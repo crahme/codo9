@@ -24,6 +24,10 @@ const config = {
     previewTokenEnvVar: 'CONTENTFUL_PREVIEW_TOKEN',
     accessTokenEnvVar: 'CONTENTFUL_MANAGEMENT_TOKEN',
   },
+   modelExtensions: [
+    // Extend the "Page" and "Post" models by defining them as page models
+    { name: "Untitled", type: "Invoice" }
+  ]
 };
 
 export default config;
