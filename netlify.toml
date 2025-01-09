@@ -8,7 +8,7 @@ publish = ".next"
 command = "npm run build"
 
 [[plugins]]
-package = "@netlify/plugin-nextjs && @netlify/plugin-lighthouse"
+package = "@netlify/plugin-nextjs"
 
 [[redirects]]
 from = "/_next/image"
