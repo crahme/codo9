@@ -9,6 +9,11 @@ command = "npm install && npm run build"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
+    [plugins.inputs]
+      threshhhold=10 #Number of plugins allowed
+#plugin number 2
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
 
 [[redirects]]
 from = "/_next/image"
