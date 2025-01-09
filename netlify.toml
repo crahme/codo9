@@ -8,7 +8,10 @@ publish = ".next"
 command = "npm run build"
 
 [[plugins]]
-package = "@netlify/plugin-nextjs"
+package = "netlify-plugin-one"
+
+    [plugins.inputs]
+    port = 80
 
 [[redirects]]
 from = "/_next/image"
