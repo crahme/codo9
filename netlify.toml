@@ -6,6 +6,7 @@ remote_images = [
 [build]
 publish = ".next"
 command = "npm install && npm run build"
+base = "/"
 
 
 [[plugins]]
