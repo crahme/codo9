@@ -12,7 +12,7 @@ const config = {
       accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
     }),
   ],
-  modelExtensions: [{ name: 'page', type: 'page', urlPath: '/{slug}' }],
+  modelExtensions: [{ name: 'Untitled', type: 'Invoice', urlPath: '/{slug}' }],
   // Needed only for importing this repository via https://app.stackbit.com/import?mode=duplicate
   import: {
     type: 'contentful',
