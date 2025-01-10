@@ -6,6 +6,7 @@ remote_images = [
 [build]
 publish = ".next"
 command = "npm install && npm run build"
+base = "C:/Users/User/codo9"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
