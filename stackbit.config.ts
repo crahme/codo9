@@ -2,6 +2,7 @@ import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
 
 export default defineStackbitConfig({
   stackbitVersion:"~0.6.0",
+  nodeVersiob:"20.18.1".
   // ...
   modelExtensions: [
     // Static URL paths derived from the model's "slug" field
