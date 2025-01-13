@@ -39,8 +39,7 @@ export default defineStackbitConfig({
   // ...
   modelExtensions: [
     // Extend the "Page" and "Post" models by defining them as page models
-    { name: "Page", type: "page" },
-    { name: "Post", type: "page" }
+    { name: "Untitled", type: "Invoice" }
   ]
 });
 
@@ -51,8 +50,7 @@ export default defineStackbitConfig({
   // ...
   modelExtensions: [
     // Static URL paths derived from the model's "slug" field
-    { name: "Page", type: "page", urlPath: "/{slug}" },
-    { name: "Post", type: "page", urlPath: "/blog/{slug}" }
+    { name: "Untitled", type: "Invoice", urlPath: "/{slug}" }
   ]
   siteMap: ({ documents, models }) => {
     // 1. Filter all page models which were defined in modelExtensions
