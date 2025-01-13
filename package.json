@@ -6,7 +6,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "build": "npm run build:contentful && stackbit-build",
     "import": "node ./contentful/import.js"
   },
   "dependencies": {
