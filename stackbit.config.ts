@@ -1,4 +1,4 @@
-import { ContentfulContentSource } from "@stackbit/cms-contentful";
+
 
 import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
 
@@ -42,10 +42,4 @@ export default defineStackbitConfig({
       .filter(Boolean) as SiteMapEntry[];
   },
 });
-export default ({
-  models: {
-    Invoice:{
-      fields: [{name: "Start Date" , type: "Date/Time"}, {name: 'End Date", type :" Date/Time"}, {name: "address", type: "Rich Text"}]
-                                                         }
-               }
-  });
+
