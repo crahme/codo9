@@ -10,7 +10,7 @@ export default defineStackbitConfig({
   ], // <-- Missing comma added here
   siteMap: ({ documents, models }) => {
     // 1. Filter all page models which were defined in modelExtensions
-    const pageModels = models.filter((m) => m.type === "page");
+    const pageModels = models.filter((m) => m.type === "Invoice");
 
     return documents
       // 2. Filter all documents which are of a page model
