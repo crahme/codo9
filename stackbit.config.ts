@@ -7,15 +7,6 @@ export default defineStackbitConfig({
   
   stackbitVersion: "~0.6.0",
   nodeVersion: "20.18.1", // Fixed typo "nodeVersiob" to "nodeVersion" and replaced "." with ","
-   contentSources: [
-    new ContentfulContentSource({
-      spaceId: process.env.CONTENTFUL_SPACE_ID!,
-      environment: process.env.CONTENTFUL_ENVIRONMENT!,
-      previewToken: process.env.CONTENTFUL_PREVIEW_TOKEN!,
-      accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN!,
-      useWebhookForContentUpdates: true
-    })
-  ],
   modelExtensions: [
     // Static URL paths derived from the model's "slug" field
     { name: "Untitled", type: "Invoice", urlPath: "/{slug}/"}
