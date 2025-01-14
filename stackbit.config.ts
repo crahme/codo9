@@ -22,8 +22,6 @@ export default defineStackbitConfig({
             switch (document.modelName) {
                 case 'Invoice':
                     return 'OtherInvoice';
-                case 'Blog':
-                    return 'otherBlog';
                 default:
                     return null;
             }
