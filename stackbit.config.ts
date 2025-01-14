@@ -6,7 +6,7 @@ export default defineStackbitConfig({
   // ...
   modelExtensions: [
     // Static URL paths derived from the model's "slug" field
-    { name: "Untitled", type: "Invoice", urlPath: "https://app.contentful.com/spaces/t3t3mhakehxg/visual_modeler/content_types" }
+    { name: "Untitled", type: "Invoice", urlPath: "/{slug}/" }
   ], // <-- Missing comma added here
   siteMap: ({ documents, models }) => {
     // 1. Filter all page models which were defined in modelExtensions
