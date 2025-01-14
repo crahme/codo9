@@ -5,7 +5,7 @@ export default defineStackbitConfig({
   nodeVersion: "20.18.1", // Fixed typo "nodeVersiob" to "nodeVersion" and replaced "." with ","
   modelExtensions: [
     // Static URL paths derived from the model's "slug" field
-    { name: "Untitled", type: "Invoice", urlPath: "/{slug}/", fields:[{{name:"Start Date", type:"Date/Time"},{name: "End Date", type: "Datee/Time"},{name:"Address", type:"Rich Text}}]}  }
+    { name: "Untitled", type: "Invoice", urlPath: "/{slug}/"}
   ],
   siteMap: ({ documents, models }) => {
     // 1. Filter all page models which were defined in modelExtensions
