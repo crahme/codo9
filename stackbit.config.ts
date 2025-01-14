@@ -1,6 +1,16 @@
+import { ContentfulContentSource } from "@stackbit/cms-contentful";
+
 import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
 
+
 export default defineStackbitConfig({
+  new ContentfulContentSource({
+  spaceId: process.env.CONTENTFUL_SPACE_ID!,
+  environment: process.env.CONTENTFUL_ENVIRONMENT!,
+  previewToken: process.env.CONTENTFUL_PREVIEW_TOKEN!,
+  accessToken: process.env.CONTENTFUL_ACCESS_TOKEN!,
+  useWebhookForContentUpdates: true
+});
   stackbitVersion: "~0.6.0",
   nodeVersion: "20.18.1", // Fixed typo "nodeVersiob" to "nodeVersion" and replaced "." with ","
   modelExtensions: [
