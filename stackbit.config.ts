@@ -25,11 +25,12 @@ export default defineStackbitConfig({
           // Skip if URL path cannot be determined
           return null;
         }
+        console.log(siteMap({ documents, models }))
 
 
         return {
           stableId: document.id,
-          urlPath: `/${urlModel}/${document.id}`,
+          urlPath,
           document,
           isHomePage: false,
         };
