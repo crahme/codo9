@@ -29,7 +29,7 @@ export default defineStackbitConfig({
 
         return {
           stableId: document.id,
-          urlPath: `/${urlModel}/${document.id}`,
+          urlPath,
           document,
           isHomePage: false,
         };
