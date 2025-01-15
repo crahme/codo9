@@ -16,8 +16,8 @@ export default defineStackbitConfig({
       .filter((d) => pageModels.some((m) => m.name === d.modelName))
       // 3. Map each document to a SiteMapEntry
       .map((document) => {
-        const modelName = document.modelName || "unknown";
-        const slug = document.fields?.slug || "unknown-slug";
+        const modelName = document.modelName || "Invoice";
+        const slug = document.fields?.slug || "https://app.contentful.com/spaces/t3t3mhakehxg/ent…";
         const urlPath = modelName === "Invoice" ? `/invoices/${slug}` : null;
 
         // Map the model name to its corresponding URL
