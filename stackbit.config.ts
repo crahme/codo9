@@ -25,6 +25,15 @@ export default defineStackbitConfig({
           // Skip if URL path cannot be determined
           return null;
         }
+        const contentType = "Invoice"; // Replace with a valid content type
+const query = {
+  content_type: contentType, // Ensure this matches the content type in your Contentful space
+  "fields.slug": "https://app.contentful.com/spaces/t3t3mhakehxg/entries/gB2x22iFHKkTchcuFdSEb?focusedField=slug", // Replace "fields.slug" and "example-slug" with valid filters
+};
+
+client.getEntries(query)
+  .then((response) => console.log(response.items))
+  .catch((error) => console.error(error));
         console.log(siteMap({ documents, models }))
 
 
