@@ -25,6 +25,7 @@ export default defineStackbitConfig({
           // Skip if URL path cannot be determined
           return null;
         }
+        console.log(siteMap({ documents, models }))
 
 
         return {
