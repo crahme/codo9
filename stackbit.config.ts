@@ -35,16 +35,7 @@ client.getEntries(query)
   .then((response) => console.log(response.items))
   .catch((error) => console.error(error));
         console.log(siteMap({ documents, models }))
-client.getEntries(query)
-  .then((response) => {
-    if (response.items.length === 0) {
-      console.error("No entries found for the query.");
-    } else {
-      console.log(response.items);
-    }
-  })
-  .catch((error) => {
-    console.error("Error fetching entries:", error.message);
+
 
         return {
           stableId: document.id,
