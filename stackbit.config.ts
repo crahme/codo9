@@ -34,6 +34,6 @@ export default defineStackbitConfig({
           isHomePage: false,
         };
       })
-      .filter(Boolean) as SiteMapEntry[];
+      return siteMapEntries.filter(Boolean)
   }
 });
