@@ -1,9 +1,11 @@
 import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
-import {createClient} from 'contentful';
+import {createClient} from 'contentful'; 
+const contentful = require("contentful");
+
 export default defineStackbitConfig({
   stackbitVersion: "~0.6.0",
   nodeVersion: "20.18.1",
-  const contentful = require("contentful");
+ 
 
      const client = contentful.createClient({
        space: process.env.CONTENTFUL_SPACE_ID,
