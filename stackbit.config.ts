@@ -3,6 +3,13 @@ import {createClient} from 'contentful';
 export default defineStackbitConfig({
   stackbitVersion: "~0.6.0",
   nodeVersion: "20.18.1",
+    const contentful = require("contentful");
+
+     const client = contentful.createClient({
+       space: process.env.CONTENTFUL_SPACE_ID,
+       accessToken: process.env.CONTENTFUL_PREVIEW_TOKEN,
+     });
+
   modelExtensions: [
     {
       name: "Invoice",
