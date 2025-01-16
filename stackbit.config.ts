@@ -7,7 +7,7 @@ export default defineStackbitConfig({
     // Static URL paths derived from the model's "slug" field
     { name: "Invoice", type: "page", urlPath: "/invoices/{slug}" },
   ],
-  siteMap: ({ documents, models }) => {
+  siteMap: ({ documents, modelExtensions }) => {
     // 1. Filter all page models which were defined in modelExtensions
     const pageModels = models.filter((m) => m.type === "page");
 
