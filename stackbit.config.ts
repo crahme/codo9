@@ -34,7 +34,7 @@ const query = {
 client.getEntries(query)
   .then((response) => console.log(response.items))
   .catch((error) => console.error(error));
-        console.log(siteMap({ documents, models }))
+        console.log(siteMap({ documents, modelExtensions }))
 
 
         return {
