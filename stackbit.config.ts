@@ -49,3 +49,4 @@ export async function fetchEntries(contentType: string) {
     throw error;
   }
 }
+console.log("Invalid content type:", document.modelName);
