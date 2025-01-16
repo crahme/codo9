@@ -27,10 +27,6 @@ export default defineStackbitConfig({
         };
       });
   },
-   const contentType = "Invoice"; // Replace with a valid Contentful content type
-  const entries = await client.getEntries({
-    content_type: contentType,
-    "fields.slug[exists]": true, // Ensure slug exists
 
 });
 
