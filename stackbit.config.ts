@@ -1,15 +1,15 @@
 import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
-import {createClient} from 'contentful';
+import { createClient } from "contentful";
+
+// Create Contentful client outside of the configuration
+const client = createClient({
+  space: process.env.CONTENTFUL_SPACE_ID,
+  accessToken: process.env.CONTENTFUL_PREVIEW_TOKEN,
+});
+
 export default defineStackbitConfig({
   stackbitVersion: "~0.6.0",
   nodeVersion: "20.18.1",
-    const contentful = require("contentful");
-
-     const client = contentful.createClient({
-       space: process.env.CONTENTFUL_SPACE_ID,
-       accessToken: process.env.CONTENTFUL_PREVIEW_TOKEN,
-     });
-
   modelExtensions: [
     {
       name: "Invoice",
@@ -34,5 +34,18 @@ export default defineStackbitConfig({
         };
       });
   },
-
 });
+
+// Example function for fetching entries from Contentful (optional, for usage)
+export async function fetchEntries(contentType) {
+  try {
+    const entries = await client.getEntries({
+      content_type: contentType,
+      "fields.slug[exists]": true,
+    });
+    return entries.items;
+  } catch (error) {
+    console.error("Error fetching entries:", error);
+    throw error;
+  }
+}
