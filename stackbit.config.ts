@@ -6,6 +6,12 @@ const client = createClient({
   space: process.env.CONTENTFUL_SPACE_ID,
   accessToken: process.env.CONTENTFUL_PREVIEW_TOKEN,
 });
+   const fetchEntries = async () => {
+       try {
+         const entries = await client.getEntries({
+           content_type: "Invoice", // Replace with a valid content type
+           "fields.slug[exists]": true, // Ensure the 'slug' field exists
+         });
 
 export default defineStackbitConfig({
   stackbitVersion: "~0.6.0",
