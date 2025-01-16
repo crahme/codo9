@@ -10,45 +10,17 @@ export default defineStackbitConfig({
       urlPath: "/invoices/{slug}",
     },
   ],
-  siteMap: ({ documents, modelExtensions }) => {
-    if (!documents || !Array.isArray(documents)) {
-      console.warn("Documents are undefined or not an array.");
-      return [];
-    }
-
-    if (!modelExtensions || !Array.isArray(modelExtensions)) {
-      console.warn("Model extensions are undefined or not an array.");
-      return [];
-    }
-
-    // 1. Filter all page models defined in modelExtensions
-    const pageModels = modelExtensions.filter((m) => m.type === "page");
-
-    if (pageModels.length === 0) {
-      console.warn("No page models found in modelExtensions.");
-      return [];
-    }
-
-    // 2. Filter and map documents to SiteMapEntry
+ siteMap: ({ documents }) => {
     return documents
-      .filter((d) => pageModels.some((m) => m.name === d.modelName))
+      .filter((doc) => doc.modelName === "Invoice") // Filter for relevant content types
       .map((document) => {
-        const modelName = document.modelName || "Invoice";
-        const slug = document.fields?.slug || "default-slug";
-        const urlPath = modelName === "Invoice" ? `/invoices/${slug}` : null;
-
-        if (!urlPath) {
-          console.warn(`Skipping document with ID ${document.id} due to missing URL path.`);
-          return null;
-        }
-
+        const slug = document.fields?.slug || "unknown-slug";
         return {
           stableId: document.id,
-          urlPath,
+          urlPath: `/invoices/${slug}`, // Construct valid URLs
           document,
-          isHomePage: false,
         };
-      })
-      .filter(Boolean) as SiteMapEntry[];
+      });
   },
+
 });
