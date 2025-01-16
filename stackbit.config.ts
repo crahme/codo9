@@ -34,7 +34,7 @@ export default defineStackbitConfig({
         };
       });
   },
-  console.log("Invalid content type:", document.modelName);
+  
 });
 
 // Separate the fetchEntries function
