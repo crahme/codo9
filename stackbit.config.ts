@@ -10,7 +10,7 @@ const client = createClient({
 export default defineStackbitConfig({
   stackbitVersion: "~0.6.0",
   nodeVersion: "20.18.1",
-  npm:"11.0.0",
+ 
   modelExtensions: [
     {
       name: "Invoice",
