@@ -7,6 +7,9 @@ remote_images = [
 publish = ".next"
 command = "npm run build: contentful && stackbit-build"
 base = "/"
+[build.environment]
+  SENTRY_LOG_LEVEL = "debug"
+
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
