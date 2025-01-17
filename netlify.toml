@@ -20,7 +20,7 @@ package = "@netlify/plugin-nextjs"
 package = "@netlify/plugin-lighthouse"
 
 [[plugins]]
-package = "@sentry/netilfy-build-plugin"
+package = "@sentry/netlify-build-plugin"
 [plugin.inputs]
 org = "Cloud Perry"
 project = "codo9"
