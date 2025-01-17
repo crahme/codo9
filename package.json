@@ -14,7 +14,7 @@
     "@netlify/plugin-lighthouse":"6.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@sentry/netlify-buidl-plugin":"1.1.1",
+    "@sentry/netlify-build-plugin":"1.1.1",
     "@netlify/plugin-lighthouse":"6.0.1"
   },
   "devDependencies": {
