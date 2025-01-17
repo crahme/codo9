@@ -20,7 +20,8 @@ package = "@netlify/plugin-lighthouse"
 package = "@sentry/netilfy-build-plugin"
 [plugin.inputs]
 org = "env:Cloud Perry"
-project = "env:node"
+project = "codo9"
+slug = "https://cloud-perry.sentry.io/settings/projects/codo9/"
 AUTH_TOKEN = "emv: ************PMN8"
 deploy = true
 dryRun = true
