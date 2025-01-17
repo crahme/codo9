@@ -26,6 +26,7 @@ org = "cloud-perry"
 project = "codo9"
 slug = "https://cloud-perry.sentry.io/settings/projects/codo9/"
 authToken = "${SENTRY_AUTH_TOKEN}"
+release = "release-$(git rev-parse HEAD)" # Dynamically generate release name
 deploy = true
 dryRun = true
 [[redirects]]
