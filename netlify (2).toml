@@ -22,9 +22,9 @@ package = "@netlify/plugin-lighthouse"
 [[plugins]]
 package = "@sentry/netilfy-build-plugin"
 [plugin.inputs]
-org = "env:Cloud Perry"
-project = "env:node"
-AUTH_TOKEN = "emv: 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"
+org = "Cloud Perry"
+project = "node"
+AUTH_TOKEN = "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"
 deploy = true
 dryRun = true
 [[redirects]]
