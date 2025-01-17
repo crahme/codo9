@@ -25,7 +25,7 @@ package = "@sentry/netlify-build-plugin"
 org = "cloud-perry"
 project = "codo9"
 slug = "https://cloud-perry.sentry.io/settings/projects/codo9/"
-authToken = "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"
+SENTRY_AUTH_TOKEN = "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"
 deploy = true
 dryRun = true
 [[redirects]]
