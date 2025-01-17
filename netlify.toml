@@ -5,7 +5,7 @@ remote_images = [
 
 [build]
 publish = ".next"
-command = "npm run build: contentful && stackbit-build"
+command = "npm run build"
 base = "/"
 
 [[plugins]]
