@@ -22,6 +22,8 @@ package = "@sentry/netilfy-build-plugin"
 org = "env:Cloud Perry"
 project = "env:node"
 AUTH_TOKEN = "emv: ************PMN8"
+deploy = true
+dryRun = true
 [[redirects]]
 from = "/_next/image"
 to = "/.netlify/images?url=:url&w=:width&q=:quality"
