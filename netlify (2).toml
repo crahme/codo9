@@ -16,6 +16,14 @@ package = "@netlify/plugin-nextjs"
 [[plugins]]
 package = "@netlify/plugin-lighthouse"
 
+[[plugins]]
+package = "@sentry/netilfy-build-plugin"
+[plugin.inputs]
+sentryOrg = "Cloud Perry"
+sentryProject = "node"
+
+
+
 [[redirects]]
 from = "/_next/image"
 to = "/.netlify/images?url=:url&w=:width&q=:quality"
