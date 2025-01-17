@@ -19,7 +19,7 @@ package = "@netlify/plugin-lighthouse"
 [[plugins]]
 package = "@sentry/netilfy-build-plugin"
 [plugin.inputs]
-org = "env:Cloud Perry"
+org = "Cloud Perry"
 project = "codo9"
 slug = "https://cloud-perry.sentry.io/settings/projects/codo9/"
 AUTH_TOKEN = "emv: ************PMN8"
