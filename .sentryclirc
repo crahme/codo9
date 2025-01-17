@@ -1,0 +1,6 @@
+[defaults]
+org="env: Cloud Perru"
+project="env:node"
+
+[auth]
+token="env:************PMN8"
