@@ -24,7 +24,7 @@
     "dotenv": "^16.4.5",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.0",
-    "@sentry/netlify-buidl-plugin":"1.1.1",
+    "@sentry/netlify-buidl-plugin":"1.0.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3"
   }
