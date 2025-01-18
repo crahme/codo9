@@ -26,7 +26,6 @@ package = "@sentry/netlify-build-plugin"
   skipSourceMaps = false                  # Ensure source maps are uploaded
   deployPreviews = false                  # Disable previews for deploys
   sentryRepository = "crahme/codo9"  # Your GitHub repository name
-  commit = "${COMMIT_REF}"
 [[redirects]]
 from = "/_next/image"
 to = "/.netlify/images?url=:url&w=:width&q=:quality"
