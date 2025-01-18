@@ -25,7 +25,7 @@ package = "@sentry/netlify-build-plugin"
   skipSetCommits = false                  # enable commit tracking
   skipSourceMaps = false                  # Ensure source maps are uploaded
   deployPreviews = false                  # Disable previews for deploys
-  repository = "crahme/codo9"  # Your GitHub repository name
+  sentryRepository = "crahme/codo9"  # Your GitHub repository name
   commit = "${COMMIT_REF}"
 [[redirects]]
 from = "/_next/image"
