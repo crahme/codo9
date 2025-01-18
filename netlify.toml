@@ -22,7 +22,7 @@ package = "@sentry/netlify-build-plugin"
   sourceMapPath = ".next"                 # Path to source maps
   sourceMapUrlPrefix = "~/_next"          # Matches Next.js build directory structure
   releasePrefix = "release-"              # Optional: Custom prefix for releases
-  skipSetCommits = true                  # Temporarily disable commit tracking until permissions are fixed
+  skipSetCommits = false                  # enable commit tracking
   skipSourceMaps = false                  # Ensure source maps are uploaded
   deployPreviews = false                  # Disable previews for deploys
 [[redirects]]
