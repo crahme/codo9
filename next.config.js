@@ -19,7 +19,7 @@ const nextConfig = {
     CONTENTFUL_ENVIRONMENT: process.env.CONTENTFUL_ENVIRONMENT || 'master',
     SENTRY_DSN: process.env.SENTRY_DSN,
     // Use DEPLOY_ID instead of COMMIT_REF for more reliable releases
-    SENTRY_RELEASE: process.env.SENTRY_RELEASE || `release-${process.env.DEPLOY_ID}`,
+    SENTRY_RELEASE: process.env.COMMIT_REF || 'development',
   }
 };
 
@@ -27,7 +27,7 @@ const sentryWebpackPluginOptions = {
   silent: false, // Enable Sentry output for debugging
   org: process.env.SENTRY_ORG || 'cloud-perry', // Add your org as fallback
   project: process.env.SENTRY_PROJECT || 'codo9', // Add your project as fallback
-  release: process.env.SENTRY_RELEASE || `release-${process.env.DEPLOY_ID}`,
+  release: process.env.COMMIT_REF || 'development',
   include: '.next',
   ignore: ['node_modules'],
   urlPrefix: '~/_next',
