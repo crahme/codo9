@@ -18,32 +18,35 @@ const nextConfig = {
     CONTENTFUL_MANAGEMENT_TOKEN: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
     CONTENTFUL_ENVIRONMENT: process.env.CONTENTFUL_ENVIRONMENT || 'master',
     SENTRY_DSN: process.env.SENTRY_DSN,
-    // Use DEPLOY_ID instead of COMMIT_REF for more reliable releases
-    SENTRY_RELEASE: process.env.COMMIT_REF || 'development',
-  }
+    SENTRY_RELEASE: process.env.DEPLOY_ID || 'development',
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.devtool = 'source-map';
+    }
+    return config;
+  },
 };
 
 const sentryWebpackPluginOptions = {
-  silent: false, // Enable Sentry output for debugging
-  org: process.env.SENTRY_ORG || 'cloud-perry', // Add your org as fallback
-  project: process.env.SENTRY_PROJECT || 'codo9', // Add your project as fallback
-  release: process.env.COMMIT_REF || 'development',
+  silent: false,
+  org: process.env.SENTRY_ORG || 'cloud-perry',
+  project: process.env.SENTRY_PROJECT || 'codo9',
+  release: process.env.DEPLOY_ID || 'development',
   include: '.next',
   ignore: ['node_modules'],
   urlPrefix: '~/_next',
   dryRun: process.env.NODE_ENV !== 'production',
   setCommits: {
     auto: true,
-    commit: process.env.COMMIT_REF,
+    commit: process.env.DEPLOY_ID,
   },
-  debug: true
+  debug: true,
+  widenClientFileUpload: true,
 };
 
-// Add error handling for withSentryConfig
-const config = withSentryConfig(
+module.exports = withSentryConfig(
   nextConfig,
   sentryWebpackPluginOptions,
-  { silent: false } // Enable console output for debugging
+  { silent: false }
 );
-
-module.exports = config;
