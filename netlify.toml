@@ -10,7 +10,6 @@ base = "/"
 [build.environment]
   SENTRY_LOG_LEVEL = "debug"
 
-
 [[plugins]]
 package = "@netlify/plugin-nextjs"
 
@@ -19,18 +18,18 @@ package = "@netlify/plugin-lighthouse"
 
 [[plugins]]
 package = "@sentry/netlify-build-plugin"
+  [plugins.inputs]
+  org = "cloud-perry"               # Replace with your Sentry organization slug
+  project = "codo9"                 # Replace with your Sentry project slug
+  authToken = "${SENTRY_AUTH_TOKEN}" # Ensure this is configured in Netlify environment variables
+  release = "release-${COMMIT_REF}" # Dynamically generate release name using commit hash
+  deploy = true
+  setCommits = true                 # Track commits for release
+  urlPrefix = "~/_next"             # Matches Next.js build directory structure
+  uploadSourceMaps = true           # Enables source map upload
+  stripPrefix = [".next"]           # Remove `.next` from source map paths
+  dryRun = false                    # Ensure uploads occur during production builds
 
-[plugin.inputs]
-org = "cloud-perry"
-project = "codo9"
-authToken = "${SENTRY_AUTH_TOKEN}"
-release = "release-${COMMIT_REF}" # Dynamically generate release name
-deploy = true
-setCommits = true               # Enables commit tracking for the release
-urlPrefix = "~/_next"           # Matches Next.js directory structure
-uploadSourceMaps = true         # Enables source map upload
- stripPrefix = [".next"]   
-dryRun = false
 [[redirects]]
 from = "/_next/image"
 to = "/.netlify/images?url=:url&w=:width&q=:quality"
@@ -50,19 +49,3 @@ status = 200
   url = ":url"
   w = ":width"
   q = ":quality"
-
-[context]
-
-  [context.production]
-
-    [context.production.images]
-    remote_images = [
-      "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
-    ]
-
-  [context.main]
-
-    [context.main.images]
-    remote_images = [
-      "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
-    ]
