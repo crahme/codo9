@@ -22,13 +22,13 @@ package = "@sentry/netlify-build-plugin"
   sentryOrg = "cloud-perry"               # Replace with your Sentry organization slug
   sentryProject = "codo9"                 # Replace with your Sentry project slug
   sentryAuthToken = "${SENTRY_AUTH_TOKEN}" # Ensure this is configured in Netlify environment variables
-  sentryRelease = "release-${COMMIT_REF}" # Dynamically generate release name using commit hash
+  sentryRelease = "release-${DEPLOY_ID}" 
   sourceMapPath = ".next"                 # Path to source maps
   sourceMapUrlPrefix = "~/_next"          # Matches Next.js build directory structure
-  releasePrefix = "release-"              # Optional: Custom prefix for releases
-  skipSetCommits = false                  # Ensure commits are tracked
-  skipSourceMaps = false                  # Ensure source maps are uploaded
-  deployPreviews = false                  # Disable previews for deploys
+setCommits = true
+  skipSetCommits = false
+  skipSourceMaps = false
+  deployPreviews = false
 
 [[redirects]]
 from = "/_next/image"
@@ -65,3 +65,6 @@ status = 200
     remote_images = [
       "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
     ]
+[build.environment]
+SENTRY_LOG_LEVEL = "debug"
+SENTRY_DEBUG = "true"
