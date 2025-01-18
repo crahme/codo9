@@ -14,20 +14,22 @@ base = "/"
 [[plugins]]
 package = "@netlify/plugin-nextjs"
 
-  [plugins.inputs]
-
 [[plugins]]
 package = "@netlify/plugin-lighthouse"
 
 [[plugins]]
 package = "@sentry/netlify-build-plugin"
+
 [plugin.inputs]
 org = "cloud-perry"
 project = "codo9"
-slug = "https://cloud-perry.sentry.io/settings/projects/codo9/"
 authToken = "${SENTRY_AUTH_TOKEN}"
-release = "release-$(git rev-parse HEAD)" # Dynamically generate release name
+release = "release-${COMMIT_REF}" # Dynamically generate release name
 deploy = true
+setCommits = true               # Enables commit tracking for the release
+urlPrefix = "~/_next"           # Matches Next.js directory structure
+uploadSourceMaps = true         # Enables source map upload
+ stripPrefix = [".next"]   
 dryRun = true
 [[redirects]]
 from = "/_next/image"
