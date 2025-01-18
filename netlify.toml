@@ -18,11 +18,11 @@ package = "@sentry/netlify-build-plugin"
   sentryOrg = "cloud-perry"               # Replace with your Sentry organization slug
   sentryProject = "codo9"                 # Replace with your Sentry project slug
   sentryAuthToken = "${SENTRY_AUTH_TOKEN}" # Ensure this is configured in Netlify environment variables
-  sentryRelease = "release-${COMMIT_REF}" # Dynamically generate release name using commit hash
+  sentryRelease = "${COMMIT_REF}" # Dynamically generate release name using commit hash
   sourceMapPath = ".next"                 # Path to source maps
   sourceMapUrlPrefix = "~/_next"          # Matches Next.js build directory structure
   releasePrefix = "release-"              # Optional: Custom prefix for releases
-  skipSetCommits = false                  # Ensure commits are tracked
+  skipSetCommits = true                  # Temporarily disable commit tracking until permissions are fixed
   skipSourceMaps = false                  # Ensure source maps are uploaded
   deployPreviews = false                  # Disable previews for deploys
 [[redirects]]
