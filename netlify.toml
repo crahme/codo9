@@ -30,7 +30,7 @@ setCommits = true               # Enables commit tracking for the release
 urlPrefix = "~/_next"           # Matches Next.js directory structure
 uploadSourceMaps = true         # Enables source map upload
  stripPrefix = [".next"]   
-dryRun = true
+dryRun = false
 [[redirects]]
 from = "/_next/image"
 to = "/.netlify/images?url=:url&w=:width&q=:quality"
