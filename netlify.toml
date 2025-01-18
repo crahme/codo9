@@ -1,70 +1,54 @@
 [images]
 remote_images = [
-  "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+  "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)?)|$))$"
 ]
-
 [build]
 publish = ".next"
 command = "npm run build"
 base = "/"
 [build.environment]
   SENTRY_LOG_LEVEL = "debug"
-
 [[plugins]]
 package = "@netlify/plugin-nextjs"
-
 [[plugins]]
 package = "@netlify/plugin-lighthouse"
-
 [[plugins]]
 package = "@sentry/netlify-build-plugin"
   [plugins.inputs]
   sentryOrg = "cloud-perry"               # Replace with your Sentry organization slug
   sentryProject = "codo9"                 # Replace with your Sentry project slug
   sentryAuthToken = "${SENTRY_AUTH_TOKEN}" # Ensure this is configured in Netlify environment variables
-  sentryRelease = "release-${DEPLOY_ID}" 
+  sentryRelease = "release-${COMMIT_REF}" # Dynamically generate release name using commit hash
   sourceMapPath = ".next"                 # Path to source maps
   sourceMapUrlPrefix = "~/_next"          # Matches Next.js build directory structure
-setCommits = true
-  skipSetCommits = false
-  skipSourceMaps = false
-  deployPreviews = false
-
+  releasePrefix = "release-"              # Optional: Custom prefix for releases
+  skipSetCommits = false                  # Ensure commits are tracked
+  skipSourceMaps = false                  # Ensure source maps are uploaded
+  deployPreviews = false                  # Disable previews for deploys
 [[redirects]]
 from = "/_next/image"
 to = "/.netlify/images?url=:url&w=:width&q=:quality"
 status = 200
-
   [redirects.query]
   url = ":url"
   w = ":width"
   q = ":quality"
-
 [[redirects]]
-from = "/_ipx/*"
+from = "/_ipx/"
 to = "/.netlify/images?url=:url&w=:width&q=:quality"
 status = 200
-
   [redirects.query]
   url = ":url"
   w = ":width"
   q = ":quality"
-
 [context]
-
   [context.production]
-
     [context.production.images]
     remote_images = [
-      "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+      "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)?)|$))$"
     ]
-
   [context.main]
-
     [context.main.images]
     remote_images = [
-      "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+      "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)?)|$))$"
     ]
-[build.environment]
-SENTRY_LOG_LEVEL = "debug"
-SENTRY_DEBUG = "true"
