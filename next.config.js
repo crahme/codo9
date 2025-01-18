@@ -46,4 +46,6 @@ const config = withSentryConfig(
   { silent: false } // Enable console output for debugging
 );
 
-module.exports = config;
+module.exports = {
+  productionBrowserSourceMaps: true,
+};
