@@ -9,7 +9,7 @@
     "import": "node ./contentful/import.js"
   },
   "dependencies": {
-    "@sentry/nextjs": "^7.53.1",
+    "@sentry/nextjs": "^8.28.0",
     "@sentry/netlify-build-plugin": "1.1.1",
     "@netlify/plugin-lighthouse": "6.0.1",
     "markdown-to-jsx": "^7.4.7",
