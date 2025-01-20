@@ -50,6 +50,7 @@ const sentryWebpackPluginOptions = {
     auto: true, // Automatically detect commits
   },
   debug: false, // Set to false for production to avoid cluttering logs
+deleteSourcemapsAfterUpload: true, // Prevent serving source maps to users
 };
 
 module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions);
