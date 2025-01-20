@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const { withSentryConfig } = require('@sentry/nextjs');
-
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -20,10 +19,18 @@ const nextConfig = {
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.DEPLOY_ID || 'development',
   },
+  // Modify webpack config for both client and server
   webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.devtool = 'source-map';
-    }
+    // Enable source maps for both client and server
+    config.devtool = 'source-map';
+    
+    // Add rule for handling source maps
+    config.module.rules.push({
+      test: /\.js$/,
+      enforce: 'pre',
+      use: ['source-map-loader'],
+    });
+    
     return config;
   },
 };
@@ -43,6 +50,21 @@ const sentryWebpackPluginOptions = {
   },
   debug: true,
   widenClientFileUpload: true,
+  // Add these options for better source map handling
+  entries: [
+    '.next/static/chunks/**/*.js',
+    '.next/static/runtime/*.js',
+    '.next/server/pages/**/*.js',
+    '.next/server/chunks/*.js'
+  ],
+  rewrite: true,
+  stripPrefix: ['webpack://_N_E/'],
+  // Add source map upload configuration
+  sourcemaps: {
+    assets: '.next/**/*.map',
+    servicePrefix: '~/_next/',
+    stripPrefix: ['webpack://_N_E/'],
+  }
 };
 
 module.exports = withSentryConfig(
