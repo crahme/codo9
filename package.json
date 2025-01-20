@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "next-sentry-source-maps"
+    "postbuild": "next-sentry-source-maps",
     "start": "next start",
     "import": "node ./contentful/import.js"
   },
