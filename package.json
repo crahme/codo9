@@ -24,6 +24,7 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.0",
     "postcss": "^8.4.38",
+    "source-map-loader": "^latest_version",
     "tailwindcss": "^3.4.3"
   }
 }
