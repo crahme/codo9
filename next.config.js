@@ -35,6 +35,8 @@ const nextConfig = {
 
     return config;
   },
+  cacheHandler: require.resolve('./cache-handler.js'), // Add build caching handler
+  cacheMaxMemorySize: 0, // Disable in-memory caching if needed
 };
 
 // const sentryWebpackPluginOptions = {
