@@ -12,7 +12,7 @@ export default defineStackbitConfig({
   nodeVersion: "20.18.1",
   modelExtensions: [
     {
-      name: "Invoice",
+      name: "invoice",
       type: "page",
       urlPath: "/invoices/{slug}",
     },
