@@ -17,8 +17,6 @@ const nextConfig = {
     CONTENTFUL_PREVIEW_TOKEN: process.env.CONTENTFUL_PREVIEW_TOKEN,
     CONTENTFUL_MANAGEMENT_TOKEN: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
     CONTENTFUL_ENVIRONMENT: process.env.CONTENTFUL_ENVIRONMENT || 'master',
-    // SENTRY_DSN: process.env.SENTRY_DSN, // Sentry DSN for error tracking
-    // SENTRY_RELEASE: process.env.COMMIT_REF || 'development', // Release version for Sentry
   },
   webpack: (config, { isServer }) => {
     // Enable source maps for debugging
@@ -35,24 +33,23 @@ const nextConfig = {
 
     return config;
   },
-  cacheHandler: './cache-handler.js', // Use string path for Netlify compatibility
+  cacheHandler: './cache-handler.js', // String path for Netlify compatibility
   cacheMaxMemorySize: 0, // Disable in-memory caching if needed
 };
 
 // const sentryWebpackPluginOptions = {
-//   silent: false, // Display logs for debugging
-//   org: process.env.SENTRY_ORG || 'cloud-perry', // Your Sentry organization slug
-//   project: process.env.SENTRY_PROJECT || 'codo9', // Your Sentry project slug
-//   release: process.env.COMMIT_REF || 'development', // Release version for Sentry
-//   include: '.next', // Include the .next directory for source map uploads
-//   ignore: ['node_modules'], // Ignore node_modules
-//   urlPrefix: '~/_next', // Set the URL prefix to match Next.js file paths
-//   dryRun: process.env.NODE_ENV !== 'production', // Only upload source maps in production
-//   setCommits: {
-//     auto: true, // Automatically detect commits
-//   },
-//   debug: false, // Set to false for production to avoid cluttering logs
-//   deleteSourcemapsAfterUpload: true, // Prevent serving source maps to users
+//   silent: false,
+//   org: process.env.SENTRY_ORG || 'cloud-perry',
+//   project: process.env.SENTRY_PROJECT || 'codo9',
+//   release: process.env.COMMIT_REF || 'development',
+//   include: '.next',
+//   ignore: ['node_modules'],
+//   urlPrefix: '~/_next',
+//   dryRun: process.env.NODE_ENV !== 'production',
+//   setCommits: { auto: true },
+//   debug: false,
+//   deleteSourcemapsAfterUpload: true,
 // };
 
+// module.exports = nextConfig;
 module.exports = nextConfig;
