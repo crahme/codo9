@@ -32,8 +32,8 @@ const nextConfig = {
 
     return config;
   },
-  // cacheHandler: './cache-handler.js', // Temporarily disabled
-  // cacheMaxMemorySize: 0, // Temporarily disabled
+  cacheHandler: require('./cache-handler.js'), // Use direct require instead of path
+  cacheMaxMemorySize: 0, // Disable in-memory caching if needed
 };
 
 module.exports = nextConfig;
