@@ -2,19 +2,22 @@
 // Example cache handler implementation
 
 const NodeCache = require('node-cache');
-const cache = new NodeCache();
 
-module.exports = {
+class CurCacheHandler {
+  constructor() {
+    this.cache = new NodeCache();
+  }
+
   get(key) {
-    return cache.get(key);
-  },
+    return this.cache.get(key);
+  }
+
   set(key, value, ttl = 3600) { // Default TTL is 1 hour
-    cache.set(key, value, ttl);
-  },
+    this.cache.set(key, value, ttl);
+  }
+
   del(key) {
-    cache.del(key);
-  },
-  clear() {
-    cache.flushAll();
-  },
-};
+    this.cache.del(key);
+  }
+
+  clear ▋
