@@ -13,7 +13,7 @@ export default defineStackbitConfig({
  
   modelExtensions: [
     {
-      name: "Invoice",
+      name: "invoice",
       type: "page",
       urlPath: "/invoices/{slug}",
     },
