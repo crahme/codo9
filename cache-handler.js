@@ -20,4 +20,9 @@ class CurCacheHandler {
     this.cache.del(key);
   }
 
-  clear ▋
+  clear() {
+    this.cache.flushAll();
+  }
+}
+
+module.exports = new CurCacheHandler();
