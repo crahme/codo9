@@ -35,7 +35,7 @@ const nextConfig = {
 
     return config;
   },
-  cacheHandler: require('./cache-handler.js'), // Correctly require the cache handler instance
+  cacheHandler: './cache-handler.js', // Use string path for Netlify compatibility
   cacheMaxMemorySize: 0, // Disable in-memory caching if needed
 };
 
