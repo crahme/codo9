@@ -1,5 +1,5 @@
 // cache-handler.js
-// Simple in-memory cache handler implementation
+// Simple in-memory cache handler for Next.js
 
 const cache = new Map();
 
@@ -9,7 +9,7 @@ module.exports = {
   },
   set(key, value, ttl = 3600) {
     cache.set(key, value);
-    // Optional: Implement TTL cleanup with setTimeout
+    // Optional TTL implementation
     if (ttl) {
       setTimeout(() => cache.delete(key), ttl * 1000);
     }
