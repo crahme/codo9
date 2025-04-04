@@ -1,5 +1,4 @@
 /** @type {import('next').NextConfig} */
-// const { withSentryConfig } = require('@sentry/nextjs');
 
 const nextConfig = {
   images: {
@@ -37,19 +36,4 @@ const nextConfig = {
   cacheMaxMemorySize: 0, // Disable in-memory caching if needed
 };
 
-// const sentryWebpackPluginOptions = {
-//   silent: false,
-//   org: process.env.SENTRY_ORG || 'cloud-perry',
-//   project: process.env.SENTRY_PROJECT || 'codo9',
-//   release: process.env.COMMIT_REF || 'development',
-//   include: '.next',
-//   ignore: ['node_modules'],
-//   urlPrefix: '~/_next',
-//   dryRun: process.env.NODE_ENV !== 'production',
-//   setCommits: { auto: true },
-//   debug: false,
-//   deleteSourcemapsAfterUpload: true,
-// };
-
-// module.exports = nextConfig;
 module.exports = nextConfig;
