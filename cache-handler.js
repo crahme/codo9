@@ -9,7 +9,6 @@ module.exports = {
   },
   set(key, value, ttl = 3600) {
     cache.set(key, value);
-    // Optional TTL implementation
     if (ttl) {
       setTimeout(() => cache.delete(key), ttl * 1000);
     }
