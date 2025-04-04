@@ -32,8 +32,8 @@ const nextConfig = {
 
     return config;
   },
-  cacheHandler: './cache-handler.js', // String path for Netlify compatibility
-  cacheMaxMemorySize: 0, // Disable in-memory caching if needed
+  // cacheHandler: './cache-handler.js', // Temporarily disabled
+  // cacheMaxMemorySize: 0, // Temporarily disabled
 };
 
 module.exports = nextConfig;
