@@ -1,28 +1,23 @@
 // cache-handler.js
-// Example cache handler implementation
+// Simple in-memory cache handler implementation
 
-const NodeCache = require('node-cache');
+const cache = new Map();
 
-class CurCacheHandler {
-  constructor() {
-    this.cache = new NodeCache();
-  }
-
+module.exports = {
   get(key) {
-    return this.cache.get(key);
-  }
-
-  set(key, value, ttl = 3600) { // Default TTL is 1 hour
-    this.cache.set(key, value, ttl);
-  }
-
+    return cache.get(key);
+  },
+  set(key, value, ttl = 3600) {
+    cache.set(key, value);
+    // Optional: Implement TTL cleanup with setTimeout
+    if (ttl) {
+      setTimeout(() => cache.delete(key), ttl * 1000);
+    }
+  },
   del(key) {
-    this.cache.del(key);
-  }
-
+    cache.delete(key);
+  },
   clear() {
-    this.cache.flushAll();
-  }
-}
-
-module.exports = new CurCacheHandler();
+    cache.clear();
+  },
+};
