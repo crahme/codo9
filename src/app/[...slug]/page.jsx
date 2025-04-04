@@ -9,12 +9,15 @@ const componentMap = {
 };
 
 export default async function ComposablePage({ params }) {
-  const { slug } = params;
+  // Await params to resolve the promise
+  const awaitedParams = await params;
+  const { slug } = awaitedParams;
   
   const pageSlug = slug.join('/');
 
   try {
-    const page = await getPageFromSlug(`/${pageSlug}`);
+    // Pass the correct content type ID (replace 'page' with your actual content type ID)
+    const page = await getPageFromSlug(`/${pageSlug}`, 'page');
 
     if (!page) {
       return notFound();
