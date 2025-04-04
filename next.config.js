@@ -35,7 +35,7 @@ const nextConfig = {
 
     return config;
   },
-  cacheHandler: require.resolve('./cache-handler.js'), // Add build caching handler
+  cacheHandler: require('./cache-handler.js'), // Correctly require the cache handler instance
   cacheMaxMemorySize: 0, // Disable in-memory caching if needed
 };
 
