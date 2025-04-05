@@ -28,7 +28,7 @@ const client = (space && accessToken) ? createClient({
 
 // --- Content Type IDs ---
 // Best Practice: Use Environment Variables (adjust defaults if needed)
-const CONTENTFUL_HOMEPAGE_TYPE_ID = process.env.CONTENTFUL_HOMEPAGE_TYPE_ID || 'homePage'; // Assuming you might keep this distinct
+
 const CONTENTFUL_INVOICE_TYPE_ID = process.env.CONTENTFUL_INVOICE_TYPE_ID || 'invoice';
 // *** IMPORTANT: 'page' is assumed to be the ID for your generic pages ***
 const CONTENTFUL_DEFAULT_PAGE_TYPE_ID = process.env.CONTENTFUL_PAGE_TYPE_ID || 'page';
