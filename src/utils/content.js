@@ -5,7 +5,7 @@ import { createClient } from 'contentful';
 
 // --- Contentful Client Setup ---
 const space = process.env.CONTENTFUL_SPACE_ID;
-const accessToken = process.env.CONTENTFUL_PREVIEW_TOKEN || process.env.CONTENTFUL_ACCESS_TOKEN;
+const accessToken = process.env.CONTENTFUL_PREVIEW_TOKEN || process.env.CONTENTFULMANAGEMENT_TOKEN;
 const host = process.env.CONTENTFUL_PREVIEW_TOKEN
   ? 'preview.contentful.com'
   : undefined;
