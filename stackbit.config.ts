@@ -24,7 +24,7 @@ export default defineStackbitConfig({
     }
 
     return documents
-      .filter((doc) => doc.modelName === "Invoice")
+      .filter((doc) => doc.modelName === "invoice")
       .map((document) => {
         const slug = document.fields?.slug || "unknown-slug";
         return {
