@@ -10,7 +10,7 @@ const componentMap = {
 
 export default async function ComposablePage() {
   try {
-    const page = await getPageFromSlug("/", 'homePage');
+    const page = await getPageFromSlug("/", 'page');
 
     if (!page) {
       return notFound();
