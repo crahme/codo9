@@ -1,40 +1,24 @@
-import Markdown from 'markdown-to-jsx';
-
-const themeClassMap = {
-  primary: 'bg-purple-700 text-white',
-  dark: 'bg-gray-800 text-white',
-};
-
-export const Stats = (props) => {
-  return (
-    <div
-      className={`px-6 py-16 text-center ${themeClassMap[props.theme] ?? themeClassMap['primary']} sm:px-12 sm:py-24`}
-      data-sb-object-id={props.id}
-    >
-      <div className="mx-auto">
-        <div className="mb-16">
-          <h2 className="mb-4 text-4xl font-bold sm:text-5xl" data-sb-field-path="heading">
-            {props.heading}
-          </h2>
-          {props.body && <Markdown options={{ forceBlock: true }} className="sm:text-lg" data-sb-field-path="body">
-            {props.body}
-          </Markdown>}
-        </div>
-        <div className="grid max-w-3xl gap-12 mx-auto sm:grid-cols-3">
-          {(props.stats || []).map((stat, idx) => <StatItem key={idx} {...stat} />)}
-        </div>
-      </div>
-    </div>
-  );
-};
+// Inside Stats.jsx
 
 const StatItem = (props) => {
+  // Access fields correctly from the passed entry object
+  const label = props.fields?.label;
+  const value = props.fields?.value;
+  const id = props.sys?.id; // Get ID from sys object
+
+  // Use the StatItem entry's ID for its object ID
   return (
-    <div data-sb-object-id={props.id}>
-      <div className="mb-3 text-4xl font-bold sm:text-5xl" data-sb-field-path="value">
-        {props.value}
-      </div>
-      <div data-sb-field-path="label">{props.label}</div>
+    <div data-sb-object-id={id}>
+      {/* Check if value exists before rendering */}
+      {value && (
+        <div className="mb-3 text-4xl font-bold sm:text-5xl" data-sb-field-path="value">
+          {value}
+        </div>
+      )}
+      {/* Check if label exists before rendering */}
+      {label && (
+        <div data-sb-field-path="label">{label}</div>
+      )}
     </div>
   );
 };
