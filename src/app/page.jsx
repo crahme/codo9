@@ -1,8 +1,8 @@
 // src/app/page.jsx
 import { notFound } from 'next/navigation';
-import { Hero } from '../components/Hero.jsx'; // Adjust path if needed
-import { Stats } from '../components/Stats.jsx'; // Adjust path if needed
-import { getPageFromSlug } from '../utils/content.js'; // Adjust path if needed
+import { Hero } from '../components/Hero.jsx'; // Verify path
+import { Stats } from '../components/Stats.jsx'; // Verify path
+import { getPageFromSlug } from '../utils/content.js'; // Verify path
 
 // Map Contentful Content Type IDs to React components
 const componentMap = {
@@ -13,8 +13,8 @@ const componentMap = {
 
 export default async function HomePage() {
   try {
-    // Fetch the 'page' entry with slug '/' - explicitly providing type is fine too
-    const page = await getPageFromSlug("/", 'page'); // Or just getPageFromSlug("/"); if content.js handles it
+    // Fetch the 'page' entry with slug '/'
+    const page = await getPageFromSlug("/", 'page');
 
     // Check if the page, its fields, or the sections array are missing
     if (!page || !page.fields || !page.fields.sections) {
@@ -29,8 +29,8 @@ export default async function HomePage() {
         {Array.isArray(page.fields.sections) && page.fields.sections.map((section) => {
           // Basic check for a valid section object structure
           if (!section || !section.sys || !section.sys.contentType || !section.sys.contentType.sys || !section.sys.id || !section.fields) {
-            console.warn("Skipping rendering of invalid section object:", section);
-            return null;
+             console.warn("Skipping rendering of invalid section object:", section);
+             return null;
           }
 
           // Get the Content Type ID of the linked section entry
@@ -40,7 +40,8 @@ export default async function HomePage() {
           // Handle cases where a component isn't mapped
           if (!Component) {
             console.warn(`No component mapped for section content type: ${contentTypeId}`);
-            return <div key={section.sys.id}>Component for {contentTypeId} not found</div>; // Render placeholder or null
+            // Optionally render a placeholder
+            return <div key={section.sys.id}>Component for {contentTypeId} not found</div>;
           }
 
           // Pass the linked section's FIELDS as props, and its ID separately
@@ -51,8 +52,6 @@ export default async function HomePage() {
     );
   } catch (error) {
     console.error("Error fetching or rendering homepage:", error.message, error.stack);
-    // Consider throwing error during development for better debugging
-    // throw error;
     return notFound(); // Return 404 page on error
   }
 }
