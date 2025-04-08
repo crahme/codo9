@@ -3,4 +3,4 @@ org="env: Cloud Perry"
 project="env:node"
 
 [auth]
-token="env:************PMN8"
+token="************PMN8"
