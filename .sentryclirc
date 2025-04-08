@@ -3,4 +3,4 @@ org="env: Cloud Perry"
 project="env:node"
 
 [auth]
-token= "************7CH8"
+token="************7CH8"
