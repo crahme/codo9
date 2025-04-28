@@ -8,6 +8,8 @@ import { getPageFromSlug } from '../utils/content.js'; // Verify path
 const componentMap = {
   hero: Hero,
   stats: Stats,
+  button: Button,
+  page: page
   // Add mappings for any other section types you might create
 };
 
