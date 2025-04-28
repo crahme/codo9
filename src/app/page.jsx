@@ -7,8 +7,7 @@ import { getPageFromSlug } from '../utils/content.js'; // Verify path
 // Map Contentful Content Type IDs to React components
 const componentMap = {
   hero: Hero,
-  stats: Stats,
-  button: Button
+  stats: Stats
   // Add mappings for any other section types you might create
 };
 
