@@ -53,7 +53,9 @@ export default defineStackbitConfig({
         return [];
     }
     const entries: SiteMapEntry[] = documents
+
       .filter((doc) =>{
+
         const isSupportedModel = ['page', 'invoice'].includes(doc.modelName);
         if (!isSupportedModel) {
           console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
