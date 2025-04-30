@@ -53,7 +53,13 @@ export default defineStackbitConfig({
         return [];
     }
     const entries: SiteMapEntry[] = documents
-      .filter((doc) => doc.modelName === 'page' || doc.modelName === 'invoice')
+      .filter((doc) => {
+        const isSupportedModel = ['page', 'invoice'].includes(doc.modelName);
+        if (!isSupportedModel) {
+          console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
+        }
+        return isSupportedModel;
+      })
       .map((document) => {
         const slug = document.fields?.slug as string | undefined;
         const title = document.fields?.title as string | undefined;
