@@ -35,7 +35,7 @@ export default async function HomePage() {
 
             <button onClick={() => window.location.href = '/invoices'}>
                Invoice
-           </button>
+            </button>
   </div>
         // Get the Content Type ID of the linked section entry
           const contentTypeId = section.sys.contentType.sys.id;
