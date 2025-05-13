@@ -10,8 +10,8 @@ const nextConfig = {
   },
   productionBrowserSourceMaps: true,
   env: {
-    CONTENTFUL_ACCESS_TOKEN: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
-    CONTENTFUL_ACCESS_TOKEN: process.env.CONTENTFUL_DELIVERY_TOKEN,
+    CONTENTFUL_MANAGEMENT_TOKEN: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+    CONTENTFUL_DELIVERY_TOKEN: process.env.CONTENTFUL_DELIVERY_TOKEN,
     CONTENTFUL_SPACE_ID: process.env.CONTENTFUL_SPACE_ID,
   },
   webpack: (config, { isServer }) => {
