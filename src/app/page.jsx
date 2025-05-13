@@ -32,7 +32,7 @@ export default async function HomePage() {
              console.warn("Skipping rendering of invalid section object:", section);
              return null;
           }
-          <button onclick={() => window.location.href = '/invoices'}>
+          <button onClick={() => window.location.href = '/invoices'}>
             Invoice
           </button>
   </div>
