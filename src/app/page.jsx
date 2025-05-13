@@ -32,10 +32,9 @@ export default async function HomePage() {
              console.warn("Skipping rendering of invalid section object:", section);
              return null;
           }
-
-            <button onClick={() => window.location.href = '/invoices'}>
-               Invoice
-            </button>
+          <button onclick={() => window.location.href = '/invoices'}>
+            Invoice
+          </button>
   </div>
         // Get the Content Type ID of the linked section entry
           const contentTypeId = section.sys.contentType.sys.id;
