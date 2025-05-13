@@ -33,7 +33,11 @@ export default async function HomePage() {
              return null;
           }
 
-          // Get the Content Type ID of the linked section entry
+            <button onClick={() => window.location.href = '/invoices'}>
+               Invoice
+           </button>
+  </div>
+        // Get the Content Type ID of the linked section entry
           const contentTypeId = section.sys.contentType.sys.id;
           const Component = componentMap[contentTypeId];
 
