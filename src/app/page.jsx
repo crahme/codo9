@@ -15,6 +15,10 @@ export default async function HomePage() {
   try {
     // Fetch the 'page' entry with slug '/'
     const page = await getPageFromSlug("/", 'page');
+     function handleNavigation() {
+      window.location.href = '/invoices';
+    }
+
     // Check if the page, its fields, or the sections array are missing
     if (!page || !page.fields || !page.fields.sections) {
       console.error("Error: Homepage ('/' page entry) not found, missing fields, or missing sections.", page);
