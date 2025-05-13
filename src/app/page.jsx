@@ -62,7 +62,7 @@ export default async function HomePage() {
     console.error("Error fetching or rendering homepage:", error.message, error.stack);
     return notFound(); // Return 404 page on error
   }
-  export function handleNavigation() {
+   function handleNavigation() {
       window.location.href = '/invoices';
     }
   <button onClick={handleNavigation}>
