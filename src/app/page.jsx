@@ -15,7 +15,9 @@ export default async function HomePage() {
   try {
     // Fetch the 'page' entry with slug '/'
     const page = await getPageFromSlug("/", 'page');
-
+    function handleNavigation() {
+      window.location.href = '/invoices';
+    }
     // Check if the page, its fields, or the sections array are missing
     if (!page || !page.fields || !page.fields.sections) {
       console.error("Error: Homepage ('/' page entry) not found, missing fields, or missing sections.", page);
@@ -50,9 +52,10 @@ export default async function HomePage() {
         })}
 
         {/* Add the button here, outside of the sections.map loop */}
-        <button onClick={() => window.location.href = '/invoices'}>
+        <button onClick={handleNavigation}>
           Go to Invoices
         </button>
+
       </div>
     );
   } catch (error) {
