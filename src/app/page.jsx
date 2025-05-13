@@ -50,6 +50,9 @@ export default async function HomePage() {
         })}
 
         {/* Add the button here, outside of the sections.map loop */}
+        <button onClick={() => window.location.href = '/invoices'}>
+          Go to Invoices
+        </button>
       </div>
     );
   } catch (error) {
