@@ -18,7 +18,9 @@ export default async function HomePage() {
   try {
     // Fetch the 'page' entry with slug '/'
     const page = await getPageFromSlug("/", 'page');
-     
+     function handleNavigation() {
+      window.location.href = '/invoices';
+    }
 
     // Check if the page, its fields, or the sections array are missing
     if (!page || !page.fields || !page.fields.sections) {
@@ -54,7 +56,9 @@ export default async function HomePage() {
         })}
 
         {/* Add the button here, outside of the sections.map loop */}
-        
+        <button onClick={handleNavigation}>
+          Invoice
+        </button>
 
       </div>
     );
@@ -62,11 +66,7 @@ export default async function HomePage() {
     console.error("Error fetching or rendering homepage:", error.message, error.stack);
     return notFound(); // Return 404 page on error
   }
-   function handleNavigation() {
-      window.location.href = '/invoices';
-    }
-  <button onClick={handleNavigation}>
-          Invoice
-        </button>
+   
+  
   
 }
