@@ -1,5 +1,6 @@
 // src/app/page.jsx
 import { notFound } from 'next/navigation';
+import { Button } from '../components/Button.jsx';
 import { Hero } from '../components/Hero.jsx'; // Verify path
 import { Stats } from '../components/Stats.jsx'; // Verify path
 import { getPageFromSlug } from '../utils/content.js'; // Verify path
@@ -7,7 +8,8 @@ import { getPageFromSlug } from '../utils/content.js'; // Verify path
 // Map Contentful Content Type IDs to React components
 const componentMap = {
   hero: Hero,
-  stats: Stats
+  stats: Stats,
+  button: Button
   // Add mappings for any other section types you might create
 };
 
