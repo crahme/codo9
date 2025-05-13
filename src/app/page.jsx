@@ -1,4 +1,5 @@
 // src/app/page.jsx
+'use client';
 import { notFound } from 'next/navigation';
 import { Button } from '../components/Button.jsx';
 import { Hero } from '../components/Hero.jsx'; // Verify path
