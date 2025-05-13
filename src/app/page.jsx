@@ -52,7 +52,7 @@ export default async function HomePage() {
         })}
 
         {/* Add the button here, outside of the sections.map loop */}
-        <button onClick={handleNavigation}>
+        <button onClick=handleNavigation()>
           Go to Invoices
         </button>
 
