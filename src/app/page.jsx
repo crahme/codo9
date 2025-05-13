@@ -32,11 +32,8 @@ export default async function HomePage() {
              console.warn("Skipping rendering of invalid section object:", section);
              return null;
           }
-          <button onClick={() => window.location.href = '/invoices'}>
-            Invoice
-          </button>
-  </div>
-        // Get the Content Type ID of the linked section entry
+
+          // Get the Content Type ID of the linked section entry
           const contentTypeId = section.sys.contentType.sys.id;
           const Component = componentMap[contentTypeId];
 
@@ -51,6 +48,11 @@ export default async function HomePage() {
           // Use the section's unique sys.id as the key
           return <Component key={section.sys.id} {...section.fields} id={section.sys.id} />;
         })}
+
+        {/* Add the button here, outside of the sections.map loop */}
+        <button onClick={() => window.location.href = '/invoices'}>
+          Invoice
+        </button>
       </div>
     );
   } catch (error) {
