@@ -1,5 +1,6 @@
 // src/app/page.jsx
 'use client';
+import { useNavigate } from 'react-router-dom'
 import { notFound } from 'next/navigation';
 import { Hero } from '../components/Hero.jsx'; // Verify path
 import { Stats } from '../components/Stats.jsx'; // Verify path
@@ -17,7 +18,12 @@ export default async function HomePage() {
     // Fetch the 'page' entry with slug '/'
     const page = await getPageFromSlug("/", 'page');
      function handleNavigation() {
-      window.location.href = '/invoices/';
+       const navigate = useNavigate();
+
+    return () => {
+        // Redirect to /invoices/ using React Router
+        navigate('/invoices/');
+    };
     }
 
     // Check if the page, its fields, or the sections array are missing
