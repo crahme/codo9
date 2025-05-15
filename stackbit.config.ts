@@ -56,7 +56,7 @@ siteMap: ({ documents }) => {
       // Exclude unsupported models like 'hero', 'stats', 'button', etc.
       const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(documents.modelName);
       if (!isSupportedModel) {
-        console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
+        console.warn(`[siteMap] Unsupported model type: ${documents.modelName}, skipping.`);
         return false;
       }
       return true;
@@ -75,17 +75,17 @@ siteMap: ({ documents }) => {
       let urlPath: string | null = null;
       let isHomePage = false;
 
-      if (document.modelName === 'page') {
+      if (documents.modelName === 'page') {
         // Handle home page and other pages
         urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug}`;
         isHomePage = slug === '/';
-      } else if (document.modelName === 'invoice') {
+      } else if (documents.modelName === 'invoice') {
         // Handle invoices
         urlPath = `/invoices/${slug.startsWith('/') ? slug.substring(1) : slug}`;
       }
 
       if (!urlPath) {
-        console.warn(`[siteMap] Could not determine urlPath for document: ${entryId}, Type: ${document.modelName}`);
+        console.warn(`[siteMap] Could not determine urlPath for document: ${entryId}, Type: ${documents.modelName}`);
         return null;
       }
 
