@@ -14,13 +14,13 @@ const componentMap = {
 };
 
 export default async function HomePage() {
-  try {
+  try{
     // Fetch the 'page' entry with slug '/'
     const page = await getPageFromSlug("/", 'page');
      function handleNavigation() {
       window.location.href = '/invoices/';
-    };
     }
+    
 
     // Check if the page, its fields, or the sections array are missing
     if (!page || !page.fields || !page.fields.sections) {
