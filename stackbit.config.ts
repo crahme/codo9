@@ -57,7 +57,6 @@ siteMap: ({ documents }) => {
       const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(doc.modelName);
       if (!isSupportedModel) {
         console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
-        console.warn("Debug document:", document);
         return false;
       }
       return true;
@@ -70,6 +69,7 @@ siteMap: ({ documents }) => {
       // Log detailed warnings for missing fields
       if (!entryId || typeof slug === 'undefined') {
         console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
+        console.warn("Debug document:", document);
         return null;
       }
 
