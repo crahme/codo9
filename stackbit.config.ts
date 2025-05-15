@@ -57,6 +57,7 @@ siteMap: ({ documents }) => {
       const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(doc.modelName);
       if (!isSupportedModel) {
         console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
+        console.warn("Debug document:", document);
         return false;
       }
       return true;
