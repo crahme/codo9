@@ -54,7 +54,7 @@ siteMap: ({ documents }) => {
   const entries = documents
     .filter((doc) => {
       // Exclude unsupported models like 'hero', 'stats', 'button', etc.
-      const isSupportedModel = ['page', 'invoice'].includes(doc.modelName);
+      const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(doc.modelName);
       if (!isSupportedModel) {
         console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
         return false;
