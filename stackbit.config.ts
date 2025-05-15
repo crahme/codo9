@@ -52,23 +52,23 @@ siteMap: ({ documents }) => {
   }
 
   const entries = documents
-    .filter((doc) => {
+    .filter((docucments) => {
       // Exclude unsupported models like 'hero', 'stats', 'button', etc.
-      const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(doc.modelName);
+      const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(documents.modelName);
       if (!isSupportedModel) {
-        console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
+        console.warn(`[siteMap] Unsupported model type: ${documents.modelName}, skipping.`);
         return false;
       }
       return true;
     })
-    .map((document) => {
-      const slug = document.fields?.slug as string | undefined;
-      const title = document.fields?.title as string | undefined;
-      const entryId = document.sys?.id;
+    .map((documents) => {
+      const slug = documents.fields?.slug as string | undefined;
+      const title = documents.fields?.title as string | undefined;
+      const entryId = documents.sys?.id;
 
       // Log detailed warnings for missing fields
       if (!entryId || typeof slug === 'undefined') {
-        console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
+        console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${documents.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
         return null;
       }
 
