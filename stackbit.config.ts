@@ -52,34 +52,34 @@ siteMap: ({ documents }) => {
   }
 
   const entries = documents
-    .filter((docucments) => {
+    .filter((doc) => {
       // Exclude unsupported models like 'hero', 'stats', 'button', etc.
-      const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(documents.modelName);
+      const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(doc.modelName);
       if (!isSupportedModel) {
-        console.warn(`[siteMap] Unsupported model type: ${documents.modelName}, skipping.`);
+        console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
         return false;
       }
       return true;
     })
-    .map((documents) => {
-      const slug = documents.fields?.slug as string | undefined;
-      const title = documents.fields?.title as string | undefined;
-      const entryId = documents.sys?.id;
+    .map((document) => {
+      const slug = document.fields?.slug as string | undefined;
+      const title = document.fields?.title as string | undefined;
+      const entryId = document.sys?.id;
 
       // Log detailed warnings for missing fields
       if (!entryId || typeof slug === 'undefined') {
-        console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${documents.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
+        console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
         return null;
       }
 
       let urlPath: string | null = null;
       let isHomePage = false;
 
-      if (documents.modelName === 'page') {
+      if (document.modelName === 'page') {
         // Handle home page and other pages
         urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug}`;
         isHomePage = slug === '/';
-      } else if (documents.modelName === 'invoice') {
+      } else if (document.modelName === 'invoice') {
         // Handle invoices
         urlPath = `/invoices/${slug.startsWith('/') ? slug.substring(1) : slug}`;
       }
