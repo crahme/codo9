@@ -53,7 +53,7 @@ siteMap: ({ documents }) => {
     const entries: SiteMapEntry[] = documents
 
       .filter((doc) => {
-        const isSupportedModel = ['page', 'invoice', 'hero', 'stats', 'statItem', 'button'].includes(doc.modelName);
+        const isSupportedModel = ['page', 'invoice', 'hero', 'stats', 'statItem', 'button', 'invoiceSection'].includes(doc.modelName);
         if (!isSupportedModel) {
           console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
         }
