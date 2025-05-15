@@ -1,3 +1,50 @@
+// stackbit.config.ts
+// Changed component models from type: "object" to type: "data"
+
+import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
+import { ContentfulContentSource } from '@stackbit/cms-contentful';
+
+if (!process.env.CONTENTFUL_SPACE_ID) {
+  throw new Error('Stackbit requires CONTENTFUL_SPACE_ID environment variable');
+}
+if (!process.env.CONTENTFUL_PREVIEW_TOKEN) {
+  throw new Error('Stackbit requires CONTENTFUL_PREVIEW_TOKEN environment variable');
+}
+if (!process.env.CONTENTFUL_MANAGEMENT_TOKEN) {
+  console.warn('Stackbit: CONTENTFUL_MANAGEMENT_TOKEN environment variable is missing, editor functionality might be limited.');
+}
+
+export default defineStackbitConfig({
+  stackbitVersion: '~0.6.0',
+  nodeVersion: '20.18.1',
+
+  contentSources: [
+    new ContentfulContentSource({
+      spaceId: process.env.CONTENTFUL_SPACE_ID!,
+      environment: process.env.CONTENTFUL_ENVIRONMENT || 'master',
+      previewToken: process.env.CONTENTFUL_PREVIEW_TOKEN!,
+      accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN!,
+    }),
+  ],
+
+  modelExtensions: [
+    {
+      name: 'page',        // Page type
+      type: 'page',
+      urlPath: '/{slug}',
+    },
+    {
+      name: 'invoice',     // Page type
+      type: 'page',
+      urlPath: '/invoices/{slug}',
+    },
+    // --- Change type to "data" for component/data models ---
+    { name: 'hero', type: 'data' },
+    { name: 'stats', type: 'data' },
+    { name: 'button', type: 'data' },
+    { name: 'statItem', type: 'data' },
+    // --- End change ---
+  ],
 siteMap: ({ documents }) => {
     if (!Array.isArray(documents)) {
         console.warn('[siteMap] Received non-array or undefined documents. Returning empty map.');
@@ -48,3 +95,5 @@ siteMap: ({ documents }) => {
       console.log(`[siteMap] Generated ${entries.length} site map entries.`);
       return entries;
   },
+});
+  
