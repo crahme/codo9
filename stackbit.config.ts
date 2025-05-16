@@ -51,55 +51,72 @@ siteMap: ({ documents }) => {
     return [];
   }
 
+  // Helper: Find a page slug from a data document, recursively
+  function getReferencedPageSlug(document, allDocs, visited = new Set()) {
+    if (!document || visited.has(document.sys?.id)) return undefined;
+    visited.add(document.sys?.id);
+
+    // If this doc is a page, return its slug
+    if (document.modelName === 'page') {
+      return document.fields?.slug;
+    }
+
+    // If this doc is data, look for a reference field (customize this field name as needed)
+    const ref = document.fields?.reference || document.fields?.parent || document.fields?.page;
+    if (!ref) return undefined;
+
+    // ref could be a single object or an array (adjust as needed)
+    const refs = Array.isArray(ref) ? ref : [ref];
+    for (const r of refs) {
+      // Find the referenced doc. Adjust the lookup if your refs are just IDs.
+      const referencedDoc = allDocs.find(d => d.sys?.id === (r?.sys?.id || r));
+      if (referencedDoc) {
+        const slug = getReferencedPageSlug(referencedDoc, allDocs, visited);
+        if (slug) return slug;
+      }
+    }
+    return undefined;
+  }
+
   const entries = documents
-    .filter((doc) => {
-      // Exclude unsupported models like 'hero', 'stats', 'button', etc.
-      const isSupportedModel = ['page', 'invoice', 'stats', 'hero', 'statItem','invoiceSection', 'button'].includes(doc.modelName);
-      if (!isSupportedModel) {
-        console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
-        return false;
-      }
-      return true;
-    })
     .map((document) => {
-      const slug = document.fields?.slug as string | undefined;
-      const title = document.fields?.title as string | undefined;
       const entryId = document.sys?.id;
-
-      // Log detailed warnings for missing fields
-      if (!entryId || typeof slug === 'undefined') {
-        console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
-        console.warn("Debug document:", document);
-        console.warn("Slug:", document.fields.slug);
-        console.warn("Sections:", document.fields.sections);
-        return null;
-      }
-
-      let urlPath: string | null = null;
-      let isHomePage = false;
+      let slug;
+      let isDataModel = false;
 
       if (document.modelName === 'page') {
-        // Handle home page and other pages
-        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug}`;
-        isHomePage = slug === '/';
-      } else if (document.modelName === 'invoice') {
-        // Handle invoices
-        urlPath = `/invoices/${slug.startsWith('/') ? slug.substring(1) : slug}`;
+        slug = document.fields?.slug;
+      } else if (document.modelName === 'data') {
+        slug = getReferencedPageSlug(document, documents);
+        isDataModel = true;
+      } else {
+        // Not a page or data model
+        return null;
       }
 
-      if (!urlPath) {
-        console.warn(`[siteMap] Could not determine urlPath for document: ${entryId}, Type: ${documents.modelName}`);
+      if (!entryId || typeof slug === 'undefined') {
+        console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
         return null;
+      }
+
+      let urlPath = null;
+      let isHomePage = false;
+
+      if (!isDataModel) {
+        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug}`;
+        isHomePage = slug === '/';
+      } else if (slug) {
+        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug}`;
       }
 
       return {
         stableId: entryId,
-        label: title || slug,
-        urlPath: urlPath,
-        isHomePage: isHomePage,
+        label: document.fields?.title || slug,
+        urlPath,
+        isHomePage,
       };
     })
-    .filter((entry): entry is SiteMapEntry => entry !== null);
+    .filter((entry) => entry !== null);
 
   console.log(`[siteMap] Generated ${entries.length} site map entries.`);
   return entries;
