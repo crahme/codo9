@@ -94,7 +94,7 @@ siteMap: ({ documents }) => {
         return null;
       }
 
-      if (!entryId || typeof slug === 'undefined') {
+      if (!entryId || typeof slug !== 'string') {
         console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
         console.warn("Debug document:", document);
         console.warn("Slug:", document.fields.slug);
