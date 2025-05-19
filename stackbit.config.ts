@@ -55,7 +55,7 @@ siteMap: ({ documents }) => {
   // Helper: Find a page slug from a data document, recursively
   function getReferencedPageSlug(document, allDocs, visited = new Set()) {
     if (!document || visited.has(document.sys?.id)) return undefined;
-    visited.add(document.sys?.id);
+    visited.add(document.sys?.id?.value);
 
     // If this doc is a page, return its slug
     if (document.modelName === 'page') {
@@ -70,7 +70,7 @@ siteMap: ({ documents }) => {
     const refs = Array.isArray(ref) ? ref : [ref];
     for (const r of refs) {
       // Find the referenced doc. Adjust the lookup if your refs are just IDs.
-      const referencedDoc = allDocs.find(d => d.sys?.id === (r?.sys?.id || r));
+      const referencedDoc = allDocs.find(d => d.sys?.id?.value === (r?.sys?.id?.value || r));
       if (referencedDoc) {
         const slug = getReferencedPageSlug(referencedDoc, allDocs, visited);
         if (slug) return slug?.value;
@@ -81,7 +81,7 @@ siteMap: ({ documents }) => {
 
   const entries = documents
     .map((document) => {
-      const entryId = document.sys?.id;
+      const entryId = document.sys?.id?.value;
       let slug;
       let isDataModel = false;
 
