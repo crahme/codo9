@@ -59,7 +59,7 @@ siteMap: ({ documents }) => {
 
     // If this doc is a page, return its slug
     if (document.modelName === 'page') {
-      return document.fields?.slug;
+      return document.fields?.slug.value;
     }
 
     // If this doc is data, look for a reference field (customize this field name as needed)
@@ -86,7 +86,7 @@ siteMap: ({ documents }) => {
       let isDataModel = false;
 
       if (document.modelName === 'page') {
-        slug = document.fields?.slug;
+        slug = document.fields?.slug.value;
       } else if (document.modelName === 'data') {
         slug = getReferencedPageSlug(document, documents);
         isDataModel = true;
@@ -115,7 +115,7 @@ siteMap: ({ documents }) => {
 
       return {
         stableId: entryId,
-        label: document.fields?.title || slug,
+        label: document.fields?.title || slug.value,
         urlPath,
         isHomePage,
       };
