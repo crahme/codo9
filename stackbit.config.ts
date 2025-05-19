@@ -54,7 +54,8 @@ siteMap: ({ documents }) => {
 
   // Helper: Find a page slug from a data document, recursively
   function getReferencedPageSlug(document, allDocs, visited = new Set()) {
-    if (!document || !visited.has(document.sys?.id?.value)) return undefined;
+    
+    if (!document || visited.has(document.sys?.id?.value)) return undefined;
     visited.add(document.sys?.id?.value);
 
     // If this doc is a page, return its slug
