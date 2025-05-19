@@ -34,7 +34,7 @@ export default defineStackbitConfig({
       urlPath: '/{slug}',
     },
     {
-      name: 'invoice',     // Page type
+      name: 'page',     // Page type
       type: 'page',
       urlPath: '/invoices/{slug}',
     },
