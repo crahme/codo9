@@ -1,6 +1,70 @@
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+[images]
+remote_images = [
+  "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+]
 
 [build]
-  publish = ".next"
-  command = "npm run build"
+publish = ".next"
+command = "npm run build"
+base = "/"
+
+[build.environment]
+  SENTRY_LOG_LEVEL = "debug"            # Set Sentry logging level
+  NEXT_TELEMETRY_DISABLED = "1"         # Disable Next.js telemetry
+  NODE_OPTIONS = "--max_old_space_size=4096" # Increase Node.js memory
+  NODE_VERSION = "20.18.1"              # Corrected typo from NODE_VERSIOB
+
+[[plugins]]
+package = "@netlify/plugin-nextjs"
+
+[[plugins]]
+package = "@netlify/plugin-lighthouse"
+
+# [[plugins]]
+# package = "@sentry/netlify-build-plugin"
+
+#   [plugins.inputs]
+#   sentryOrg = "cloud-perry"              # Replace with your Sentry organization slug
+#   sentryProject = "codo9"                # Replace with your Sentry project slug
+#   sentryAuthToken = "${SENTRY_AUTH_TOKEN}" # Ensure this is configured in Netlify environment variables
+#   sentryRelease = "${COMMIT_REF}"        # Use commit hash for release version
+#   sourceMapPath = ".next"                # Path to source maps
+#   sourceMapUrlPrefix = "~/_next"         # Matches Next.js directory structure
+#   releasePrefix = "release-"             # Optional prefix for releases
+#   skipSetCommits = false                 # Enable commit tracking for Sentry
+#   skipSourceMaps = false                 # Ensure source maps are uploaded
+#   deployPreviews = false                 # Disable previews for deploys
+#   sentryRepository = "crahme/codo9"      # Your GitHub repository
+
+[[redirects]]
+from = "/_next/image"
+to = "/.netlify/images?url=:url&w=:width&q=:quality"
+status = 200
+
+  [redirects.query]
+  url = ":url"
+  w = ":width"
+  q = ":quality"
+
+[[redirects]]
+from = "/_ipx/*"
+to = "/.netlify/images?url=:url&w=:width&q=:quality"
+status = 200
+
+  [redirects.query]
+  url = ":url"
+  w = ":width"
+  q = ":quality"
+
+[context]
+  [context.production]
+    [context.production.images]
+    remote_images = [
+      "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+    ]
+
+  [context.main]
+    [context.main.images]
+    remote_images = [
+      "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+    ]

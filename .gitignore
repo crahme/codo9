@@ -26,12 +26,14 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-.env*
-!.env.example
+.env
 
 # vercel
 .vercel
 
 .stackbit/cache
+<<<<<<< HEAD
 # Sentry Config File
 .env.sentry-build-plugin
+=======
+>>>>>>> eecd1e5025cf0c8c16939bad842a8898876096c0
