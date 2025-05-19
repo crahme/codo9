@@ -33,8 +33,7 @@ export default defineStackbitConfig({
       type: 'page',
       urlPath: '/{slug}',
     },
-    {
-      name: 'invoice',     // Page type
+    {     // Page type
       type: 'page',
       urlPath: '/invoices/{slug}',
     },
@@ -43,55 +42,88 @@ export default defineStackbitConfig({
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
     { name: 'statItem', type: 'data' },
+    { name: 'invoice', type: 'data'},
+    { name: 'invoiceSection', type: 'data'}
     // --- End change ---
   ],
+siteMap: ({ documents }) => {
+  if (!Array.isArray(documents)) {
+    console.warn('[siteMap] Received invalid documents array. Returning empty map.');
+    return [];
+  }
 
-  // Keep siteMap function for now
-  siteMap: ({ documents }) => {
-    if (!Array.isArray(documents)) {
-        console.warn('[siteMap] Received non-array or undefined documents. Returning empty map.');
-        return [];
+  // Helper: Find a page slug from a data document, recursively
+  function getReferencedPageSlug(document, allDocs, visited = new Set()) {
+    if (!document || !visited.has(document.sys?.id?.value)) return undefined;
+    visited.add(document.sys?.id?.value);
+
+    // If this doc is a page, return its slug
+    if (document.modelName === 'page') {
+      return document.fields?.slug?.value;
     }
-    const entries: SiteMapEntry[] = documents
 
-      .filter((doc) =>{
+    // If this doc is data, look for a reference field (customize this field name as needed)
+    const ref = document.fields?.reference || document.fields?.parent || document.fields?.page;
+    if (!ref) return undefined;
 
-        const isSupportedModel = ['page', 'invoice'].includes(doc.modelName);
-        if (!isSupportedModel) {
-          console.warn(`[siteMap] Unsupported model type: ${doc.modelName}, skipping.`);
-        }
-        return isSupportedModel;
-      })
-      .map((document) => {
-        const slug = document.fields?.slug as string | undefined;
-        const title = document.fields?.title as string | undefined;
-        const entryId = document.sys?.id;
-        if (!entryId || typeof slug === 'undefined') {
-            console.warn(`[siteMap] Document ${entryId || 'UNKNOWN'} missing ID or slug, skipping:`, document?.modelName);
-            return null;
-        }
-        let urlPath: string | null = null;
-        let isHomePage = false;
-        if (document.modelName === 'page') {
-          urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug}`;
-          isHomePage = slug === '/';
-        } else if (document.modelName === 'invoice') {
-          urlPath = `/invoices/${slug.startsWith('/') ? slug.substring(1) : slug}`;
-        }
-        if (!urlPath) {
-            console.warn(`[siteMap] Could not determine urlPath for document:`, entryId, document.modelName);
-            return null;
-        }
-        return {
-          stableId: entryId,
-          label: title || slug,
-          urlPath: urlPath,
-          isHomePage: isHomePage,
-        };
-      })
-      .filter((entry): entry is SiteMapEntry => entry !== null);
-      console.log(`[siteMap] Generated ${entries.length} site map entries.`);
-      return entries;
-  },
+    // ref could be a single object or an array (adjust as needed)
+    const refs = Array.isArray(ref) ? ref : [ref];
+    for (const r of refs) {
+      // Find the referenced doc. Adjust the lookup if your refs are just IDs.
+      const referencedDoc = allDocs.find(d => d.sys?.id?.value === (r?.sys?.id?.value || r));
+      if (referencedDoc) {
+        const slug = getReferencedPageSlug(referencedDoc, allDocs, visited);
+        if (slug) return slug?.value;
+      }
+    }
+    return undefined;
+  }
 
+  const entries = documents
+    .map((document) => {
+      const entryId = document.sys?.id?.value;
+      let slug;
+      let isDataModel = false;
+
+      if (document.modelName === 'page') {
+        slug = document.fields?.slug?.value;
+      } else if (document.modelName === 'data') {
+        slug = getReferencedPageSlug(document, documents);
+        isDataModel = true;
+      } else {
+        // Not a page or data model
+        return null;
+      }
+
+      if (!entryId || typeof slug !== 'string') {
+        console.warn(`[siteMap] Skipping document: Missing ID or slug. Type: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug || 'UNKNOWN'}`);
+        console.warn("Debug document:", document);
+        console.warn("Slug:", document.fields.slug);
+        console.warn("Sections:", document.fields.sections);
+        return null;
+      }
+
+      let urlPath = null;
+      let isHomePage = false;
+
+      if (!isDataModel) {
+        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug?.value}`;
+        isHomePage = slug === '/';
+      } else if (slug) {
+        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug?.value}`;
+      }
+
+      return {
+        stableId: entryId,
+        label: document.fields?.title || slug?.value,
+        urlPath,
+        isHomePage,
+      };
+    })
+    .filter((entry) => entry !== null);
+
+  console.log(`[siteMap] Generated ${entries.length} site map entries.`);
+  return entries;
+},
 });
+  
