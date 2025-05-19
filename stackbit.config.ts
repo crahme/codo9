@@ -59,7 +59,7 @@ siteMap: ({ documents }) => {
 
     // If this doc is a page, return its slug
     if (document.modelName === 'page') {
-      return document.fields?.slug.value;
+      return document.fields?.slug?.value;
     }
 
     // If this doc is data, look for a reference field (customize this field name as needed)
@@ -73,7 +73,7 @@ siteMap: ({ documents }) => {
       const referencedDoc = allDocs.find(d => d.sys?.id === (r?.sys?.id || r));
       if (referencedDoc) {
         const slug = getReferencedPageSlug(referencedDoc, allDocs, visited);
-        if (slug) return slug;
+        if (slug) return slug?.value;
       }
     }
     return undefined;
@@ -86,7 +86,7 @@ siteMap: ({ documents }) => {
       let isDataModel = false;
 
       if (document.modelName === 'page') {
-        slug = document.fields?.slug.value;
+        slug = document.fields?.slug?.value;
       } else if (document.modelName === 'data') {
         slug = getReferencedPageSlug(document, documents);
         isDataModel = true;
@@ -107,15 +107,15 @@ siteMap: ({ documents }) => {
       let isHomePage = false;
 
       if (!isDataModel) {
-        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug}`;
+        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug?.value}`;
         isHomePage = slug === '/';
       } else if (slug) {
-        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug}`;
+        urlPath = slug === '/' ? '/' : `/${slug.startsWith('/') ? slug.substring(1) : slug?.value}`;
       }
 
       return {
         stableId: entryId,
-        label: document.fields?.title || slug.value,
+        label: document.fields?.title || slug?.value,
         urlPath,
         isHomePage,
       };
