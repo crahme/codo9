@@ -33,8 +33,7 @@ export default defineStackbitConfig({
       type: 'page',
       urlPath: '/{slug}',
     },
-    {
-      name: 'page',     // Page type
+    {     // Page type
       type: 'page',
       urlPath: '/invoices/{slug}',
     },
@@ -43,6 +42,8 @@ export default defineStackbitConfig({
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
     { name: 'statItem', type: 'data' },
+    { name: 'invoice', type: 'data'},
+    { name: 'invoiceSection', type: 'data'}
     // --- End change ---
   ],
 siteMap: ({ documents }) => {
