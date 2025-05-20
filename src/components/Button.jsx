@@ -6,33 +6,15 @@ const themeClassMap = {
 };
 
 export const Button = (props) => {
-  const { onClick, url, label, id, theme } = props;
-
-  if (onClick) {
-    // Render a <button> element when onClick is provided
-    return (
-      <button
-        onClick={onClick}
-        className={`py-3 px-6 inline-block border-2 font-semibold rounded-md transition-all duration-300 ${
-          themeClassMap[theme] ?? themeClassMap['default']
-        }`}
-        data-sb-object-id={id}
-      >
-        <span data-sb-field-path="label">{label}</span>
-      </button>
-    );
-  }
-
-  // Default behavior: Render a <Link> element for navigation
   return (
     <Link
-      href={url}
+      href={props.url}
       className={`py-3 px-6 inline-block border-2 font-semibold rounded-md transition-all duration-300 ${
-        themeClassMap[theme] ?? themeClassMap['default']
+        themeClassMap[props.theme] ?? themeClassMap['default']
       }`}
-      data-sb-object-id={id}
+      data-sb-object-id={props.id}
     >
-      <span data-sb-field-path="label">{label}</span>
+      <span data-sb-field-path="label">{props.label}</span>
     </Link>
   );
 };
