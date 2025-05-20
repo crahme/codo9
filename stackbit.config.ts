@@ -42,7 +42,6 @@ export default defineStackbitConfig({
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
     { name: 'statItem', type: 'data' },
-    { name: 'invoice', type: 'data'},
     { name: 'invoiceSection', type: 'data'}
     // --- End change ---
   ],
