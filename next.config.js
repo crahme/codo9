@@ -10,12 +10,12 @@ const nextConfig = {
   },
   productionBrowserSourceMaps: true,
   env: {
-    CONTENTFUL_ACCESS_TOKEN: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
-    CONTENTFUL_ACCESS_TOKEN: process.env.CONTENTFUL_DELIVERY_TOKEN,
+    CONTENTFUL_MANAGEMENT_TOKEN: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+    CONTENTFUL_DELIVERY_TOKEN: process.env.CONTENTFUL_DELIVERY_TOKEN,
     CONTENTFUL_SPACE_ID: process.env.CONTENTFUL_SPACE_ID,
   },
-  webpack: (config, { isServer }) => {
-    config.devtool = 'source-map';
+  webpack: (config, { isServer, dev }) => {
+    config.devtool = dev ? 'eval-source-map' : 'source-map';
     if (!isServer) {
       config.module.rules.push({
         test: /\.js$/,
@@ -25,8 +25,9 @@ const nextConfig = {
     }
     return config;
   },
-  // cacheHandler: require('./cache-handler.js'), // Temporarily disabled due to build error
-  // cacheMaxMemorySize: 0, // Temporarily disabled
+  // Uncomment and fix these lines if needed:
+  // cacheHandler: require('./cache-handler.js'),
+  // cacheMaxMemorySize: 0,
 };
 
 module.exports = nextConfig;

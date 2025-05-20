@@ -1,4 +1,6 @@
-// src/app/page.jsx
+//src/app/page.jsx
+'use client';
+import { useNavigate } from 'react-router-dom';
 import { notFound } from 'next/navigation';
 import { Hero } from '../components/Hero.jsx'; // Verify path
 import { Stats } from '../components/Stats.jsx'; // Verify path
@@ -12,9 +14,13 @@ const componentMap = {
 };
 
 export default async function HomePage() {
-  try {
+  try{
     // Fetch the 'page' entry with slug '/'
     const page = await getPageFromSlug("/", 'page');
+     function handleNavigation() {
+      window.location.href = '/invoices/';
+    }
+    
 
     // Check if the page, its fields, or the sections array are missing
     if (!page || !page.fields || !page.fields.sections) {
@@ -32,7 +38,7 @@ export default async function HomePage() {
              console.warn("Skipping rendering of invalid section object:", section);
              return null;
           }
-
+        
           // Get the Content Type ID of the linked section entry
           const contentTypeId = section.sys.contentType.sys.id;
           const Component = componentMap[contentTypeId];
@@ -48,10 +54,19 @@ export default async function HomePage() {
           // Use the section's unique sys.id as the key
           return <Component key={section.sys.id} {...section.fields} id={section.sys.id} />;
         })}
+
+        {/* Add the button here, outside of the sections.map loop */}
+        <button onClick={handleNavigation}>
+          Invoice
+        </button>
+
       </div>
     );
   } catch (error) {
     console.error("Error fetching or rendering homepage:", error.message, error.stack);
     return notFound(); // Return 404 page on error
   }
+   
+  
+  
 }

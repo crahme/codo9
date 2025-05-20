@@ -127,6 +127,10 @@ app.get('/dashboard', async (req, res) => {
     };
 
     for (const [mpUuid, consumption] of Object.entries(consumptionData)) {
+      app.get('/invoices', async (req, res) => {
+      const allInvoices = await Invoice.findAll({ order: [['created_at', 'DESC']] });
+      res.render('invoices.html', { invoices: allInvoices });
+});
       formattedConsumption.labels.push(`Device ${mpUuid.substring(0, 8)}`);
       formattedConsumption.values.push(parseFloat(consumption));
     }
