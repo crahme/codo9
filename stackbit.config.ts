@@ -1,28 +1,61 @@
 // stackbit.config.ts
-// ... (imports and env checks remain the same) ...
+// Further refined siteMap for netlify dev log structure
+
+import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
+import { ContentfulContentSource } from '@stackbit/cms-contentful';
+
+// --- Environment Variable Checks --- (Keep as before)
+if (!process.env.CONTENTFUL_SPACE_ID) { /* ... */ }
+if (!process.env.CONTENTFUL_PREVIEW_TOKEN) { /* ... */ }
+if (!process.env.CONTENTFUL_MANAGEMENT_TOKEN) { /* ... */ }
+// --- End Environment Variable Checks ---
 
 export default defineStackbitConfig({
-  // ... (stackbitVersion, nodeVersion, contentSources, modelExtensions remain the same) ...
+  stackbitVersion: '~0.6.0',
+  nodeVersion: '20.18.1',
+
+  contentSources: [
+    new ContentfulContentSource({
+      spaceId: process.env.CONTENTFUL_SPACE_ID!,
+      environment: process.env.CONTENTFUL_ENVIRONMENT || 'master',
+      previewToken: process.env.CONTENTFUL_PREVIEW_TOKEN!,
+      accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN!,
+    }),
+  ],
+
+  modelExtensions: [
+    { name: 'page', type: 'page', urlPath: '/{slug}' },
+    { name: 'invoice', type: 'page', urlPath: '/invoices/{slug}' },
+    { name: 'hero', type: 'data' },
+    { name: 'stats', type: 'data' },
+    { name: 'button', type: 'data' },
+    { name: 'statItem', type: 'data' },
+    // { name: 'invoiceSection', type: 'data' }, // Only if it exists
+  ],
 
   siteMap: ({ documents }) => {
     if (!Array.isArray(documents)) {
-      console.warn('[siteMap] Received invalid documents array. Returning empty map.');
+      console.warn('[siteMap] Documents data is not an array. Returning empty map.');
       return [];
     }
 
     const entries: SiteMapEntry[] = documents
       .filter((doc) => {
-        return doc && doc.modelName && (doc.modelName === 'page' || doc.modelName === 'invoice');
+        // Filter for documents that are page models and have the necessary fields structure
+        const isPageModel = doc && doc.modelName && (doc.modelName === 'page' || doc.modelName === 'invoice');
+        const hasFields = doc && typeof doc.fields === 'object' && doc.fields !== null;
+        return isPageModel && hasFields;
       })
       .map((document) => {
-        // Corrected access based on your debug document logs
-        const entryId = document.id as string | undefined;
-        const slugValue = document.fields?.slug?.value as string | undefined; // Access the 'value'
-        const titleValue = document.fields?.title?.value as string | undefined; // Access the 'value'
+        const entryId = document.id as string | undefined; // Top-level ID from debug log
+        const slugField = document.fields.slug; // slug is an object with a 'value'
+        const slug = slugField?.value as string | undefined;
 
-        // Use slugValue for all checks and assignments
-        if (!entryId || typeof slugValue === 'undefined') {
-          console.warn(`[siteMap] Document missing ID or slug, skipping: Model ${document.modelName}, ID ${entryId}, Slug ${slugValue}`);
+        const titleField = document.fields.title; // title might also be an object with 'value'
+        const title = (typeof titleField === 'object' && titleField !== null && 'value' in titleField ? titleField.value : titleField) as string | undefined;
+
+        if (!entryId || typeof slug !== 'string') { // Ensure slug is a string
+          console.warn(`[siteMap] Skipping document: Missing ID or valid slug string. Model: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug}`);
           return null;
         }
 
@@ -30,11 +63,11 @@ export default defineStackbitConfig({
         let isHomePage = false;
 
         if (document.modelName === 'page') {
-          const cleanSlug = slugValue.startsWith('/') && slugValue.length > 1 ? slugValue.substring(1) : slugValue;
+          const cleanSlug = slug.startsWith('/') && slug.length > 1 ? slug.substring(1) : slug;
           urlPath = cleanSlug === '/' ? '/' : `/${cleanSlug}`;
           isHomePage = cleanSlug === '/';
         } else if (document.modelName === 'invoice') {
-          const cleanSlug = slugValue.startsWith('/') ? slugValue.substring(1) : slugValue;
+          const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
           urlPath = `/invoices/${cleanSlug}`;
         }
 
@@ -45,7 +78,7 @@ export default defineStackbitConfig({
 
         return {
           stableId: entryId,
-          label: titleValue || slugValue, // Use titleValue if available
+          label: title || slug,
           urlPath: urlPath,
           isHomePage: isHomePage,
         };
@@ -53,8 +86,10 @@ export default defineStackbitConfig({
       .filter((entry): entry is SiteMapEntry => entry !== null);
 
     console.log(`[siteMap] Generated ${entries.length} site map entries.`);
-    if (entries.length === 0) {
-      console.warn("[siteMap] No entries generated. Check document structure and filtering. Sample docs:", documents.slice(0,3).map(d => ({id: d.id, model: d.modelName, slug: d.fields?.slug, title: d.fields?.title})) );
+    if (entries.length > 0) {
+        console.log('[siteMap] First generated entry:', entries[0]);
+    } else {
+        console.warn("[siteMap] No entries generated. Check filtering and data structure assumptions. Sample input documents (first 3):", documents.slice(0,3).map(d => ({ id: d.id, modelName: d.modelName, fields: d.fields })));
     }
     return entries;
   },
