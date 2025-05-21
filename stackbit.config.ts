@@ -25,12 +25,13 @@ export default defineStackbitConfig({
 
   modelExtensions: [
     { name: 'page', type: 'page', urlPath: '/{slug}' },
-    { name: 'invoice', type: 'page', urlPath: '/invoices/{slug}' },
+    { name: 'Invoice', type: 'page', urlPath: '/invoices/{slug}' },
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
     { name: 'statItem', type: 'data' },
-    // { name: 'invoiceSection', type: 'data' }, // Only if it exists
+    { name: 'invoice', type:'date'},
+    { name: 'invoiceSection', type: 'data' }, // Only if it exists
   ],
 
   siteMap: ({ documents }) => {
