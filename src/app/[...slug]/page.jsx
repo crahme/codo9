@@ -1,38 +1,33 @@
 import { notFound } from 'next/navigation';
-import { getPageFromSlug } from '../../utils/content.js'; // Ensure this import is correct
-import { Hero } from '../../components/Hero.jsx'; // Verify the path
-import { Stats } from '../../components/Stats.jsx'; // Verify the path
-// Import other section components if needed
+import { getPageFromSlug } from '../../utils/content.js';
+import { Hero } from '../../components/Hero.jsx';
+import { Stats } from '../../components/Stats.jsx';
 
-// Map Contentful Content Type IDs to React components
 const componentMap = {
   hero: Hero,
   stats: Stats,
-  // Add mappings for any other section types
 };
 
-export default async function ComposablePage({ params }) {
+export default async function ComposablePage(paramsPromise) {
+  const { params } = await paramsPromise; // <-- Fix: await params
   try {
     // Validate and construct the slug
-    const slugArray = params?.slug; // Access slug array safely
+    const slugArray = params?.slug;
     if (!Array.isArray(slugArray) || slugArray.length === 0) {
       console.warn("Invalid slug parameter received:", params);
       return notFound();
     }
 
-    const pageSlug = slugArray.join('/'); // Join the slug array into a string
-    const fullPath = `/${pageSlug}`; // Construct the full path (e.g., /about)
+    const pageSlug = slugArray.join('/');
+    const fullPath = `/${pageSlug}`;
 
-    // Fetch the page data using the slug
     const page = await getPageFromSlug(fullPath);
 
-    // Ensure the page is valid
     if (!page || !page.sys?.contentType?.sys?.id) {
       console.log(`No content found for slug: ${fullPath}`);
       return notFound();
     }
 
-    // --- Handle 'page' type entries ---
     if (page.sys.contentType.sys.id === 'page') {
       if (!page.fields || !page.fields.sections) {
         console.warn(`Page entry found for slug '${fullPath}', but missing fields or sections.`, page);
@@ -41,7 +36,6 @@ export default async function ComposablePage({ params }) {
 
       return (
         <div data-sb-object-id={page.sys.id}>
-          {/* Render sections */}
           {Array.isArray(page.fields.sections) &&
             page.fields.sections.map((section) => {
               if (
@@ -55,15 +49,12 @@ export default async function ComposablePage({ params }) {
                 console.warn("Skipping rendering of invalid section object:", section);
                 return null;
               }
-
               const contentTypeId = section.sys.contentType.sys.id;
               const Component = componentMap[contentTypeId];
               if (!Component) {
                 console.warn(`No component mapped for section content type: ${contentTypeId}`);
-                // Optionally, render a placeholder
                 return <div key={section.sys.id}>Component for {contentTypeId} not found</div>;
               }
-
               return (
                 <Component key={section.sys.id} {...section.fields} id={section.sys.id} />
               );
@@ -72,23 +63,19 @@ export default async function ComposablePage({ params }) {
       );
     }
 
-    // --- Handle 'invoice' type entries ---
     if (page.sys.contentType.sys.id === 'invoice') {
       if (!page.fields) {
         console.warn(`Invoice entry found for slug '${fullPath}', but missing fields.`, page);
         return notFound();
       }
-
       return (
         <div data-sb-object-id={page.sys.id}>
           <h1>Invoice: {page.fields.slug || 'Unknown'}</h1>
           <p>Invoice-specific rendering needs to be implemented here.</p>
-          {/* Add invoice-specific fields and rendering */}
         </div>
       );
     }
 
-    // --- Handle unsupported content types ---
     console.warn(`Unsupported content type for slug '${fullPath}':`, page.sys.contentType.sys.id);
     return notFound();
 
