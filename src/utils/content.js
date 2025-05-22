@@ -52,6 +52,10 @@ export async function getPageFromSlug(slug, contentType) {
         if (slug.startsWith('/invoices/')) {
             typeToQuery = CONTENTFUL_INVOICE_TYPE_ID;
             slugForQuery = slug.substring('/invoices/'.length);
+            // Remove trailing '/index.htm' or '/index.html' if present
+            if (slugForQuery.endsWith('/index.htm') || slugForQuery.endsWith('/index.html')) {
+               slugForQuery = slugForQuery.replace(/\/index\.html?$/, '');
+             }
             if (!slugForQuery) {
                  console.warn(`[content.js] Invalid invoice slug detected: ${slug}`);
                  return null;
