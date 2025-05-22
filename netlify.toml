@@ -55,6 +55,11 @@ status = 200
   url = ":url"
   w = ":width"
   q = ":quality"
+[[redirects]]
+from = "/invoices/"
+to = "/invoices/fac-2024-001/"
+status = 301
+force = true
 
 [context]
   [context.production]
