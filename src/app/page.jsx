@@ -18,7 +18,9 @@ export default async function HomePage() {
     // Fetch the 'page' entry with slug '/'
     const page = await getPageFromSlug("/", 'page');
      function handleNavigation() {
-      window.location.href = '/invoices/';
+      function handleNavigation() {
+       window.location.href = '/invoices/fac-2024-001/';
+}
     }
     
 
