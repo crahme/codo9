@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice fac-2024-001</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    .invoice { border: 1px solid #ccc; padding: 1em; max-width: 900px; }
+    .loading { color: #888; }
+    .error { color: red; }
+    table.invoice-table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    table.invoice-table th, table.invoice-table td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+    .invoice-summary, .invoice-footer { margin-top: 1em; }
+    .invoice-heading { margin-bottom: 1em; }
+    .invoice-metadata, .invoice-charger-info { margin-bottom: 1em; }
+    .invoice-meta-block { margin-bottom: 0.5em; }
+  </style>
+</head>
+<body>
+  <!--
+    Invoice Type Definition (as used in InvoiceSection.jsx):
+
+    {
+      invoiceNumber: string (required),
+      invoiceDate: string (required, ISO date),
+      clientName: string,
+      clientEmail: string,
+      chargerSerial: string,
+      chargerModel: string,
+      billingStart: string (ISO date),
+      billingEnd: string (ISO date),
+      lineItems: [
+        {
+          sys: { id: string (required) },
+          date: string,
+          startTime: string,
+          endTime: string,
+          energyConsumed: string,
+          unitPrice: string,
+          amount: string,
+        }
+      ] (required),
+      totalAmount: string,
+      environmentalImpact: string,
+      paymentDueDate: string (ISO date),
+      lateFeeRate: number,
+    }
+  -->
+
+  <h1>Invoice fac-2024-001</h1>
+  <div id="content" class="invoice">
+    <div class="loading">Loading invoice...</div>
+  </div>
+  <script>
+    // --- CONFIGURATION ---
+    const spaceId = process.env.CONTENTFUL_SPACE_ID;
+    const accessToken = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
+    const slug = '/invoice/fac-2024-001/';
+
+    // --- RENDER LOGIC (matching InvoiceSection.jsx props) ---
+    function renderInvoice(invoice) {
+      // Defensive: fallbacks for possible undefined
+      const lineItems = invoice.lineItems || [];
+      return `
+        <h2 class="invoice-heading">${invoice.title || 'Invoice'}</h2>
+        <div class="invoice-metadata">
+          <div class="invoice-meta-block">
+            <p><strong>Invoice #:</strong> ${invoice.invoiceNumber || ''}</p>
+            <p><strong>Date:</strong> ${invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : ''}</p>
+          </div>
+          <div class="invoice-meta-block">
+            <p><strong>Client:</strong> ${invoice.clientName || ''}</p>
+            <p><strong>Email:</strong> ${invoice.clientEmail || ''}</p>
+          </div>
+        </div>
+        <div class="invoice-charger-info">
+          <p><strong>Charger Serial #:</strong> ${invoice.chargerSerial || ''}</p>
+          <p><strong>Charger Model:</strong> ${invoice.chargerModel || ''}</p>
+          <p><strong>Billing Period:</strong> ${
+            invoice.billingStart && invoice.billingEnd
+              ? new Date(invoice.billingStart).toLocaleDateString() + ' — ' + new Date(invoice.billingEnd).toLocaleDateString()
+              : ''
+          }</p>
+        </div>
+        <table class="invoice-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Energy (kWh)</th>
+              <th>Unit Price</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItems.map(item => `
+              <tr>
+                <td>${item.date ? new Date(item.date).toLocaleDateString() : ''}</td>
+                <td>${item.startTime || ''}</td>
+                <td>${item.endTime || ''}</td>
+                <td>${item.energyConsumed || ''}</td>
+                <td>${item.unitPrice || ''}</td>
+                <td>${item.amount || ''}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="invoice-summary">
+          <p><strong>Total Amount:</strong> ${invoice.totalAmount || ''}</p>
+          ${invoice.environmentalImpact ? `<p class="invoice-environmental">${invoice.environmentalImpact}</p>` : ''}
+        </div>
+        ${
+          invoice.paymentDueDate
+            ? `<div class="invoice-footer">
+                <p><strong>Payment Due By:</strong> ${new Date(invoice.paymentDueDate).toLocaleDateString()}</p>
+                ${invoice.lateFeeRate ? `<p><em>Late fee:</em> ${invoice.lateFeeRate}% per month</p>` : ''}
+              </div>`
+            : ''
+        }
+      `;
+    }
+
+    // --- FETCH & DISPLAY INVOICE ---
+    fetch(`https://cdn.contentful.com/spaces/${spaceId}/environments/master/entries?access_token=${accessToken}&fields.slug=${encodeURIComponent(slug)}&content_type=invoice`)
+      .then(res => res.json())
+      .then(data => {
+        const contentDiv = document.getElementById('content');
+        if (data.items && data.items.length > 0) {
+          // Adapt Contentful fields to expected invoice structure if needed
+          const entry = data.items[0];
+          const fields = entry.fields;
+          // If 'lineItems' is a reference, you may need to resolve it from includes.Entry
+          // Here, we assume all fields are in .fields
+          contentDiv.innerHTML = renderInvoice({
+            ...fields,
+            lineItems: fields.lineItems || []
+          });
+        } else {
+          contentDiv.innerHTML = '<div class="error">Invoice not found.</div>';
+        }
+      })
+      .catch(err => {
+        document.getElementById('content').innerHTML = `<div class="error">Error loading invoice: ${err.message}</div>`;
+      });
+  </script>
+</body>
+</html>

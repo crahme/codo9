@@ -24,16 +24,10 @@ export default defineStackbitConfig({
   ],
 
   modelExtensions: [
-    {
-      name: 'page',        // Page type
-      type: 'page',
-      urlPath: '/{slug}',
-    },
-    { name : 'invoice' ,   // Page type
-      type: 'page',
-      urlPath: '/invoice/{slug}',
-    },
-    // --- Change type to "data" for component/data models ---
+
+     { name: 'page', type: 'page', urlPath: '/{slug}' },
+    { name: 'invoice', type: 'page', urlPath: '/invoice/{slug}' },
+
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
