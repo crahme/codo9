@@ -56,8 +56,8 @@ status = 200
   w = ":width"
   q = ":quality"
 [[redirects]]
-from = "/invoices/"
-to = "/invoices/fac-2024-001/"
+from = "/invoice/"
+to = "/invoice/fac-2024-001/"
 status = 301
 force = true
 
