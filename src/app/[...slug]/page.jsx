@@ -8,8 +8,7 @@ const componentMap = {
   stats: Stats,
 };
 
-export default async function ComposablePage(paramsPromise) {
-  const { params } = await paramsPromise; // <-- Fix: await params
+export default async function ComposablePage({ params }) { // <-- FIXED
   try {
     // Validate and construct the slug
     const slugArray = params?.slug;
@@ -18,7 +17,9 @@ export default async function ComposablePage(paramsPromise) {
       return notFound();
     }
 
-    const pageSlug = slugArray.join('/');
+    // Normalize slug: remove trailing /index.html or /index.htm
+    let pageSlug = slugArray.join('/');
+    pageSlug = pageSlug.replace(/\/index\.html?$/i, ''); // <-- FIXED
     const fullPath = `/${pageSlug}`;
 
     const page = await getPageFromSlug(fullPath);
