@@ -25,8 +25,8 @@
     "stackbit": "^0.0.0"
   },
   "devDependencies": {
-    "@netlify/plugin-lighthouse": "^3.0.0",
-    "@netlify/plugin-nextjs": "^5.9.3",
+    "@netlify/plugin-lighthouse": "^6.0.1",
+    "@netlify/plugin-nextjs": "^5.11.2",
     "@sentry/cli": "^2.40.0",
     "@sentry/netlify-build-plugin": "^1.1.1",
     "@sentry/nextjs": "^8.50.0",
