@@ -130,7 +130,6 @@ export default function InvoiceSection({ heading, invoice, theme }) {
           )}
         </div>
       )}
-@@ -79,27 +124,28 @@
   heading: PropTypes.string,
   theme: PropTypes.string,
   invoice: PropTypes.shape({
