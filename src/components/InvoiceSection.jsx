@@ -1,5 +1,6 @@
-import PropTypes from 'prop-types';
-import VisualEditorComponent from '../../VisualEditorComponent'; // Adjust path if needed
+import React from 'react'
+import PropTypes from 'prop-types'
+import VisualEditorComponent from '../../VisualEditorComponent';
 
 export default function InvoiceSection({ heading, invoice, theme }) {
   // Defensive: fallback for id
@@ -7,11 +8,11 @@ export default function InvoiceSection({ heading, invoice, theme }) {
   return (
     <section className={`invoice-section ${theme}`}>      
       {/* Section Heading */}
-      {heading && <h2 className="invoice-heading">{heading}</h2>}
-
       {/* Invoice Header Info */}
       <div className="invoice-metadata">
         <div className="invoice-meta-block">
+          <p><strong>Invoice #:</strong> {invoice.invoiceNumber}</p>
+          <p><strong>Date:</strong> {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
           <p>
             <strong>Invoice #:</strong>{' '}
             <VisualEditorComponent contentId={entryId} fieldName="invoiceNumber" />
@@ -22,6 +23,8 @@ export default function InvoiceSection({ heading, invoice, theme }) {
           </p>
         </div>
         <div className="invoice-meta-block">
+          <p><strong>Client:</strong> {invoice.clientName}</p>
+          <p><strong>Email:</strong> {invoice.clientEmail}</p>
           <p>
             <strong>Client:</strong>{' '}
             <VisualEditorComponent contentId={entryId} fieldName="clientName" />
@@ -33,8 +36,13 @@ export default function InvoiceSection({ heading, invoice, theme }) {
         </div>
       </div>
 
+      </div>
+
       {/* Charger & Billing Period Info */}
       <div className="invoice-charger-info">
+        <p><strong>Charger Serial #:</strong> {invoice.chargerSerial}</p>
+        <p><strong>Charger Model:</strong> {invoice.chargerModel}</p>
+        <p><strong>Billing Period:</strong> {new Date(invoice.billingStart).toLocaleDateString()} — {new Date(invoice.billingEnd).toLocaleDateString()}</p>
         <p>
           <strong>Charger Serial #:</strong>{' '}
           <VisualEditorComponent contentId={entryId} fieldName="chargerSerial" />
@@ -51,20 +59,18 @@ export default function InvoiceSection({ heading, invoice, theme }) {
       </div>
 
       {/* Line Items Table */}
-      <table className="invoice-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Start Time</th>
-            <th>End Time</th>
-            <th>Energy (kWh)</th>
-            <th>Unit Price</th>
-            <th>Amount</th>
           </tr>
         </thead>
         <tbody>
+          {invoice.lineItems.map(item => (
           {Array.isArray(invoice.lineItems) && invoice.lineItems.map(item => (
             <tr key={item.sys.id}>
+              <td>{new Date(item.date).toLocaleDateString()}</td>
+              <td>{item.startTime}</td>
+              <td>{item.endTime}</td>
+              <td>{item.energyConsumed}</td>
+              <td>{item.unitPrice}</td>
+              <td>{item.amount}</td>
               <td>
                 <VisualEditorComponent contentId={item.sys.id} fieldName="date" />
               </td>
@@ -90,11 +96,13 @@ export default function InvoiceSection({ heading, invoice, theme }) {
 
       {/* Totals & Environmental Impact */}
       <div className="invoice-summary">
+        <p><strong>Total Amount:</strong> {invoice.totalAmount}</p>
         <p>
           <strong>Total Amount:</strong>{' '}
           <VisualEditorComponent contentId={entryId} fieldName="totalAmount" />
         </p>
         {invoice.environmentalImpact && (
+          <p className="invoice-environmental">{invoice.environmentalImpact}</p>
           <p className="invoice-environmental">
             <VisualEditorComponent contentId={entryId} fieldName="environmentalImpact" />
           </p>
@@ -104,11 +112,13 @@ export default function InvoiceSection({ heading, invoice, theme }) {
       {/* Payment Terms */}
       {invoice.paymentDueDate && (
         <div className="invoice-footer">
+          <p><strong>Payment Due By:</strong> {new Date(invoice.paymentDueDate).toLocaleDateString()}</p>
           <p>
             <strong>Payment Due By:</strong>{' '}
             <VisualEditorComponent contentId={entryId} fieldName="paymentDueDate" />
           </p>
           {invoice.lateFeeRate && (
+            <p><em>Late fee:</em> {invoice.lateFeeRate}% per month</p>
             <p>
               <em>Late fee:</em>{' '}
               <VisualEditorComponent contentId={entryId} fieldName="lateFeeRate" />% per month
@@ -116,11 +126,7 @@ export default function InvoiceSection({ heading, invoice, theme }) {
           )}
         </div>
       )}
-    </section>
-  )
-}
-
-InvoiceSection.propTypes = {
+@@ -79,27 +124,28 @@
   heading: PropTypes.string,
   theme: PropTypes.string,
   invoice: PropTypes.shape({
@@ -149,4 +155,3 @@ InvoiceSection.propTypes = {
     paymentDueDate: PropTypes.string,
     lateFeeRate: PropTypes.number,
   }).isRequired,
-}
