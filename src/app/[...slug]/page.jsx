@@ -16,7 +16,6 @@ export default async function ComposablePage({ params }) { // <-- FIXED
       console.warn("Invalid slug parameter received:", params);
       return notFound();
     }
-    const page = await getPageFromSlug(fullPath);
     // Normalize slug: remove trailing /index.html or /index.htm
     let pageSlug = slugArray.join('/');
     pageSlug = pageSlug.replace(/\/index\.html?$/i, ''); // <-- FIXED
