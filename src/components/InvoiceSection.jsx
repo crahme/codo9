@@ -39,7 +39,7 @@ export default function InvoiceSection({ heading, invoice, theme }) {
       </div>
 
       {/* Charger & Billing Period Info */}
-      <div className="invoice-charger-info">
+        <div className="invoice-charger-info">
         <p><strong>Charger Serial #:</strong> {invoice.chargerSerial}</p>
         <p><strong>Charger Model:</strong> {invoice.chargerModel}</p>
         <p><strong>Billing Period:</strong> {new Date(invoice.billingStart).toLocaleDateString()} — {new Date(invoice.billingEnd).toLocaleDateString()}</p>
@@ -58,8 +58,9 @@ export default function InvoiceSection({ heading, invoice, theme }) {
         </p>
       </div>
 
+
       {/* Line Items Table */}
-          </tr>
+</tr>
         </thead>
         <tbody>
           {invoice.lineItems.map(item => (
@@ -90,6 +91,9 @@ export default function InvoiceSection({ heading, invoice, theme }) {
                 <VisualEditorComponent contentId={item.sys.id} fieldName="amount" />
               </td>
             </tr>
+          ))}
+        </tbody>
+      </table>
           ))}
         </tbody>
       </table>
