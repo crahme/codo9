@@ -35,8 +35,8 @@ export default function InvoiceSection({ heading, invoice, theme }) {
           </p>
         </div>
       </div>
-      </section>
-      </div>
+       </div>
+    </section>
 
       {/* Charger & Billing Period Info */}
         <div className="invoice-charger-info">
