@@ -1,6 +1,7 @@
 // src/components/InvoiceSection.js
 import React from 'react'
 import PropTypes from 'prop-types'
+import VisualEditorComponent from '../../VisualEditorComponent' // Adjust path if needed
 export default function InvoiceSection({ heading, invoice, theme }) {
   return (
     <section className={`invoice-section ${theme}`}>      
