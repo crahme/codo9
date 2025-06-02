@@ -23,6 +23,10 @@ const nextConfig = {
         use: ['source-map-loader'],
       });
     }
+     allowedDevOrigins: [
+    'https://devserver-preview--codo9.netlify.app',
+    // add any other allowed origins here
+  ]
     return config;
   },
   // Uncomment and fix these lines if needed:
