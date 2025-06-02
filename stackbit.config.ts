@@ -31,7 +31,6 @@ export default defineStackbitConfig({
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
-    { name: 'invoice', type: 'data'},
     { name: 'statItem', type: 'data' },
     { name: 'invoiceSection', type: 'data' }, // Only if it exists
   ],
