@@ -26,7 +26,7 @@ export default defineStackbitConfig({
   modelExtensions: [
 
      { name: 'page', type: 'page', urlPath: '/{slug}' },
-    { name:'invoice', type: 'page', urlPath: '/{slug}' },
+    { name:'invoice', type: 'page', urlPath: '/invoice/fac-2024-001/' },
 
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
