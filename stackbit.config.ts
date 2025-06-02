@@ -71,7 +71,7 @@ export default defineStackbitConfig({
           isHomePage = cleanSlug === '/';
         } else if (document.modelName === 'invoice') {
           const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
-          urlPath = `/invoices/${cleanSlug}`;
+          urlPath = `/invoice/${cleanSlug}`;
         }
 
         if (!urlPath) {
