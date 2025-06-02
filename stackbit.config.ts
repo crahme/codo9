@@ -26,11 +26,12 @@ export default defineStackbitConfig({
   modelExtensions: [
 
      { name: 'page', type: 'page', urlPath: '/{slug}' },
-    { name: 'invoice', type: 'page', urlPath: '/invoice/{slug}' },
+    { type: 'page', urlPath: '/invoice/{slug}' },
 
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
+    {name: 'invoice', type: 'data'}'
     { name: 'statItem', type: 'data' },
     { name: 'invoiceSection', type: 'data' }, // Only if it exists
   ],
