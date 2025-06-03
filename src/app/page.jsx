@@ -12,7 +12,7 @@ import { VisualEditorComponent } from './VisualEditorComponent.jsx';
 const componentMap = {
   hero: Hero,
   stats: Stats,
-  invoiceSection: InvoiceSection,Add commentMore actions
+  invoiceSection: InvoiceSection,
   invoice: Invoice,
   invoiceLineItem: InvoiceLineItem,
   // Add mappings for any other section types you might create
