@@ -4,18 +4,11 @@ import { notFound } from 'next/navigation';
 import { Hero } from '../components/Hero.jsx'; // Verify path
 import { Stats } from '../components/Stats.jsx'; // Verify path
 import { getPageFromSlug } from '../utils/content.js'; // Verify path
-import { InvoiceSection } from '../components/InvoiceSection.jsx';
-import { Invoice } from '../components/Invoice.jsx';
-import { InvoiceLineItem } from '../components/ InvoiceLineItem.jsx';
-import { VisualEditorComponent } from '../components/VisualEditorComponent.jsx';
 // Map Contentful Content Type IDs to React components
 const componentMap = {
   hero: Hero,
   stats: Stats,
-  invoiceSection: InvoiceSection,
-  invoice: Invoice,
-  invoiceLineItem: InvoiceLineItem,
-  visualEditorComponent: VisualEditorComponent,
+ 
   // Add mappings for any other section types you might create
 };
 
