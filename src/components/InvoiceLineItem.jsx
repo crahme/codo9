@@ -1,7 +1,7 @@
 // components/InvoiceLineItem.jsx
 import React from 'react';
 import PropTypes from 'prop-types';
-import VisualEditorComponent from '../VisualEditorComponent';
+import VisualEditorComponent from '../components/VisualEditorComponent.jsx';
 
 const InvoiceLineItem = ({ lineItem }) => {
   const formatTime = (dateTimeString) => {
