@@ -9,7 +9,7 @@ import {InvoiceSection} from '../components/InvoiceSection.jsx';
 // Map Contentful Content Type IDs to React components
 const componentMap = {
   hero: Hero,
-  stats: Stats
+  stats: Stats,
   invoiceSection: InvoiceSection,
   // Add mappings for any other section types you might create
 };
