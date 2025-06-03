@@ -5,7 +5,7 @@ import { Hero } from '../components/Hero.jsx'; // Verify path
 import { Stats } from '../components/Stats.jsx'; // Verify path
 import { getPageFromSlug } from '../utils/content.js'; // Verify path
 import { Invoice } from '../components/Invoice.jsx';
-import { InvoiceSection } from '../components/InvoiceSection.jsx';Add commentMore actions
+import { InvoiceSection } from '../components/InvoiceSection.jsx';
 import { InvoiceLineItem } from '../components/InvoiceLineItem.jsx';
 import { VisualEditorComponent } from '../components/VisualEditorComponent.jsx';
 const componentMap = {
@@ -13,7 +13,7 @@ const componentMap = {
   stats: Stats,
   invoice: Invoice,
   invoiceSection: InvoiceSection,
-  invoiceLineItem: InvoiceLineItem,Add commentMore actions
+  invoiceLineItem: InvoiceLineItem,
   visualEditorComponent: VisualEditorComponent,
   // Add mappings for any other section types you might create
 };
