@@ -6,7 +6,7 @@ import { Stats } from '../components/Stats.jsx'; // Verify path
 import { getPageFromSlug } from '../utils/content.js'; // Verify path
 import { InvoiceSecton } from '../components/InvoiceSecction.jsx';
 import { Invoice } from '../components/Invoice.jsx';
-import { InvoiceLineItem } from '../components/ InvoiceLineItem.jsx';Add commentMore actions
+import { InvoiceLineItem } from '../components/ InvoiceLineItem.jsx'
 import { VisualEditorComponent } from '../components/VisualEditorComponent.jsx';
 // Map Contentful Content Type IDs to React components
 const componentMap = {
