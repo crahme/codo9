@@ -1,7 +1,7 @@
 // components/Invoice.jsx
 import React from 'react';
 import PropTypes from 'prop-types';
-import VisualEditorComponent from '../VisualEditorComponent.jsx';
+import VisualEditorComponent from '../componenets/VisualEditorComponent.jsx';
 import InvoiceLineItem from './InvoiceLineItem'; // We'll create this next
 
 const Invoice = ({ invoice }) => {
