@@ -13,9 +13,9 @@ import { getPageFromSlug } from '../utils/content.js';
 const componentMap = {
   hero: Hero,
   stats: Stats,
-  invoice: Invoice,
-  invoiceSection: InvoiceSection,
-  invoiceLineItem: InvoiceLineItem,
+  Invoice: Invoice,
+  InvoiceSection: InvoiceSection,
+  InvoiceLineItem: InvoiceLineItem,
   visualEditorComponent: VisualEditorComponent,
   // Add mappings for any other section types you might create
 };
