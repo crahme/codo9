@@ -2,7 +2,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { VisualEditorComponent } from '../components/VisualEditorComponent.jsx';
-import { InvoiceLineItem } from './InvoiceLineItem';
+import { InvoiceLineItem } from '../components/InvoiceLineItem.jsx';
 
 export function Invoice({ invoice }) {
   const entryId = invoice.sys?.id;
