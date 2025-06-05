@@ -1,11 +1,58 @@
-import { useContentfulLiveUpdtaes } from '@contentful/live-preview'; // Import the Contentful live preview hook
+// src/components/VisualEditorComponent.jsx
+import React from 'react';
+import PropTypes from 'prop-types';
 
-// Component to render live preview content from Contentful
-function VisualEditorComponent({ contentId, fieldName }) {
-  console.log("[VisualEditorComponent] Rendering content with ID:", contentId, "and field name:", fieldName);
-  const content = useContentfulLivePreview(contentId, fieldName); // Use the Contentful live preview hook
-  console.log("[VisualEditorComponent] Live preview content:", content);
-  return <div>{content}</div>; // Render the content in a div element
+/**
+ * VisualEditorComponent
+ * Renders a value for live editing or display, falls back to a placeholder if not provided.
+ * 
+ * Props:
+ * - contentId: string (entry or object ID)
+ * - fieldName: string (field to edit/display)
+ * - displayValue: string or node (optional, value to display)
+ * - isRichText: boolean (optional, if true, dangerouslySetInnerHTML is used)
+ */
+export function VisualEditorComponent({
+  contentId,
+  fieldName,
+  displayValue = '',
+  isRichText = false,
+}) {
+  if (!contentId || !fieldName) {
+    return <span style={{ color: 'red' }}>Missing content reference</span>;
+  }
+
+  // If isRichText, render as rich HTML; otherwise, render as plain text.
+  if (isRichText) {
+    return (
+      <span
+        data-content-id={contentId}
+        data-field-name={fieldName}
+        dangerouslySetInnerHTML={{
+          __html: displayValue || ''
+        }}
+        style={{ background: '#f5f5fa', padding: '2px 4px' }}
+      />
+    );
+  }
+
+  return (
+    <span
+      data-content-id={contentId}
+      data-field-name={fieldName}
+      style={{ background: '#f5f5fa', padding: '2px 4px' }}
+    >
+      {displayValue || ''}
+    </span>
+  );
 }
 
-export default VisualEditorComponent; // Export the component as default
+VisualEditorComponent.propTypes = {
+  contentId: PropTypes.string.isRequired,
+  fieldName: PropTypes.string.isRequired,
+  displayValue: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.node,
+  ]),
+  isRichText: PropTypes.bool,
+};
