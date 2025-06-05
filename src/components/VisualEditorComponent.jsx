@@ -1,4 +1,4 @@
-import { useContentfulLivePreview } from '@contentful/live-preview'; // Import the Contentful live preview hook
+import { useContentfulLiveUpdtaes } from '@contentful/live-preview'; // Import the Contentful live preview hook
 
 // Component to render live preview content from Contentful
 function VisualEditorComponent({ contentId, fieldName }) {
