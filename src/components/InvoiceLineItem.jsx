@@ -1,48 +1,20 @@
-// components/InvoiceLineItem.jsx
+// src/components/InvoiceLineItem.jsx
 import React from 'react';
 import PropTypes from 'prop-types';
-import VisualEditorComponent from '../components/VisualEditorComponent.jsx';
 
-const InvoiceLineItem = ({ lineItem }) => {
-  const formatTime = (dateTimeString) => {
-    return new Date(dateTimeString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
+export function InvoiceLineItem({ lineItem }) {
+  if (!lineItem) return null;
   return (
     <tr>
-      <td>
-        <VisualEditorComponent 
-          contentId={lineItem.sys.id} 
-          fieldName="date" 
-          displayValue={new Date(lineItem.date).toLocaleDateString()}
-        />
-      </td>
-      <td>
-        <VisualEditorComponent 
-          contentId={lineItem.sys.id} 
-          fieldName="startTime" 
-          displayValue={formatTime(lineItem.startTime)}
-        />
-      </td>
-      <td>
-        <VisualEditorComponent 
-          contentId={lineItem.sys.id} 
-          fieldName="endTime" 
-          displayValue={formatTime(lineItem.endTime)}
-        />
-      </td>
-      <td>
-        <VisualEditorComponent contentId={lineItem.sys.id} fieldName="energyConsumed" />
-      </td>
-      <td>
-        <VisualEditorComponent contentId={lineItem.sys.id} fieldName="unitPrice" />
-      </td>
-      <td>
-        <VisualEditorComponent contentId={lineItem.sys.id} fieldName="amount" />
-      </td>
+      <td>{lineItem.date ? new Date(lineItem.date).toLocaleDateString() : ''}</td>
+      <td>{lineItem.startTime || ''}</td>
+      <td>{lineItem.endTime || ''}</td>
+      <td>{lineItem.energyConsumed || ''}</td>
+      <td>{lineItem.unitPrice || ''}</td>
+      <td>{lineItem.amount || ''}</td>
     </tr>
   );
-};
+}
 
 InvoiceLineItem.propTypes = {
   lineItem: PropTypes.shape({
@@ -57,5 +29,3 @@ InvoiceLineItem.propTypes = {
     amount: PropTypes.string.isRequired,
   }).isRequired,
 };
-
-export default InvoiceLineItem;
