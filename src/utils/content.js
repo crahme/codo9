@@ -49,9 +49,9 @@ export async function getPageFromSlug(slug, contentType) {
 
     // 1. Determine Content Type if not explicitly provided
     if (!typeToQuery) {
-        if (slug.startsWith('/invoices/')) {
+        if (slug.startsWith('/invoice/')) {
             typeToQuery = CONTENTFUL_INVOICE_TYPE_ID;
-            slugForQuery = slug.substring('/invoices/'.length);
+            slugForQuery = slug.substring('/invoice/'.length);
             // Remove trailing '/index.htm' or '/index.html' if present
             if (slugForQuery.endsWith('/index.htm') || slugForQuery.endsWith('/index.html')) {
                slugForQuery = slugForQuery.replace(/\/index\.html?$/, '');
@@ -73,7 +73,7 @@ export async function getPageFromSlug(slug, contentType) {
     } else {
          // Content Type was provided explicitly, adjust slug if needed
          if (typeToQuery === CONTENTFUL_INVOICE_TYPE_ID && slug.startsWith('/invoices/')) {
-            slugForQuery = slug.substring('/invoices/'.length);
+            slugForQuery = slug.substring('/invoice/'.length);
          } else if (typeToQuery === CONTENTFUL_PAGE_TYPE_ID) {
              if (slug === '/') {
                  slugForQuery = '/';
