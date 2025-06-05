@@ -72,7 +72,7 @@ export async function getPageFromSlug(slug, contentType) {
         }
     } else {
          // Content Type was provided explicitly, adjust slug if needed
-         if (typeToQuery === CONTENTFUL_INVOICE_TYPE_ID && slug.startsWith('/invoices/')) {
+         if (typeToQuery === CONTENTFUL_INVOICE_TYPE_ID && slug.startsWith('/invoice/')) {
             slugForQuery = slug.substring('/invoice/'.length);
          } else if (typeToQuery === CONTENTFUL_PAGE_TYPE_ID) {
              if (slug === '/') {
