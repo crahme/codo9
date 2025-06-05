@@ -1,12 +1,12 @@
-// components/Invoice.jsx
+// src/components/Invoice.jsx
 import React from 'react';
 import PropTypes from 'prop-types';
 import VisualEditorComponent from '../components/VisualEditorComponent.jsx';
-import InvoiceLineItem from './InvoiceLineItem'; // We'll create this next
+import InvoiceLineItem from './InvoiceLineItem';
 
-const Invoice = ({ invoice }) => {
+export function Invoice({ invoice }) {
   const entryId = invoice.sys?.id;
-  
+
   // Format date for display (optional)
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
@@ -132,7 +132,7 @@ const Invoice = ({ invoice }) => {
       )}
     </div>
   );
-};
+}
 
 Invoice.propTypes = {
   invoice: PropTypes.shape({
@@ -166,5 +166,3 @@ Invoice.propTypes = {
     ).isRequired,
   }).isRequired,
 };
-
-export default Invoice;
