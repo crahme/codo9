@@ -2,7 +2,7 @@
 // The config you add here will be used whenever a users loads a page in their browser.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
-import * as Sentry from "@sentry/nextjs";
+/*import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: "https://018a258fe683ef5f62b25f5741f88049@o4508613584355328.ingest.us.sentry.io/4508614047694848",
@@ -25,4 +25,4 @@ Sentry.init({
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,
-});
+});*/
