@@ -73,8 +73,19 @@ export default async function ComposablePage({ params }) { // <-- FIXED
       }
       return (
         <div data-sb-object-id={page.sys.id}>
-          <h1>Invoice: {page.fields.slug || 'Unknown'}</h1>
-          <p>Invoice-specific rendering needs to be implemented here.</p>
+          return (
+  <div data-sb-object-id={page.sys.id}>
+    <h1>Invoice: {page.fields.slug || 'Unknown'}</h1>
+    <ul>
+      {Array.isArray(page.fields.lineItems) && page.fields.lineItems.map(item => (
+        <li key={item.sys.id}>
+          {item.fields.description} - {item.fields.amount}
+        </li>
+      ))}
+    </ul>
+    <p>Total: {page.fields.total}</p>
+  </div>
+);
         </div>
       );
     }
