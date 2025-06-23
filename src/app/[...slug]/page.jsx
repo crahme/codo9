@@ -70,8 +70,7 @@ export default async function ComposablePage({ params }) { // <-- FIXED
         return notFound();
       }
       return (
-        return (
-  <div data-sb-object-id={page.sys.id}>
+    <div data-sb-object-id={page.sys.id}>
     <h1>Invoice: {page.fields.slug || 'Unknown'}</h1>
     <ul>
       {Array.isArray(page.fields.lineItems) && page.fields.lineItems.map(item => (
@@ -83,7 +82,7 @@ export default async function ComposablePage({ params }) { // <-- FIXED
     <p>Total: {page.fields.total}</p>
   </div>
 );
-      );
+
     }
 
     console.warn(`Unsupported content type for slug '${fullPath}':`, page.sys.contentType.sys.id);
