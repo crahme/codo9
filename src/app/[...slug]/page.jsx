@@ -74,20 +74,17 @@ export default async function ComposablePage({ params }) { // <-- FIXED
    <h1>Invoice: {page.fields.invoiceNumber || page.fields.slug || 'Unknown'}</h1>
 
     <section>
-      <h2>Syndicate</h2>
-      <p><strong>Name:</strong> {page.fields.syndicateName}</p>
+      <p><strong>Syndicate Name:</strong> {page.fields.syndicateName}</p>
       <p><strong>Address:</strong> {page.fields.address}</p>
       <p><strong>Contact:</strong> {page.fields.contact}</p>
     </section>
 
     <section>
-      <h2>Client</h2>
-      <p><strong>Name:</strong> {page.fields.clientName}</p>
+      <p><strong>Client Name:</strong> {page.fields.clientName}</p>
       <p><strong>Email:</strong> {page.fields.clientEmail}</p>
     </section>
 
     <section>
-      <h2>Invoice Details</h2>
       <p><strong>Invoice Number:</strong> {page.fields.invoiceNumber}</p>
       <p><strong>Invoice Date:</strong> {page.fields.invoiceDate ? new Date(page.fields.invoiceDate).toLocaleDateString() : ''}</p>
       <p><strong>Charger Serial Number:</strong> {page.fields.chargerSerialNumber}</p>
@@ -108,7 +105,6 @@ export default async function ComposablePage({ params }) { // <-- FIXED
     </section>
 
     <section>
-      <h2>Line Items</h2>
       {Array.isArray(page.fields.lineItems) && page.fields.lineItems.length > 0 ? (
         <table>
           <thead>
