@@ -109,7 +109,7 @@ export default async function ComposablePage({ params }) { // <-- FIXED
         <table>
           <thead>
             <tr>
-              <th width = "40%">Date</th>
+              <th width = "30%">Date</th>
               <th width = "40%">Start Time</th>
               <th width = "40%">End Time</th>
               <th width ="40%">Energy Consumed</th>
@@ -120,7 +120,7 @@ export default async function ComposablePage({ params }) { // <-- FIXED
           <tbody>
             {page.fields.lineItems.map(item => (
               <tr key={item.sys.id}>
-                <td align = "centter">{item.fields.date ? new Date(item.fields.date).toLocaleDateString() : ''}</td>
+                <td align = "center">{item.fields.date ? new Date(item.fields.date).toLocaleDateString() : ''}</td>
                 <td align = "center">{item.fields.startTime ? new Date(item.fields.startTime).toLocaleTimeString() : ''}</td>
                 <td align = "center">{item.fields.endTime ? new Date(item.fields.endTime).toLocaleTimeString() : ''}</td>
                 <td align = "center">{item.fields.energyConsumed}</td>
