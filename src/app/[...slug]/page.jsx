@@ -109,23 +109,23 @@ export default async function ComposablePage({ params }) { // <-- FIXED
         <table>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Start Time</th>
-              <th>End Time</th>
-              <th>Energy Consumed</th>
-              <th>Unit Price</th>
-              <th>Amount</th>
+              <th width = "70%">Date</th>
+              <th width = "70%">Start Time</th>
+              <th width = "70%">End Time</th>
+              <th width ="70%">Energy Consumed</th>
+              <th width = "70%">Unit Price</th>
+              <th width = "70%">Amount</th>
             </tr>
           </thead>
           <tbody>
             {page.fields.lineItems.map(item => (
               <tr key={item.sys.id}>
-                <td>{item.fields.date ? new Date(item.fields.date).toLocaleDateString() : ''}</td>
-                <td>{item.fields.startTime ? new Date(item.fields.startTime).toLocaleTimeString() : ''}</td>
-                <td>{item.fields.endTime ? new Date(item.fields.endTime).toLocaleTimeString() : ''}</td>
-                <td>{item.fields.energyConsumed}</td>
-                <td>{item.fields.unitPrice}</td>
-                <td>{item.fields.amount}</td>
+                <td align = "centter">{item.fields.date ? new Date(item.fields.date).toLocaleDateString() : ''}</td>
+                <td align = "center">{item.fields.startTime ? new Date(item.fields.startTime).toLocaleTimeString() : ''}</td>
+                <td align = "center">{item.fields.endTime ? new Date(item.fields.endTime).toLocaleTimeString() : ''}</td>
+                <td align = "center">{item.fields.energyConsumed}</td>
+                <td align = "center">{item.fields.unitPrice}</td>
+                <td align = "center">{item.fields.amount}</td>
               </tr>
             ))}
           </tbody>
