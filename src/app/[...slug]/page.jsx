@@ -11,14 +11,12 @@ const componentMap = {
 export default async function ComposablePage({ params }) { // <-- FIXED
   try {
     // Validate and construct the slug
-    if (typeof params?.then === 'function') {
-      params = await params;
-    }
     const slugArray = params?.slug;
     if (!Array.isArray(slugArray) || slugArray.length === 0) {
       console.warn("Invalid slug parameter received:", params);
       return notFound();
     }
+
     // Normalize slug: remove trailing /index.html or /index.htm
     let pageSlug = slugArray.join('/');
     pageSlug = pageSlug.replace(/\/index\.html?$/i, ''); // <-- FIXED
@@ -73,82 +71,17 @@ export default async function ComposablePage({ params }) { // <-- FIXED
       }
       return (
         <div data-sb-object-id={page.sys.id}>
-          return (
-  <div data-sb-object-id={page.sys.id}>
-   return (
-  <div data-sb-object-id={page.sys.id}>
-   return (
-  <div data-sb-object-id={page.sys.id}>
-    <h1>Invoice: {page.fields.invoiceNumber || page.fields.slug || 'Unknown'}</h1>
-
-    <section>
-      <h2>Syndicate</h2>
-      <p><strong>Name:</strong> {page.fields.syndicateName}</p>
-      <p><strong>Address:</strong> {page.fields.address}</p>
-      <p><strong>Contact:</strong> {page.fields.contact}</p>
-    </section>
-
-    <section>
-      <h2>Client</h2>
-      <p><strong>Name:</strong> {page.fields.clientName}</p>
-      <p><strong>Email:</strong> {page.fields.clientEmail}</p>
-    </section>
-
-    <section>
-      <h2>Invoice Details</h2>
-      <p><strong>Invoice Number:</strong> {page.fields.invoiceNumber}</p>
-      <p><strong>Invoice Date:</strong> {page.fields.invoiceDate ? new Date(page.fields.invoiceDate).toLocaleDateString() : ''}</p>
-      <p><strong>Charger Serial Number:</strong> {page.fields.chargerSerialNumber}</p>
-      <p><strong>Billing Period:</strong> 
-        {page.fields.billingPeriodStart ? new Date(page.fields.billingPeriodStart).toLocaleDateString() : ''} 
-        {' '}to{' '}
-        {page.fields.billingPeriodEnd ? new Date(page.fields.billingPeriodEnd).toLocaleDateString() : ''}
-      </p>
-      <p><strong>Payment Due Date:</strong> {page.fields.paymentDueDate ? new Date(page.fields.paymentDueDate).toLocaleDateString() : ''}</p>
-      <p><strong>Late Fee Rate:</strong> {page.fields.lateFeeRate}</p>
-      {page.fields.environmentalImpactText && (
-        <div>
-          <h3>Environmental Impact</h3>
-          {/* If this is Rich Text, you may need to use a Contentful rich text renderer */}
-          <div>{/* Render rich text here as plain text or using a renderer */}</div>
+          <h1>Invoice: {page.fields.slug || 'Unknown'}</h1>
+          <p>Invoice-specific rendering needs to be implemented here.</p>
         </div>
-      )}
-    </section>
+      );
+    }
 
-    <section>
-      <h2>Line Items</h2>
-      {Array.isArray(page.fields.lineItems) && page.fields.lineItems.length > 0 ? (
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Start Time</th>
-              <th>End Time</th>
-              <th>Energy Consumed</th>
-              <th>Unit Price</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {page.fields.lineItems.map(item => (
-              <tr key={item.sys.id}>
-                <td>{item.fields.date ? new Date(item.fields.date).toLocaleDateString() : ''}</td>
-                <td>{item.fields.startTime ? new Date(item.fields.startTime).toLocaleTimeString() : ''}</td>
-                <td>{item.fields.endTime ? new Date(item.fields.endTime).toLocaleTimeString() : ''}</td>
-                <td>{item.fields.energyConsumed}</td>
-                <td>{item.fields.unitPrice}</td>
-                <td>{item.fields.amount}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p>No line items.</p>
-      )}
-    </section>
+    console.warn(`Unsupported content type for slug '${fullPath}':`, page.sys.contentType.sys.id);
+    return notFound();
 
-    {/* If you have a total field, display it here */}
-    {page.fields.total && <p><strong>Total:</strong> {page.fields.total}</p>}
-  </div>
-);
-
+  } catch (error) {
+    console.error(`Error fetching or rendering page for slug '${params?.slug?.join('/')}':`, error);
+    return notFound();
+  }
+} // <-- This is the required extra bracket
