@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Initialize Cloud Ocean API client and Invoice Generator
-const cloudOcean = new CloudOceanAPI(process.env.CLOUD_OCEAN_API_KEY);
+const cloudOcean = new CloudOceanAPI(process.env.API_Key);
 const invoiceGenerator = new InvoiceGenerator(path.join(__dirname, 'static', 'invoices'));
 
 // Route to generate invoices
