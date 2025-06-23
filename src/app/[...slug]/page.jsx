@@ -151,5 +151,4 @@ export default async function ComposablePage({ params }) { // <-- FIXED
     {page.fields.total && <p><strong>Total:</strong> {page.fields.total}</p>}
   </div>
 );
-);
-}
+
