@@ -77,6 +77,8 @@ export default async function ComposablePage({ params }) { // <-- FIXED
   <div data-sb-object-id={page.sys.id}>
    return (
   <div data-sb-object-id={page.sys.id}>
+   return (
+  <div data-sb-object-id={page.sys.id}>
     <h1>Invoice: {page.fields.invoiceNumber || page.fields.slug || 'Unknown'}</h1>
 
     <section>
@@ -107,8 +109,8 @@ export default async function ComposablePage({ params }) { // <-- FIXED
       {page.fields.environmentalImpactText && (
         <div>
           <h3>Environmental Impact</h3>
-          {/* Render rich text here as plain text, or use a Rich Text renderer if you have one */}
-          <div>{/* TODO: Add rich text renderer if needed */}</div>
+          {/* If this is Rich Text, you may need to use a Contentful rich text renderer */}
+          <div>{/* Render rich text here as plain text or using a renderer */}</div>
         </div>
       )}
     </section>
@@ -150,15 +152,4 @@ export default async function ComposablePage({ params }) { // <-- FIXED
   </div>
 );
 );
-        </div>
-      );
-    }
-
-    console.warn(`Unsupported content type for slug '${fullPath}':`, page.sys.contentType.sys.id);
-    return notFound();
-
-  } catch (error) {
-    console.error(`Error fetching or rendering page for slug '${params?.slug?.join('/')}':`, error);
-    return notFound();
-  }
 }
