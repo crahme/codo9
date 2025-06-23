@@ -109,12 +109,12 @@ export default async function ComposablePage({ params }) { // <-- FIXED
         <table>
           <thead>
             <tr>
-              <th width = "70%">Date</th>
-              <th width = "70%">Start Time</th>
-              <th width = "70%">End Time</th>
-              <th width ="70%">Energy Consumed</th>
-              <th width = "70%">Unit Price</th>
-              <th width = "70%">Amount</th>
+              <th width = "40%">Date</th>
+              <th width = "40%">Start Time</th>
+              <th width = "40%">End Time</th>
+              <th width ="40%">Energy Consumed</th>
+              <th width = "40%">Unit Price</th>
+              <th width = "40%">Amount</th>
             </tr>
           </thead>
           <tbody>
