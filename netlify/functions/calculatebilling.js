@@ -14,7 +14,7 @@ const calculateBilling = (reads, cdr) => {
       endTime: read.endTime, // ISO string
       energyConsumed: energyConsumed.toFixed(2), // String, e.g. "2.34"
       unitPrice: unitPrice.toFixed(2),           // String, e.g. "0.12"
-      amount: amount.toFixed(2),                 // String, e.g. "0.28"
+      amount: (unitPrice*energyConsumed),                 // String, e.g. "0.28"
     }
   });
 
