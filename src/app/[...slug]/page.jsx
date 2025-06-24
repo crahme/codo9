@@ -125,7 +125,7 @@ export default async function ComposablePage({ params }) { // <-- FIXED
                 <td align = "center">{item.fields.endTime ? new Date(item.fields.endTime).toLocaleTimeString() : ''}</td>
                 <td align = "center">{item.fields.energyConsumed}</td>
                 <td align = "center">{item.fields.unitPrice}</td>
-                <td align = "center">{parseFloat(item.fields.Amount0}={item.fields.energyConsumed && item.fields.unitPrice
+                <td align = "center">{parseFloat(item.fields.Amount)}={item.fields.energyConsumed && item.fields.unitPrice
                  ? (parseFloat(item.fields.energyConsumed) * parseFloat(item.fields.unitPrice)).toFixed(2)
                   : ''}</td>
               </tr>
