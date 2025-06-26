@@ -1,6 +1,6 @@
 const axios = require('axios');
 const winston = require('winston');
-
+const apiKey = process.env.API_Key;
 const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
