@@ -12,6 +12,7 @@
   "dependencies": {
     "browserslist":"latest",
     "axios": "^1.7.9",
+    "winston":"3.10.0",
     "contentful": "^11.4.3",
     "contentful-cli": "^3.7.2",
     "curl": "^0.1.4",
