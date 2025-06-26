@@ -11,7 +11,7 @@ const app = express();
 
 // Configuration
 const SECRET_KEY = process.env.FLASK_SECRET_KEY || 'dev_secret_key';
-const DATABASE_URL = process.env.DATABASE_URL || 'sqlite:./invoices.db';
+const DATABASE_URL = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 
 // Set up Sequelize
 const sequelize = new Sequelize(DATABASE_URL, {
