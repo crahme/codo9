@@ -8,7 +8,12 @@ const logger = require('pino')({ level: 'info' });
 
 // Initialize Express app
 const app = express();
+const { Client } = require('pg');
+const client = new Client({ connectionString: process.env.DATABASE_URL });
 
+client.connect()
+  .then(() => console.log('Connected to Neon DB!'))
+  .catch(err => console.error('Connection error', err.stack));
 // Configuration
 const SECRET_KEY = process.env.FLASK_SECRET_KEY || 'dev_secret_key';
 const DATABASE_URL = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
