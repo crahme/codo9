@@ -5,7 +5,7 @@ remote_images = [
 
 [build]
 publish = ".next"
-command = "npm run build"
+command = "npm run build && npx update-browserslist-db@latest"
 base = "/"
 
 [build.environment]
@@ -20,21 +20,6 @@ package = "@netlify/plugin-nextjs"
 [[plugins]]
 package = "@netlify/plugin-lighthouse"
 
-# [[plugins]]
-# package = "@sentry/netlify-build-plugin"
-
-#   [plugins.inputs]
-#   sentryOrg = "cloud-perry"              # Replace with your Sentry organization slug
-#   sentryProject = "codo9"                # Replace with your Sentry project slug
-#   sentryAuthToken = "${SENTRY_AUTH_TOKEN}" # Ensure this is configured in Netlify environment variables
-#   sentryRelease = "${COMMIT_REF}"        # Use commit hash for release version
-#   sourceMapPath = ".next"                # Path to source maps
-#   sourceMapUrlPrefix = "~/_next"         # Matches Next.js directory structure
-#   releasePrefix = "release-"             # Optional prefix for releases
-#   skipSetCommits = false                 # Enable commit tracking for Sentry
-#   skipSourceMaps = false                 # Ensure source maps are uploaded
-#   deployPreviews = false                 # Disable previews for deploys
-#   sentryRepository = "crahme/codo9"      # Your GitHub repository
 
 [[redirects]]
 from = "/_next/image"
@@ -56,7 +41,7 @@ status = 200
   w = ":width"
   q = ":quality"
 [[redirects]]
-from = "/invoice/"
+from = "/invoice"
 to = "/invoice/fac-2024-001/"
 status = 301
 force = true

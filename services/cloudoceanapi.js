@@ -1,117 +1,137 @@
 const axios = require('axios');
-const moment = require('moment');
-const logger = require('pino')({ level: 'info' });
+const winston = require('winston');
+const apiKey = process.env.API_Key;
+const logger = winston.createLogger({
+  transports: [new winston.transports.Console()],
+});
 
 class CloudOceanAPI {
   constructor(apiKey) {
     this.baseUrl = 'https://api.develop.rve.ca';
+    if (!apiKey) throw new Error('API key is required');
+    let cleanApiKey = apiKey.startsWith('Bearer ') ? apiKey.replace('Bearer ', '') : apiKey;
+
     this.headers = {
-      Authorization: `Bearer ${apiKey}`,
+      'X-API-Key': cleanApiKey,
+      'Content-Type': 'application/json',
+    };
+    this.accessTokenHeaders = {
+      'Access-Token': `Bearer ${cleanApiKey}`,
+      'Content-Type': 'application/json',
+    };
+    this.bearerHeaders = {
+      'Authorization': `Bearer ${cleanApiKey}`,
       'Content-Type': 'application/json',
     };
   }
 
   async getMeasuringPointReads(moduleUuid, measuringPointUuid, startDate, endDate) {
-    /**
-     * Fetch measuring point reads data from Cloud Ocean platform
-     */
+    const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads`;
+    const params = {
+      start_date: startDate.toISOString().slice(0, 10),
+      end_date: endDate.toISOString().slice(0, 10),
+    };
+
+    logger.debug(`Fetching reads for measuring point ${measuringPointUuid}`);
+    logger.debug(`Request URL: ${endpoint}`);
+    logger.debug(`Request params: ${JSON.stringify(params)}`);
+
+    let response;
     try {
-      const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads`;
-      const params = {
-        start_date: moment(startDate).format('YYYY-MM-DD'),
-        end_date: moment(endDate).format('YYYY-MM-DD'),
-      };
-
-      logger.debug(`Fetching reads for measuring point ${measuringPointUuid}`);
-      const response = await axios.get(endpoint, { headers: this.headers, params });
-
+      // Try API Key header
+      response = await axios.get(endpoint, { headers: this.headers, params });
+      if (response.status === 401) {
+        logger.debug('API Key auth failed, trying Access-Token header...');
+        response = await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
+        if (response.status === 401) {
+          logger.debug('Access-Token auth failed, trying Bearer token...');
+          response = await axios.get(endpoint, { headers: this.bearerHeaders, params });
+        }
+      }
+      if (response.status === 401) {
+        logger.warn('Cloud Ocean API authentication failed - API key may lack required permissions for measuring point data access');
+        return [];
+      }
       const data = response.data?.data || [];
       logger.info(`Successfully fetched ${data.length} reads for measuring point ${measuringPointUuid}`);
       return data;
-
-    } catch (error) {
-      logger.error(`Error fetching measuring point reads: ${error.message}`);
-      throw error;
+    } catch (e) {
+      logger.error(`Error fetching measuring point reads: ${e.message}`);
+      return [];
     }
   }
 
   async getMeasuringPointCdr(moduleUuid, measuringPointUuid, startDate, endDate) {
-    /**
-     * Fetch measuring point CDR (Charge Detail Record) from Cloud Ocean platform
-     */
+    const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/cdr`;
+    const params = {
+      start_date: startDate.toISOString().slice(0, 10),
+      end_date: endDate.toISOString().slice(0, 10),
+    };
+
+    logger.debug(`Fetching CDR for measuring point ${measuringPointUuid}`);
+
+    let response;
     try {
-      const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/cdr`;
-      const params = {
-        start_date: moment(startDate).format('YYYY-MM-DD'),
-        end_date: moment(endDate).format('YYYY-MM-DD'),
-      };
-
-      logger.debug(`Fetching CDR for measuring point ${measuringPointUuid}`);
-      const response = await axios.get(endpoint, { headers: this.headers, params });
-
+      // Try API Key header
+      response = await axios.get(endpoint, { headers: this.headers, params });
+      if (response.status === 401) {
+        logger.debug('API Key auth failed for CDR, trying Access-Token header...');
+        response = await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
+        if (response.status === 401) {
+          logger.debug('Access-Token auth failed for CDR, trying Bearer token...');
+          response = await axios.get(endpoint, { headers: this.bearerHeaders, params });
+        }
+      }
+      if (response.status === 401) {
+        logger.warn('Cloud Ocean API authentication failed for CDR - API key may lack required permissions');
+        return [];
+      }
       const data = response.data?.data || [];
       logger.info(`Successfully fetched ${data.length} CDR records for measuring point ${measuringPointUuid}`);
       return data;
-
-    } catch (error) {
-      logger.error(`Error fetching measuring point CDR: ${error.message}`);
-      throw error;
+    } catch (e) {
+      logger.error(`Error fetching measuring point CDR: ${e.message}`);
+      return [];
     }
   }
 
   async getAllMeasuringPointsData(moduleUuid, measuringPointUuids, startDate, endDate) {
-    /**
-     * Fetch both reads and CDR data for multiple measuring points
-     * Returns a dictionary with measuring point UUIDs as keys and their data as values
-     */
     const data = {};
     for (const mpUuid of measuringPointUuids) {
       try {
         logger.info(`Fetching data for measuring point: ${mpUuid}`);
         const reads = await this.getMeasuringPointReads(moduleUuid, mpUuid, startDate, endDate);
         const cdr = await this.getMeasuringPointCdr(moduleUuid, mpUuid, startDate, endDate);
-
-        data[mpUuid] = {
-          reads,
-          cdr,
-        };
-
+        data[mpUuid] = { reads, cdr };
         logger.info(`Successfully fetched data for measuring point: ${mpUuid}`);
         logger.debug(`Read count: ${reads.length}, CDR count: ${cdr.length}`);
-
-      } catch (error) {
-        logger.error(`Failed to fetch data for measuring point ${mpUuid}: ${error.message}`);
-        data[mpUuid] = { reads: [], cdr: [], error: error.message };
+      } catch (e) {
+        logger.error(`Failed to fetch data for measuring point ${mpUuid}: ${e.message}`);
+        data[mpUuid] = { reads: [], cdr: [], error: e.message };
       }
     }
     return data;
   }
 
   async getModuleConsumption(moduleUuid, measuringPointUuids, startDate, endDate) {
-    /**
-     * Calculate total consumption for each measuring point in the module
-     * Returns a dictionary with measuring point UUIDs as keys and their total consumption as values
-     */
     const consumptionData = {};
     try {
       const allData = await this.getAllMeasuringPointsData(moduleUuid, measuringPointUuids, startDate, endDate);
-
-      for (const [mpUuid, data] of Object.entries(allData)) {
+      for (const mpUuid of measuringPointUuids) {
+        const data = allData[mpUuid];
         if (data.error) {
           consumptionData[mpUuid] = 0.0;
-          logger.warning(`Error fetching data for measuring point ${mpUuid}`);
+          logger.warn(`Error fetching data for measuring point ${mpUuid}`);
           continue;
         }
-
-        // Calculate total consumption from reads data
-        const totalConsumption = data.reads.reduce((sum, read) => sum + parseFloat(read.consumption || 0), 0);
+        const totalConsumption = (data.reads || []).reduce(
+          (sum, read) => sum + parseFloat(read.consumption || 0), 0
+        );
         consumptionData[mpUuid] = totalConsumption;
         logger.info(`Calculated consumption for ${mpUuid}: ${totalConsumption} kWh`);
       }
-
-    } catch (error) {
-      logger.error(`Error fetching consumption data: ${error.message}`);
-      // Return empty data on error
+    } catch (e) {
+      logger.error(`Error fetching consumption data: ${e.message}`);
       for (const mpUuid of measuringPointUuids) {
         consumptionData[mpUuid] = 0.0;
       }
@@ -120,52 +140,38 @@ class CloudOceanAPI {
   }
 
   async validateMeasuringPoint(moduleUuid, measuringPointUuid) {
-    /**
-     * Validate if a measuring point exists and is accessible
-     */
+    const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}`;
     try {
-      const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}`;
       const response = await axios.get(endpoint, { headers: this.headers });
-
       return response.status === 200;
-    } catch (error) {
-      logger.error(`Error validating measuring point: ${error.message}`);
+    } catch {
       return false;
     }
   }
 
   async getDeviceConsumption(deviceId, startDate, endDate) {
-    /**
-     * Fetch consumption data for a specific device from Cloud Ocean platform
-     */
+    const endpoint = `${this.baseUrl}/devices/${deviceId}/consumption`;
+    const params = {
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+    };
     try {
-      const endpoint = `${this.baseUrl}/devices/${deviceId}/consumption`;
-      const params = {
-        start_date: moment(startDate).toISOString(),
-        end_date: moment(endDate).toISOString(),
-      };
-
       const response = await axios.get(endpoint, { headers: this.headers, params });
-      return response.data?.data || [];
-
-    } catch (error) {
-      logger.error(`Error fetching device consumption data: ${error.message}`);
-      throw error;
+      return response.data.data;
+    } catch (e) {
+      logger.error(`Error fetching consumption data: ${e.message}`);
+      throw e;
     }
   }
 
   async getDeviceInfo(deviceId) {
-    /**
-     * Fetch device information from Cloud Ocean platform
-     */
+    const endpoint = `${this.baseUrl}/devices/${deviceId}`;
     try {
-      const endpoint = `${this.baseUrl}/devices/${deviceId}`;
       const response = await axios.get(endpoint, { headers: this.headers });
-
-      return response.data?.data || {};
-    } catch (error) {
-      logger.error(`Error fetching device info: ${error.message}`);
-      throw error;
+      return response.data.data;
+    } catch (e) {
+      logger.error(`Error fetching device info: ${e.message}`);
+      throw e;
     }
   }
 }

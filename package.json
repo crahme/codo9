@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "npx update-browserslist-db@latest",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -13,6 +14,9 @@
     "pg":"latest",
     "browserslist":"latest",
     "axios": "^1.7.9",
+    "sequelize": "latest",
+    "sqlite3":"latest",
+    "winston":"3.10.0",
     "contentful": "^11.4.3",
     "contentful-cli": "^3.7.2",
     "curl": "^0.1.4",
@@ -22,6 +26,8 @@
     "puppeteer": "^23.11.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-id-swiper": "latest",
+    "@contentful/live-preview": "latest",
     "stackbit": "^0.0.0"
   },
   "devDependencies": {

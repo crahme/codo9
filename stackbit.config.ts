@@ -26,12 +26,11 @@ export default defineStackbitConfig({
   modelExtensions: [
 
      { name: 'page', type: 'page', urlPath: '/{slug}' },
-    { name: 'invoice', type: 'page', urlPath: '/invoice/{slug}' },
+    { name:'invoice', type: 'page', urlPath: '/invoice/{slug}' },
 
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
-    { name: 'invoice', type: 'data'},
     { name: 'statItem', type: 'data' },
     { name: 'invoiceSection', type: 'data' }, // Only if it exists
   ],
@@ -71,7 +70,7 @@ export default defineStackbitConfig({
           isHomePage = cleanSlug === '/';
         } else if (document.modelName === 'invoice') {
           const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
-          urlPath = `/invoices/${cleanSlug}`;
+          urlPath = `/invoice/${cleanSlug}`;
         }
 
         if (!urlPath) {

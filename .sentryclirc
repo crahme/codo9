@@ -1,6 +1,0 @@
-[defaults]
-org="env: Cloud Perry"
-project="env:node"
-
-[auth]
-token="************PMN8"
