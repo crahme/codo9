@@ -10,7 +10,7 @@
     "import": "node ./contentful/import.js"
   },
   "dependencies": {
-    "pdf-lib":"latest"
+    "pdf-lib":"latest",
     "pg":"latest",
     "browserslist":"latest",
     "axios": "^1.7.9",
