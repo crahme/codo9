@@ -15,10 +15,10 @@ async function fetchCloudOceanReads(start, end, limit = 50, offset = 0) {
 }
 
 // Example usage (comment out in production):
-// fetchCloudOceanReads('2024-10-16', '2024-11-25').then(console.log).catch(console.error);
+fetchCloudOceanReads('2024-10-16', '2024-11-25').then(console.log).catch(console.error);
 
 // For ES6 module export
 export { fetchCloudOceanReads };
 
 // For CommonJS (Node.js), comment out the above line and uncomment below:
-// module.exports = { fetchCloudOceanReads };
+ module.exports = { fetchCloudOceanReads };
