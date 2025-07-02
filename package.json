@@ -10,10 +10,21 @@
     "import": "node ./contentful/import.js"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@contentful/live-preview": "latest",
     "axios": "^1.7.9",
     "browserslist": "latest",
     "contentful": "^11.7.3",
+=======
+    "pdf-lib":"latest",
+    "pg":"latest",
+    "browserslist":"latest",
+    "axios": "^1.7.9",
+    "sequelize": "latest",
+    "sqlite3":"latest",
+    "winston":"3.10.0",
+    "contentful": "^11.4.3",
+>>>>>>> 6073d0b81a792a3dc290b20d6f746265a0fe1835
     "contentful-cli": "^3.7.2",
     "contentful-management": "^11.54.0",
     "curl": "^0.1.4",
