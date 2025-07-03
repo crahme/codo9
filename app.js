@@ -20,7 +20,7 @@ const DATABASE_URL = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 
 // Set up Sequelize
 const sequelize = new Sequelize(DATABASE_URL, {
-  dialect: 'sqlite',
+  dialect: 'postgresql',
   logging: false,
   pool: {
     max: 5,
@@ -40,10 +40,44 @@ fs.mkdirSync(staticDir, { recursive: true });
 // Initialize models
 sequelize.define('Invoice', {
   // Define fields here
+  id:serial,
+  device_id: DataTypes.INTEGER,
+  invoice_number: Sequelize.STRING(50),
+  billing_period_start: DataTypes.DATE,
+  billing_period_end:DataTypes.DATE,
+  total_kwh: DataTypes.DOIBLE,
+  total_amount: DataTypes.DOUBLE,
+  status:DataTypes.STRING(20),
+  pdf_path: DataTypes.STRING(200),
+  created_at: DataTypes.DATE
 }, {
   sequelize,
   modelName: 'Invoice'
 });
+Sequelize.define('device', {
+  id:serial,
+  model_number:Sequelize.STRING(20),
+  serial_number:Sequelize.STRING(50),
+  device_location:Sequelize.STRING(200),
+  max_amperage: DataTypes.DOUBLE,
+  evse_count:DataTypes.INTEGER,
+  created_at:DataTypes.DATE
+},  {
+  sequelize,
+  modelName: 'Device'
+});
+Sequelize.define('consumption_record', {
+  id:serial,
+  device_id: DataTypes.INTEGER,
+  time_stamp: DataTypes.DATE,
+  kwh_consumption:DataTypes.DOUBLE,
+  rate: DataTypes.DOUBLE,
+  created_at:DataTypes.DATE
+}, {
+  sequelize,
+  modelName:'Consumption Record'
+});
+  
 
 // Middleware for JSON and URL-encoded data
 app.use(express.json());
