@@ -1,179 +1,137 @@
-const axios = require('axios');
-const winston = require('winston');
-const apiKey = process.env.API_Key;
-const logger = winston.createLogger({
-  transports: [new winston.transports.Console()],
+const express = require('express');
+const { Sequelize, DataTypes, Model } = require('sequelize');
+const path = require('path');
+const fs = require('fs');
+const logger = require('pino')({ level: 'info' });
+
+// Express app and DB setup
+const app = express();
+const DATABASE_URL = process.env.DATABASE_URL || 'sqlite:./invoices.db';
+
+// Set up Sequelize (Postgres or fallback to SQLite)
+const sequelize = new Sequelize(DATABASE_URL, {
+  dialect: DATABASE_URL.includes('postgres') ? 'postgres' : 'sqlite',
+  logging: false,
+  pool: { max: 5, min: 0, acquire: 30000, idle: 10000 }
 });
 
-class CloudOceanAPI {
-  constructor(apiKey) {
-    this.baseUrl = 'https://api.develop.rve.ca';
-    if (!apiKey) throw new Error('API key is required');
-    let cleanApiKey = apiKey.startsWith('Bearer ') ? apiKey.replace('Bearer ', '') : apiKey;
+// Ensure static directories exist
+const staticDir = path.join(__dirname, 'static', 'invoices');
+fs.mkdirSync(staticDir, { recursive: true });
 
-    this.headers = {
-      'X-API-Key': cleanApiKey,
-      'Content-Type': 'application/json',
-    };
-    this.accessTokenHeaders = {
-      'Access-Token': `Bearer ${cleanApiKey}`,
-      'Content-Type': 'application/json',
-    };
-    this.bearerHeaders = {
-      'Authorization': `Bearer ${cleanApiKey}`,
-      'Content-Type': 'application/json',
-    };
-  }
+// Models
+class Invoice extends Model {}
+Invoice.init({
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  device_id: DataTypes.INTEGER,
+  invoice_number: DataTypes.STRING(50),
+  billing_period_start: DataTypes.DATE,
+  billing_period_end: DataTypes.DATE,
+  total_kwh: DataTypes.DOUBLE,
+  total_amount: DataTypes.DOUBLE,
+  status: DataTypes.STRING(20),
+  pdf_path: DataTypes.STRING(200),
+  created_at: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }
+}, { sequelize, modelName: 'Invoice', timestamps: false });
 
-  async getMeasuringPointReads(moduleUuid, measuringPointUuid, startDate, endDate) {
-    const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads`;
-    const params = {
-      start_date: startDate.toISOString().slice(0, 10),
-      end_date: endDate.toISOString().slice(0, 10),
-    };
+class Device extends Model {}
+Device.init({
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  model_number: DataTypes.STRING(20),
+  serial_number: DataTypes.STRING(50),
+  device_location: DataTypes.STRING(200),
+  max_amperage: DataTypes.DOUBLE,
+  evse_count: DataTypes.INTEGER,
+  created_at: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }
+}, { sequelize, modelName: 'Device', timestamps: false });
 
-    logger.debug(`Fetching reads for measuring point ${measuringPointUuid}`);
-    logger.debug(`Request URL: ${endpoint}`);
-    logger.debug(`Request params: ${JSON.stringify(params)}`);
+class ConsumptionRecord extends Model {}
+ConsumptionRecord.init({
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  device_id: DataTypes.INTEGER,
+  time_stamp: DataTypes.DATE,
+  kwh_consumption: DataTypes.DOUBLE,
+  rate: DataTypes.DOUBLE,
+  created_at: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }
+}, { sequelize, modelName: 'ConsumptionRecord', timestamps: false });
 
-    let response;
-    try {
-      // Try API Key header
-      response = await axios.get(endpoint, { headers: this.headers, params });
-      if (response.status === 401) {
-        logger.debug('API Key auth failed, trying Access-Token header...');
-        response = await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
-        if (response.status === 401) {
-          logger.debug('Access-Token auth failed, trying Bearer token...');
-          response = await axios.get(endpoint, { headers: this.bearerHeaders, params });
-        }
-      }
-      if (response.status === 401) {
-        logger.warn('Cloud Ocean API authentication failed - API key may lack required permissions for measuring point data access');
-        return [];
-      }
-      const data = response.data?.data || [];
-      logger.info(`Successfully fetched ${data.length} reads for measuring point ${measuringPointUuid}`);
-      return data;
-    } catch (e) {
-      logger.error(`Error fetching measuring point reads: ${e.message}`);
-      return [];
-    }
-  }
+// Set up associations if necessary (optional)
+// Device.hasMany(Invoice, { foreignKey: 'device_id' });
+// Device.hasMany(ConsumptionRecord, { foreignKey: 'device_id' });
 
-  async getMeasuringPointCdr(moduleUuid, measuringPointUuid, startDate, endDate) {
-    const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/cdr`;
-    const params = {
-      start_date: startDate.toISOString().slice(0, 10),
-      end_date: endDate.toISOString().slice(0, 10),
-    };
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-    logger.debug(`Fetching CDR for measuring point ${measuringPointUuid}`);
+// Register routes
+logger.info('Initializing Express application...');
+require('./routes')(app); // Make sure you have a ./routes.js file
 
-    let response;
-    try {
-      // Try API Key header
-      response = await axios.get(endpoint, { headers: this.headers, params });
-      if (response.status === 401) {
-        logger.debug('API Key auth failed for CDR, trying Access-Token header...');
-        response = await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
-        if (response.status === 401) {
-          logger.debug('Access-Token auth failed for CDR, trying Bearer token...');
-          response = await axios.get(endpoint, { headers: this.bearerHeaders, params });
-        }
-      }
-      if (response.status === 401) {
-        logger.warn('Cloud Ocean API authentication failed for CDR - API key may lack required permissions');
-        return [];
-      }
-      const data = response.data?.data || [];
-      logger.info(`Successfully fetched ${data.length} CDR records for measuring point ${measuringPointUuid}`);
-      return data;
-    } catch (e) {
-      logger.error(`Error fetching measuring point CDR: ${e.message}`);
-      return [];
-    }
-  }
+// --- Cloud Ocean API Integration ---
 
-  async getAllMeasuringPointsData(moduleUuid, measuringPointUuids, startDate, endDate) {
-    const data = {};
-    for (const mpUuid of measuringPointUuids) {
-      try {
-        logger.info(`Fetching data for measuring point: ${mpUuid}`);
-        const reads = await this.getMeasuringPointReads(moduleUuid, mpUuid, startDate, endDate);
-        const cdr = await this.getMeasuringPointCdr(moduleUuid, mpUuid, startDate, endDate);
-        data[mpUuid] = { reads, cdr };
-        logger.info(`Successfully fetched data for measuring point: ${mpUuid}`);
-        logger.debug(`Read count: ${reads.length}, CDR count: ${cdr.length}`);
-      } catch (e) {
-        logger.error(`Failed to fetch data for measuring point ${mpUuid}: ${e.message}`);
-        data[mpUuid] = { reads: [], cdr: [], error: e.message };
-      }
-    }
-    return data;
-  }
+const CloudOceanAPI = require('./services/cloudoceanapi');
+const cloudOcean = new CloudOceanAPI(process.env.API_Key);
 
-  async getModuleConsumption(moduleUuid, measuringPointUuids, startDate, endDate) {
-    const consumptionData = {};
-    try {
-      const allData = await this.getAllMeasuringPointsData(moduleUuid, measuringPointUuids, startDate, endDate);
-      for (const mpUuid of measuringPointUuids) {
-        const data = allData[mpUuid];
-        if (data.error) {
-          consumptionData[mpUuid] = 0.0;
-          logger.warn(`Error fetching data for measuring point ${mpUuid}`);
-          continue;
-        }
-        const totalConsumption = (data.reads || []).reduce(
-          (sum, read) => sum + parseFloat(read.consumption || 0), 0
-        );
-        consumptionData[mpUuid] = totalConsumption;
-        logger.info(`Calculated consumption for ${mpUuid}: ${totalConsumption} kWh`);
-      }
-    } catch (e) {
-      logger.error(`Error fetching consumption data: ${e.message}`);
-      for (const mpUuid of measuringPointUuids) {
-        consumptionData[mpUuid] = 0.0;
-      }
-    }
-    return consumptionData;
-  }
+/**
+ * Example function to fetch from Cloud Ocean and save to ConsumptionRecord.
+ * Modify this as needed for your use case and models!
+ */
+async function syncFromCloudOcean() {
+  // Example parameters - replace with real ones as appropriate
+  const moduleUuid = 'your-module-uuid';
+  const measuringPointUuid = 'your-measuring-point-uuid';
+  const startDate = new Date(Date.now() - 86400 * 1000 * 30);
+  const endDate = new Date();
 
-  async validateMeasuringPoint(moduleUuid, measuringPointUuid) {
-    const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}`;
-    try {
-      const response = await axios.get(endpoint, { headers: this.headers });
-      return response.status === 200;
-    } catch {
-      return false;
-    }
-  }
+  // Fetch reads (see cloudoceanapi.js for available methods)
+  const reads = await cloudOcean.getMeasuringPointReads(moduleUuid, measuringPointUuid, startDate, endDate);
 
-  async getDeviceConsumption(deviceId, startDate, endDate) {
-    const endpoint = `${this.baseUrl}/devices/${deviceId}/consumption`;
-    const params = {
-      start_date: startDate.toISOString(),
-      end_date: endDate.toISOString(),
-    };
-    try {
-      const response = await axios.get(endpoint, { headers: this.headers, params });
-      return response.data.data;
-    } catch (e) {
-      logger.error(`Error fetching consumption data: ${e.message}`);
-      throw e;
-    }
-  }
-
-  async getDeviceInfo(deviceId) {
-    const endpoint = `${this.baseUrl}/devices/${deviceId}`;
-    try {
-      const response = await axios.get(endpoint, { headers: this.headers });
-      return response.data.data;
-    } catch (e) {
-      logger.error(`Error fetching device info: ${e.message}`);
-      throw e;
-    }
+  // Store the reads as ConsumptionRecord entries
+  for (const read of reads) {
+    await ConsumptionRecord.create({
+      device_id: read.device_id || 1,
+      time_stamp: read.timestamp ? new Date(read.timestamp) : new Date(),
+      kwh_consumption: parseFloat(read.consumption) || 0,
+      rate: parseFloat(read.rate) || 0,
+      created_at: new Date()
+    });
   }
 }
 
-module.exports = CloudOceanAPI;
+// Endpoint to trigger the sync
+app.post('/sync-cloud-ocean', async (req, res) => {
+  try {
+    await syncFromCloudOcean();
+    res.json({ success: true });
+  } catch (e) {
+    logger.error('Cloud Ocean sync failed:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Sync DB and create tables
+(async () => {
+  try {
+    logger.info('Creating database tables...');
+    await sequelize.sync();
+    logger.info('Database tables created successfully');
+  } catch (error) {
+    logger.error('Error creating database tables:', error);
+  }
+})();
+
+// Error handlers
+app.use((req, res, next) => {
+  res.status(404).send('404 Not Found');
+});
+app.use((err, req, res, next) => {
+  logger.error(err.stack);
+  res.status(500).send('500 Internal Server Error');
+});
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  logger.info(`Server is running on http://localhost:${PORT}`);
+});
+logger.info('Express application initialized successfully');
