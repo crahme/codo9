@@ -2,7 +2,7 @@ const { Client } = require('pg');
 const fetch = require('node-fetch');
 
 // Environment variables from Netlify or your .env file
-const DB_URL = process.env.DATABASE_URL;
+const DB_URL = process.env.NETLIFY_DATABASE_URL;
 const RVE_BASE = 'https://api.develop.rve.ca';
 const MODULE_UUID = 'c667ff46-9730-425e-ad48-1e950691b3f9';
 const MEASURING_POINTS = [
