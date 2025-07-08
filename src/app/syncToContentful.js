@@ -3,7 +3,7 @@ const fetch = require('node-fetch'); // Use if you're not in a modern Node.js en
 
 const CONTENTFUL_ACCESS_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
 const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
-const ENVIRONMENT_ID = process.enev.CONTENTFUL_ENVIRONMENT_ID;
+const ENVIRONMENT_ID = process.enev.CONTENTFUL_ENVIRONMENT;
 
 async function fetchCloudOceanReads(start, end, limit = 50, offset = 0) {
   const BASE_URL = 'https://api.develop.rve.ca/v1/modules/c667ff46-9730-425e-ad48-1e950691b3f9/measuring-points/71ef9476-3855-4a3f-8fc5-333cfbf9e898/reads';
