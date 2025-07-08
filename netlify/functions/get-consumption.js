@@ -60,6 +60,7 @@ exports.handler = async function(event, context) {
         }
       } catch (e) {
         // Log API error and try next method
+        console.log("Couldn't fetch consumption data");
       }
     }
   }
