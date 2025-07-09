@@ -20,33 +20,42 @@ async function fetchCloudOceanReads(start, end, limit = 50, offset = 0) {
 }
 
 async function upsertInvoiceEntry(invoiceData) {
-  const client = contentful.createClient({ accessToken: CONTENTFUL_ACCESS_TOKEN });
-  const space = await client.getSpace(SPACE_ID);
-  const environment = await space.getEnvironment(ENVIRONMENT_ID);
+  try {
+    const client = contentful.createClient({ accessToken: CONTENTFUL_ACCESS_TOKEN });
+    const space = await client.getSpace(SPACE_ID);
+    const environment = await space.getEnvironment(ENVIRONMENT_ID);
 
-  // Try to find existing entry by invoiceNumber
-  const entries = await environment.getEntries({
-    content_type: 'invoice',
-    'fields.invoiceNumber': invoiceData.invoiceNumber,
-    limit: 1,
-  });
+    // Fix: Access the actual value from the Contentful field structure
+    const entries = await environment.getEntries({
+      content_type: 'invoice',
+      'fields.invoiceNumber': invoiceData.invoiceNumber['en-US'], // Access the localized value
+      limit: 1,
+    });
 
-  let entry;
-  if (entries.items.length > 0) {
-    // Entry exists, update it
-    entry = entries.items[0];
-    entry.fields = {
-      ...entry.fields,
-      ...invoiceData // Overwrite with new data
-    };
-    entry = await entry.update();
-    await entry.publish();
-    console.log(`Updated invoice: ${invoiceData.invoiceNumber}`);
-  } else {
-    // Entry does not exist, create it
-    entry = await environment.createEntry('invoice', { fields: invoiceData });
-    await entry.publish();
-    console.log(`Created invoice: ${invoiceData.invoiceNumber}`);
+    let entry;
+    if (entries.items.length > 0) {
+      // Entry exists, update it
+      entry = entries.items[0];
+      
+      // Fix: Update fields properly without overwriting the entire fields object
+      Object.keys(invoiceData).forEach(key => {
+        entry.fields[key] = invoiceData[key];
+      });
+      
+      entry = await entry.update();
+      await entry.publish();
+      console.log(`Updated invoice: ${invoiceData.invoiceNumber['en-US']}`); // Fix: Access localized value
+    } else {
+      // Entry does not exist, create it
+      entry = await environment.createEntry('invoice', { fields: invoiceData });
+      await entry.publish();
+      console.log(`Created invoice: ${invoiceData.invoiceNumber['en-US']}`); // Fix: Access localized value
+    }
+    
+    return entry; // Return the entry for further use if needed
+  } catch (error) {
+    console.error('Error upserting invoice entry:', error);
+    throw error; // Re-throw to handle upstream
   }
 }
 
