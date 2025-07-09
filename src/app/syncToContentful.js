@@ -9,7 +9,12 @@ const CLOUD_OCEAN_API_KEY= process.env.API_Key;
 async function fetchCloudOceanReads(start, end, limit = 50, offset = 0) {
   const BASE_URL = 'https://api.develop.rve.ca/v1/modules/c667ff46-9730-425e-ad48-1e950691b3f9/measuring-points/71ef9476-3855-4a3f-8fc5-333cfbf9e898/reads';
   const url = `${BASE_URL}?start=${start}&end=${end}&limit=${limit}&offset=${offset}`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${process.env.CLOUD_OCEAN_API_KEY}`, // Add this
+      'Content-Type': 'application/json'
+    }
+  });
   if (!response.ok) throw new Error(`Cloud Ocean API error: ${response.statusText}`);
   return response.json();
 }
