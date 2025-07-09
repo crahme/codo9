@@ -10,6 +10,7 @@ async function fetchCloudOceanReads(start, end, limit = 50, offset = 0) {
     throw new Error(`Cloud Ocean API error: ${response.statusText}`);
   }
   const data = await response.json();
+  console.log('Cloud Ocean API queried data:', data);
   // Adjust this if the response is wrapped (e.g., data.reads)
   return data;
 }
