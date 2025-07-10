@@ -19,7 +19,7 @@ exports.handler = async (event) => {
     // Write to Contentful
     await updateInvoiceEntry({
       spaceId: process.env.CONTENTFUL_SPACE_ID,
-      environmentId: process.env.CONTENTFUL_ENVIRONMENT_ID || 'master',
+      environmentId: process.env.CONTENTFUL_ENVIRONMENT || 'master',
       entryId: process.env.CONTENTFUL_INVOICE_ENTRY_ID,
       invoiceData: { totalKwh, cost }
     });
