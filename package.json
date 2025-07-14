@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "pdf-lib":"latest",
-    "@neondatabase/serverles":"latest",
+    "@neondatabase/serverless":"latest",
     "pg":"latest",
     "browserslist":"latest",
     "axios": "^1.7.9",
