@@ -10,14 +10,10 @@
     "import": "node ./contentful/import.js"
   },
   "dependencies": {
-    "pdf-lib":"latest",
-    "@neondatabase/serverless":"latest",
-    "pg":"latest",
-    "browserslist":"latest",
+    "@neondatabase/serverless": "latest",
+    "@qodo/command": "^0.20.2",
     "axios": "^1.7.9",
-    "sequelize": "latest",
-    "sqlite3":"latest",
-    "winston":"3.10.0",
+    "browserslist": "latest",
     "contentful": "^11.4.3",
     "contentful-cli": "^3.7.2",
     "contentful-management": "^11.54.0",
@@ -25,11 +21,16 @@
     "markdown-to-jsx": "^7.4.7",
     "netlify": "^13.2.0",
     "next": "^15.3.2",
+    "pdf-lib": "latest",
+    "pg": "latest",
     "puppeteer": "^23.11.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-id-swiper": "latest",
-    "stackbit": "^0.0.0"
+    "sequelize": "latest",
+    "sqlite3": "latest",
+    "stackbit": "^0.0.0",
+    "winston": "3.10.0"
   },
   "devDependencies": {
     "@netlify/plugin-lighthouse": "^6.0.1",
