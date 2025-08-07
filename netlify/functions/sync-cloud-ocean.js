@@ -15,8 +15,9 @@ exports.handler = async function(event, context) {
   const cloudOcean = new CloudOceanAPI(process.env.API_Key);
 
   try {
-    const moduleUuid = 'your-module-uuid';
-    const pointUuid = 'your-point-uuid';
+    // Replace with actual UUIDs from your repo context
+    const moduleUuid = 'c667ff46-9730-425e-ad48-1e950691b3f9';
+    const pointUuid = '71ef9476-3855-4a3f-8fc5-333cfbf9e898';
     const startDate = new Date(Date.now() - 86400 * 1000 * 30);
     const endDate = new Date();
 
