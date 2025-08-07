@@ -10,7 +10,7 @@
     "import": "node ./contentful/import.js"
   },
   "dependencies": {
-    "qodo/command":"latest",
+    "@qodo/command":"latest",
     "pdf-lib":"latest",
     "@neondatabase/serverless":"latest",
     "pg":"latest",
