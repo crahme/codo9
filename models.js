@@ -1,5 +1,8 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
-const sequelize = require('./db'); // Assuming your Sequelize instance is exported from a db.js file
+const sequelize = new Sequelize('database', 'username', 'password', {
+  host: 'localhost',
+  dialect: 'postgres' // or 'postgres', 'sqlite', etc.
+});
 
 // Device Model
 class Device extends Model {}
