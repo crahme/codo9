@@ -1,11 +1,32 @@
+const path = require('path');
+
+// Resolve module paths relative to the functions directory to ensure mocks match what the handlers require
+const functionsDir = path.join(__dirname, '..');
+const contentfulWriterPath = require.resolve('../../services/contentful_writer', { paths: [functionsDir] });
+const cloudoceanapiPath = require.resolve('../../services/cloudoceanapi', { paths: [functionsDir] });
+
+
 describe('serveinvoice handler', () => {
   test('aggregates consumption and updates Contentful', async () => {
     jest.resetModules();
+
+    // Ensure env present for any modules that read tokens at import time
+    process.env.CONTENTFUL_MANAGEMENT_TOKEN = 'test-token';
+    // Mock external dependencies
     jest.doMock('node-fetch', () => jest.fn(async () => ({ ok: true, json: async () => ({ data: [{ consumption: '1.5' }, { consumption: '2.25' }] }) })));
-    jest.doMock('../../services/contentful_writer', () => ({ updateInvoiceEntry: jest.fn(async () => ({})) }), { virtual: true });
+    jest.doMock('contentful-management', () => ({
+      createClient: jest.fn(() => ({
+        getSpace: jest.fn(async () => ({
+          getEnvironment: jest.fn(async () => ({
+            createEntry: jest.fn(async () => ({ publish: jest.fn(async () => ({})), sys: { id: 'entry123' } })),
+          })),
+        })),
+      })),
+    }));
+    jest.doMock(contentfulWriterPath, () => ({ updateInvoiceEntry: jest.fn(async () => ({})) }));
 
     const fetch = require('node-fetch');
-    const { updateInvoiceEntry } = require('../../services/contentful_writer');
+    const { updateInvoiceEntry } = require(contentfulWriterPath);
     const { handler } = require('../serveinvoice');
 
     const res = await handler({ queryStringParameters: {} });
@@ -59,6 +80,9 @@ describe('get-consumption handler', () => {
 describe('push-invoice handler', () => {
   test('creates and publishes Contentful entry', async () => {
     jest.resetModules();
+
+    process.env.CONTENTFUL_MANAGEMENT_TOKEN = 'test-token';
+
     jest.doMock('node-fetch', () => jest.fn(async () => ({ ok: true, json: async () => ({ invoiceNumber: 'INV-001' }) })));
     jest.doMock('contentful-management', () => ({
       createClient: jest.fn(() => ({
@@ -83,8 +107,21 @@ describe('push-invoice handler', () => {
 describe('generateinvoice handler', () => {
   test('returns base64 PDF', async () => {
     jest.resetModules();
-    jest.doMock('../../services/cloudoceanapi', () => jest.fn(function() { return { getMeasuringPointReads: jest.fn(async () => ([{ consumption: '1.5' }, { consumption: '2.5' }])) }; }), { virtual: true });
-    jest.doMock('../../services/contentful_writer', () => ({ updateInvoiceEntry: jest.fn(async () => ({})) }), { virtual: true });
+
+    process.env.API_Key = 'test-api-key';
+    process.env.CONTENTFUL_MANAGEMENT_TOKEN = 'test-token';
+
+    jest.doMock(cloudoceanapiPath, () => jest.fn(function() { return { getMeasuringPointReads: jest.fn(async () => ([{ consumption: '1.5' }, { consumption: '2.5' }])) }; }));
+    jest.doMock(contentfulWriterPath, () => ({ updateInvoiceEntry: jest.fn(async () => ({})) }));
+    jest.doMock('contentful-management', () => ({
+      createClient: jest.fn(() => ({
+        getSpace: jest.fn(async () => ({
+          getEnvironment: jest.fn(async () => ({
+            createEntry: jest.fn(async () => ({ publish: jest.fn(async () => ({})), sys: { id: 'entry123' } })),
+          })),
+        })),
+      })),
+    }));
     jest.doMock('pdf-lib', () => ({
       PDFDocument: { create: jest.fn(async () => ({ addPage: jest.fn(() => ({ drawText: jest.fn() })), save: jest.fn(async () => Buffer.from('pdf')) })) },
     }));
@@ -102,7 +139,10 @@ describe('generateinvoice handler', () => {
 describe('sync-cloud-ocean handler', () => {
   test('creates records from Cloud Ocean reads', async () => {
     jest.resetModules();
-    jest.doMock('../../services/cloudoceanapi', () => jest.fn(function() { return { getMeasuringPointReads: jest.fn(async () => ([{ timestamp: '2024-01-01', consumption: '1.0', rate: '0.1' }])) }; }), { virtual: true });
+
+    process.env.API_Key = 'test-api-key';
+
+    jest.doMock(cloudoceanapiPath, () => jest.fn(function() { return { getMeasuringPointReads: jest.fn(async () => ([{ timestamp: '2024-01-01', consumption: '1.0', rate: '0.1' }])) }; }));
     jest.doMock('sequelize', () => {
       const createMock = jest.fn(async () => ({}));
       class Sequelize { constructor() {} async sync() { return; } }

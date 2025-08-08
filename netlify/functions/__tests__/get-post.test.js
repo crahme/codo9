@@ -1,4 +1,4 @@
-jest.mock('@netlify/neon', () => ({ neon: jest.fn(() => jest.fn(async (strings, id) => [{ id, title: 'Hello' }])) }));
+jest.mock('@netlify/neon', () => ({ neon: jest.fn(() => jest.fn(async (strings, id) => [{ id, title: 'Hello' }])) }), { virtual: true });
 const { handler } = require('../get-post');
 
 describe('get-post handler', () => {

@@ -5,6 +5,7 @@ const { handler } = require('../fetchKwh');
 describe('fetchKwh handler', () => {
   beforeEach(() => {
     fetch.mockReset();
+    process.env.API_Key = 'test-api-key';
   });
 
   test('returns 200 and upstream JSON when response is ok', async () => {
@@ -30,7 +31,7 @@ describe('fetchKwh handler', () => {
     expect(urlArg).toContain('mp-456');
     expect(urlArg).toContain('start=2024-10-01');
     expect(urlArg).toContain('end=2024-10-31');
-    expect(opts && opts.headers).toBeDefined();
+    expect(opts && opts.headers && opts.headers['Access-Token']).toBe('test-api-key');
   });
 
   test('propagates upstream non-200 status code', async () => {
@@ -51,6 +52,6 @@ describe('fetchKwh handler', () => {
     expect(urlArg).toContain('/measuring-points/');
     expect(urlArg).toContain('start=2024-10-16');
     expect(urlArg).toContain('end=2024-11-25');
-    expect(opts && opts.headers && opts.headers['Access-Token']).toBeDefined();
+    expect(opts && opts.headers && opts.headers['Access-Token']).toBe('test-api-key');
   });
 });

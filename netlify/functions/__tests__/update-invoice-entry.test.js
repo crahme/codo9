@@ -1,5 +1,11 @@
 jest.mock('node-fetch', () => jest.fn());
 const fetch = require('node-fetch');
+jest.mock('pg', () => {
+  const end = jest.fn();
+  const connect = jest.fn();
+  const query = jest.fn();
+  return { Client: jest.fn(() => ({ connect, end, query })) };
+});
 const { handler } = require('../update-invoice-entry');
 
 describe('update-invoice-entry handler', () => {
@@ -15,14 +21,6 @@ describe('update-invoice-entry handler', () => {
     fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ invoice_number: 'INV-001' }) });
     // push-invoice
     fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ message: 'ok' }) });
-
-    // Mock PG client by monkey-patching at runtime
-    jest.mock('pg', () => {
-      const end = jest.fn();
-      const connect = jest.fn();
-      const query = jest.fn();
-      return { Client: jest.fn(() => ({ connect, end, query })) };
-    });
 
     const res = await handler({
       queryStringParameters: { start: '2025-01-01', end: '2025-12-31', slug: '/invoice/fac-2024-001', invoiceNumber: 'INV-001' }
