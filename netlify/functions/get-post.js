@@ -1,8 +1,18 @@
-import { neon } from '@netlify/neon';
+const { neon } = require('@netlify/neon');
 
-export default async (req, res) => {
-  const { postId } = req.query; // Or get postId from req.body if POST
-  const sql = neon(); // Uses NETLIFY_DATABASE_URL from .env
-  const [post] = await sql`SELECT * FROM posts WHERE id = ${postId}`;
-  res.status(200).json(post);
+exports.handler = async (event) => {
+  try {
+    const postId = event.queryStringParameters?.postId;
+    if (!postId) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Missing postId' }) };
+    }
+
+    const sql = neon(); // Uses NETLIFY_DATABASE_URL
+    const rows = await sql`SELECT * FROM posts WHERE id = ${postId}`;
+    const post = rows[0] || null;
+
+    return { statusCode: 200, body: JSON.stringify(post) };
+  } catch (err) {
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+  }
 };

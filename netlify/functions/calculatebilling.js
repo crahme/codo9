@@ -11,19 +11,19 @@ function fmt2(n) {
   return round2(n).toFixed(2);
 }
 
-function calculateBilling(reads, cdr) {
-  const rateNum = toNumber(cdr && cdr.rate);
+function calculateBilling(reads, rate) {
+  const rateNum = toNumber(rate);
 
   const lineItems = Array.isArray(reads)
     ? reads.map((r) => {
-        const kWhNum = toNumber(r && r.kWh);
+        const kWhNum = toNumber(r && (r.kWh ?? r.consumption));
         const energy = round2(kWhNum);
         const unitPrice = round2(rateNum);
         const amount = round2(energy * unitPrice);
         return {
-          date: r && r.date,
-          startTime: r && r.startTime,
-          endTime: r && r.endTime,
+          date: r && (r.date ?? r.timestamp) || null,
+          startTime: r && r.startTime || null,
+          endTime: r && r.endTime || null,
           energyConsumed: fmt2(energy),
           unitPrice: fmt2(unitPrice),
           amount: fmt2(amount),
@@ -41,4 +41,15 @@ function calculateBilling(reads, cdr) {
   };
 }
 
-module.exports = calculateBilling;
+exports.handler = async (event) => {
+  try {
+    const body = event.body ? JSON.parse(event.body) : {};
+    const reads = body.reads || [];
+    const rate = body.rate ?? 0;
+
+    const result = calculateBilling(reads, rate);
+    return { statusCode: 200, body: JSON.stringify(result) };
+  } catch (err) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid input', details: err.message }) };
+  }
+};

@@ -8,17 +8,39 @@ const DB_URL = process.env.NETLIFY_DATABASE_URL;
 const SLUG = '/invoice/fac-2024-001';
 
 exports.handler = async function(event) {
+  const qs = (event && event.queryStringParameters) || {};
+  const base = process.env.URL || process.env.SITE_URL || '';
+  const slug = qs.slug || SLUG;
+  const start = qs.start || '2025-01-01';
+  const end = qs.end || '2025-12-31';
+  const invoiceNumber = qs.invoiceNumber || qs.number || '';
+
   // 1. Query get-consumption
-  const consRes = await fetch(`${process.env.SITE_URL}/.netlify/functions/get-consumption?slug=${encodeURIComponent(SLUG)}`);
+  const consUrl = `${base}/.netlify/functions/get-consumption?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+  const consRes = await fetch(consUrl);
+  if (!consRes.ok) {
+    return { statusCode: consRes.status, body: JSON.stringify({ error: 'get-consumption failed' }) };
+  }
   const consJson = await consRes.json();
   const consumptionRecords = consJson.data || [];
 
   // 2. Query get-invoice
-  const invRes = await fetch(`${process.env.URL}/.netlify/functions/get-invoice?slug=${encodeURIComponent(SLUG)}`);
-  const invoiceJson = await invRes.json();
+  let invoiceJson = {};
+  if (invoiceNumber) {
+    const invUrl = `${base}/.netlify/functions/get-invoice?invoiceNumber=${encodeURIComponent(invoiceNumber)}`;
+    const invRes = await fetch(invUrl);
+    if (!invRes.ok) {
+      return { statusCode: invRes.status, body: JSON.stringify({ error: 'get-invoice failed' }) };
+    }
+    invoiceJson = await invRes.json();
+  }
 
   // 3. Query push-invoice (for any additional status/PDF info)
-  const pushRes = await fetch(`${process.env.URL}/.netlify/functions/push-invoice?slug=${encodeURIComponent(SLUG)}`);
+  const pushUrl = `${base}/.netlify/functions/push-invoice?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+  const pushRes = await fetch(pushUrl);
+  if (!pushRes.ok) {
+    return { statusCode: pushRes.status, body: JSON.stringify({ error: 'push-invoice failed' }) };
+  }
   const pushJson = await pushRes.json();
 
   // 4. Map consumption records to line_items
@@ -88,7 +110,7 @@ exports.handler = async function(event) {
         updatedInvoice.payment_due_date,
         updatedInvoice.late_fee_rate,
         JSON.stringify(updatedInvoice.line_items),
-        SLUG
+        slug
       ]
     );
     await client.end();
