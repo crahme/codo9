@@ -6,7 +6,7 @@ exports.handler = async (event) => {
   const start = "2024-10-16";
   const end = "2024-11-25";
 
-  const url = https://api.develop.rve.ca/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads?start=${start}&end=${end};
+  const url = 'https://api.develop.rve.ca/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads?start=${start}&end=${end}';
 
   try {
     const response = await fetch(url, {
