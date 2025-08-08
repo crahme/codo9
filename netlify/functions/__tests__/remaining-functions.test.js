@@ -3,7 +3,7 @@ describe('serveinvoice handler', () => {
     jest.isolateModules(async () => {
       jest.resetModules();
       jest.doMock('node-fetch', () => jest.fn(async () => ({ ok: true, json: async () => ({ data: [{ consumption: '1.5' }, { consumption: '2.25' }] }) })));
-      jest.doMock('../../services/contentful_writer', () => ({ updateInvoiceEntry: jest.fn(async () => ({})) }));
+      jest.doMock('../../services/contentful_writer', () => ({ updateInvoiceEntry: jest.fn(async () => ({})) }), { virtual: true });
 
       const fetch = require('node-fetch');
       const { updateInvoiceEntry } = require('../../services/contentful_writer');
@@ -92,8 +92,8 @@ describe('generateinvoice handler', () => {
   test('returns base64 PDF', async () => {
     jest.isolateModules(async () => {
       jest.resetModules();
-      jest.doMock('../../services/cloudoceanapi', () => jest.fn(function() { return { getMeasuringPointReads: jest.fn(async () => ([{ consumption: '1.5' }, { consumption: '2.5' }])) }; }));
-      jest.doMock('../../services/contentful_writer', () => ({ updateInvoiceEntry: jest.fn(async () => ({})) }));
+      jest.doMock('../../services/cloudoceanapi', () => jest.fn(function() { return { getMeasuringPointReads: jest.fn(async () => ([{ consumption: '1.5' }, { consumption: '2.5' }])) }; }), { virtual: true });
+      jest.doMock('../../services/contentful_writer', () => ({ updateInvoiceEntry: jest.fn(async () => ({})) }), { virtual: true });
       jest.doMock('pdf-lib', () => ({
         PDFDocument: { create: jest.fn(async () => ({ addPage: jest.fn(() => ({ drawText: jest.fn() })), save: jest.fn(async () => Buffer.from('pdf')) })) },
       }));
@@ -113,7 +113,7 @@ describe('sync-cloud-ocean handler', () => {
   test('creates records from Cloud Ocean reads', async () => {
     jest.isolateModules(async () => {
       jest.resetModules();
-      jest.doMock('../../services/cloudoceanapi', () => jest.fn(function() { return { getMeasuringPointReads: jest.fn(async () => ([{ timestamp: '2024-01-01', consumption: '1.0', rate: '0.1' }])) }; }));
+      jest.doMock('../../services/cloudoceanapi', () => jest.fn(function() { return { getMeasuringPointReads: jest.fn(async () => ([{ timestamp: '2024-01-01', consumption: '1.0', rate: '0.1' }])) }; }), { virtual: true });
       jest.doMock('sequelize', () => {
         const createMock = jest.fn(async () => ({}));
         class Sequelize { constructor() {} async sync() { return; } }
