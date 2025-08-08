@@ -1,3 +1,4 @@
+require('dotenv').config();
 const logger = require('pino')({ level: 'info' });
 const app = require('./app'); // Importing the Express app
 
