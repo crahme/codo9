@@ -11,6 +11,7 @@ exports.handler = async function(event) {
   }
 
   const url = `${RVE_BASE}/v1/modules/${MODULE_UUID}/invoices?invoiceNumber=${encodeURIComponent(invoiceNumber)}`;
+  console.log("Fetching invoice from URL:", url);
   try {
     const response = await fetch(url, {
       headers: { 'Access-Token': ACCESS_TOKEN },
