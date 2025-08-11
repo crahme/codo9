@@ -13,7 +13,7 @@ Device.init({
     autoIncrement: true
   },
   model_number: {
-    type: DataTypes.STRING(20),
+    type: DataTypes.STRING(50),
     allowNull: false
   },
   serial_number: {
@@ -23,6 +23,14 @@ Device.init({
   },
   location: {
     type: DataTypes.STRING(200)
+  },
+  status: {
+    type: DataTypes.STRING(20),
+    defaultValue: 'active'
+  },
+  installation_date: {
+    type: DataTypes.DATE,
+    defaultValue: Sequelize.NOW
   },
   max_amperage: {
     type: DataTypes.FLOAT
