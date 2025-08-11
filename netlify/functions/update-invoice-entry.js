@@ -11,8 +11,8 @@ exports.handler = async function(event) {
   const qs = (event && event.queryStringParameters) || {};
   const base = process.env.URL || process.env.SITE_URL || '';
   const slug = qs.slug || SLUG;
-  const start = qs.start || '2025-01-01';
-  const end = qs.end || '2025-12-31';
+  const start = qs.start || '2024-10-16';
+  const end = qs.end || '2024-11-25';
   const invoiceNumber = qs.invoiceNumber || qs.number || '';
 
   // 1. Query get-consumption
