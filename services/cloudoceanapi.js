@@ -26,21 +26,25 @@ class CloudOceanAPI {
   }
 
   async requestWithFallback(endpoint, params) {
-    // Try X-API-Key, then Authorization Bearer, then Access-Token
+    // Try Access-Token, then X-API-Key, then Authorization Bearer
     try {
+      logger.debug('Trying Access-Token header');
+      return await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status !== 401) throw err;
+      logger.debug('Access-Token auth failed with 401, trying X-API-Key...');
+    }
+    try {
+      logger.debug('Trying X-API-Key header');
       return await axios.get(endpoint, { headers: this.headers, params });
     } catch (err) {
       const status = err?.response?.status;
       if (status !== 401) throw err;
+      logger.debug('X-API-Key auth failed with 401, trying Authorization Bearer...');
     }
-    try {
-      return await axios.get(endpoint, { headers: this.bearerHeaders, params });
-    } catch (err) {
-      const status = err?.response?.status;
-      if (status !== 401) throw err;
-    }
-    // Final fallback
-    return await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
+    logger.debug('Trying Authorization Bearer header');
+    return await axios.get(endpoint, { headers: this.bearerHeaders, params });
   }
 
   async getMeasuringPointReads(moduleUuid, measuringPointUuid, startDate, endDate) {
@@ -167,6 +171,11 @@ class CloudOceanAPI {
       const response = await this.requestWithFallback(endpoint, params);
       return response.data.data;
     } catch (e) {
+      const status = e?.response?.status;
+      if (status === 404) {
+        logger.warn(`Device consumption not found for device ${deviceId}`);
+        return [];
+      }
       logger.error(`Error fetching consumption data: ${e.message}`);
       throw e;
     }
@@ -178,6 +187,11 @@ class CloudOceanAPI {
       const response = await this.requestWithFallback(endpoint, undefined);
       return response.data.data;
     } catch (e) {
+      const status = e?.response?.status;
+      if (status === 404) {
+        logger.warn(`Device not found: ${deviceId}`);
+        return null;
+      }
       logger.error(`Error fetching device info: ${e.message}`);
       throw e;
     }
