@@ -25,37 +25,48 @@ class CloudOceanAPI {
     };
   }
 
+  async requestWithFallback(endpoint, params) {
+    // Try X-API-Key, then Authorization Bearer, then Access-Token
+    try {
+      return await axios.get(endpoint, { headers: this.headers, params });
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status !== 401) throw err;
+    }
+    try {
+      return await axios.get(endpoint, { headers: this.bearerHeaders, params });
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status !== 401) throw err;
+    }
+    // Final fallback
+    return await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
+  }
+
   async getMeasuringPointReads(moduleUuid, measuringPointUuid, startDate, endDate) {
     const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads`;
     const params = {
-      start_date: startDate.toISOString().slice(0, 10),
-      end_date: endDate.toISOString().slice(0, 10),
+      start: startDate.toISOString().slice(0, 10),
+      end: endDate.toISOString().slice(0, 10),
+      limit: 50,
+      offset: 0,
     };
 
     logger.debug(`Fetching reads for measuring point ${measuringPointUuid}`);
     logger.debug(`Request URL: ${endpoint}`);
     logger.debug(`Request params: ${JSON.stringify(params)}`);
 
-    let response;
     try {
-      // Try API Key header
-      response = await axios.get(endpoint, { headers: this.headers, params });
-      if (response.status === 401) {
-        logger.debug('API Key auth failed, trying Access-Token header...');
-        response = await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
-        if (response.status === 401) {
-          logger.debug('Access-Token auth failed, trying Bearer token...');
-          response = await axios.get(endpoint, { headers: this.bearerHeaders, params });
-        }
-      }
-      if (response.status === 401) {
-        logger.warn('Cloud Ocean API authentication failed - API key may lack required permissions for measuring point data access');
-        return [];
-      }
+      const response = await this.requestWithFallback(endpoint, params);
       const data = response.data?.data || [];
       logger.info(`Successfully fetched ${data.length} reads for measuring point ${measuringPointUuid}`);
       return data;
     } catch (e) {
+      const status = e?.response?.status;
+      if (status === 401) {
+        logger.warn('Cloud Ocean API authentication failed - API key may lack required permissions for measuring point data access');
+        return [];
+      }
       logger.error(`Error fetching measuring point reads: ${e.message}`);
       return [];
     }
@@ -64,32 +75,25 @@ class CloudOceanAPI {
   async getMeasuringPointCdr(moduleUuid, measuringPointUuid, startDate, endDate) {
     const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/cdr`;
     const params = {
-      start_date: startDate.toISOString().slice(0, 10),
-      end_date: endDate.toISOString().slice(0, 10),
+      start: startDate.toISOString().slice(0, 10),
+      end: endDate.toISOString().slice(0, 10),
+      limit: 50,
+      offset: 0,
     };
 
     logger.debug(`Fetching CDR for measuring point ${measuringPointUuid}`);
 
-    let response;
     try {
-      // Try API Key header
-      response = await axios.get(endpoint, { headers: this.headers, params });
-      if (response.status === 401) {
-        logger.debug('API Key auth failed for CDR, trying Access-Token header...');
-        response = await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
-        if (response.status === 401) {
-          logger.debug('Access-Token auth failed for CDR, trying Bearer token...');
-          response = await axios.get(endpoint, { headers: this.bearerHeaders, params });
-        }
-      }
-      if (response.status === 401) {
-        logger.warn('Cloud Ocean API authentication failed for CDR - API key may lack required permissions');
-        return [];
-      }
+      const response = await this.requestWithFallback(endpoint, params);
       const data = response.data?.data || [];
       logger.info(`Successfully fetched ${data.length} CDR records for measuring point ${measuringPointUuid}`);
       return data;
     } catch (e) {
+      const status = e?.response?.status;
+      if (status === 401) {
+        logger.warn('Cloud Ocean API authentication failed for CDR - API key may lack required permissions');
+        return [];
+      }
       logger.error(`Error fetching measuring point CDR: ${e.message}`);
       return [];
     }
