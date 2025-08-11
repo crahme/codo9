@@ -16,7 +16,7 @@ class CloudOceanAPI {
       'Content-Type': 'application/json',
     };
     this.accessTokenHeaders = {
-      'Access-Token': `Bearer ${cleanApiKey}`,
+      'Access-Token': cleanApiKey,
       'Content-Type': 'application/json',
     };
     this.bearerHeaders = {
@@ -146,21 +146,25 @@ class CloudOceanAPI {
   async validateMeasuringPoint(moduleUuid, measuringPointUuid) {
     const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}`;
     try {
-      const response = await axios.get(endpoint, { headers: this.headers });
+      const response = await this.requestWithFallback(endpoint, undefined);
       return response.status === 200;
-    } catch {
+    } catch (e) {
+      const status = e?.response?.status;
+      if (status === 401) {
+        logger.warn('Cloud Ocean API authentication failed while validating measuring point');
+      }
       return false;
     }
   }
 
   async getDeviceConsumption(deviceId, startDate, endDate) {
-    const endpoint = `${this.baseUrl}/devices/${deviceId}/consumption`;
+    const endpoint = `${this.baseUrl}/v1/devices/${deviceId}/consumption`;
     const params = {
       start_date: startDate.toISOString(),
       end_date: endDate.toISOString(),
     };
     try {
-      const response = await axios.get(endpoint, { headers: this.headers, params });
+      const response = await this.requestWithFallback(endpoint, params);
       return response.data.data;
     } catch (e) {
       logger.error(`Error fetching consumption data: ${e.message}`);
@@ -169,9 +173,9 @@ class CloudOceanAPI {
   }
 
   async getDeviceInfo(deviceId) {
-    const endpoint = `${this.baseUrl}/devices/${deviceId}`;
+    const endpoint = `${this.baseUrl}/v1/devices/${deviceId}`;
     try {
-      const response = await axios.get(endpoint, { headers: this.headers });
+      const response = await this.requestWithFallback(endpoint, undefined);
       return response.data.data;
     } catch (e) {
       logger.error(`Error fetching device info: ${e.message}`);
