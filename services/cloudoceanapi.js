@@ -1,15 +1,30 @@
 const axios = require('axios');
 const winston = require('winston');
-const apiKey = process.env.API_Key;
 const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
+function toYMD(date) {
+  if (date instanceof Date) return date.toISOString().slice(0, 10);
+  if (typeof date === 'string') return date.slice(0, 10);
+  const d = new Date(date);
+  if (!isNaN(d)) return d.toISOString().slice(0, 10);
+  throw new Error('Invalid date provided');
+}
+
+function toISO(date) {
+  if (date instanceof Date) return date.toISOString();
+  const d = new Date(date);
+  if (!isNaN(d)) return d.toISOString();
+  throw new Error('Invalid date provided');
+}
+
 class CloudOceanAPI {
   constructor(apiKey) {
-    this.baseUrl = 'https://api.develop.rve.ca';
-    if (!apiKey) throw new Error('API key is required');
-    let cleanApiKey = apiKey.startsWith('Bearer ') ? apiKey.replace('Bearer ', '') : apiKey;
+    this.baseUrl = process.env.CLOUD_OCEAN_BASE_URL || 'https://api.develop.rve.ca';
+    const envKey = apiKey || process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
+    if (!envKey) throw new Error('API key is required');
+    const cleanApiKey = envKey.startsWith('Bearer ') ? envKey.replace('Bearer ', '') : envKey;
 
     this.headers = {
       'X-API-Key': cleanApiKey,
@@ -19,6 +34,10 @@ class CloudOceanAPI {
       'Access-Token': cleanApiKey,
       'Content-Type': 'application/json',
     };
+    this.accessTokenHeadersBearer = {
+      'Access-Token': `Bearer ${cleanApiKey}`,
+      'Content-Type': 'application/json',
+    };
     this.bearerHeaders = {
       'Authorization': `Bearer ${cleanApiKey}`,
       'Content-Type': 'application/json',
@@ -26,14 +45,14 @@ class CloudOceanAPI {
   }
 
   async requestWithFallback(endpoint, params) {
-    // Try Access-Token, then X-API-Key, then Authorization Bearer
+    // Try Access-Token (raw), then X-API-Key, then Access-Token (Bearer), then Authorization Bearer
     try {
-      logger.debug('Trying Access-Token header');
+      logger.debug('Trying Access-Token header (raw)');
       return await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
     } catch (err) {
       const status = err?.response?.status;
       if (status !== 401) throw err;
-      logger.debug('Access-Token auth failed with 401, trying X-API-Key...');
+      logger.debug('Access-Token raw failed with 401, trying X-API-Key...');
     }
     try {
       logger.debug('Trying X-API-Key header');
@@ -41,7 +60,15 @@ class CloudOceanAPI {
     } catch (err) {
       const status = err?.response?.status;
       if (status !== 401) throw err;
-      logger.debug('X-API-Key auth failed with 401, trying Authorization Bearer...');
+      logger.debug('X-API-Key failed with 401, trying Access-Token Bearer...');
+    }
+    try {
+      logger.debug('Trying Access-Token header (Bearer)');
+      return await axios.get(endpoint, { headers: this.accessTokenHeadersBearer, params });
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status !== 401) throw err;
+      logger.debug('Access-Token Bearer failed with 401, trying Authorization Bearer...');
     }
     logger.debug('Trying Authorization Bearer header');
     return await axios.get(endpoint, { headers: this.bearerHeaders, params });
@@ -50,8 +77,8 @@ class CloudOceanAPI {
   async getMeasuringPointReads(moduleUuid, measuringPointUuid, startDate, endDate) {
     const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads`;
     const params = {
-      start: startDate.toISOString().slice(0, 10),
-      end: endDate.toISOString().slice(0, 10),
+      start: toYMD(startDate),
+      end: toYMD(endDate),
       limit: 50,
       offset: 0,
     };
@@ -79,8 +106,8 @@ class CloudOceanAPI {
   async getMeasuringPointCdr(moduleUuid, measuringPointUuid, startDate, endDate) {
     const endpoint = `${this.baseUrl}/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/cdr`;
     const params = {
-      start: startDate.toISOString().slice(0, 10),
-      end: endDate.toISOString().slice(0, 10),
+      start: toYMD(startDate),
+      end: toYMD(endDate),
       limit: 50,
       offset: 0,
     };
@@ -164,8 +191,8 @@ class CloudOceanAPI {
   async getDeviceConsumption(deviceId, startDate, endDate) {
     const endpoint = `${this.baseUrl}/v1/devices/${deviceId}/consumption`;
     const params = {
-      start_date: startDate.toISOString(),
-      end_date: endDate.toISOString(),
+      start_date: toISO(startDate),
+      end_date: toISO(endDate),
     };
     try {
       const response = await this.requestWithFallback(endpoint, params);
