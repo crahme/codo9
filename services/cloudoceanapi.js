@@ -42,25 +42,37 @@ class CloudOceanAPI {
       'Authorization': `Bearer ${cleanApiKey}`,
       'Content-Type': 'application/json',
     };
+      this.authorizationRawHeaders = {
+      'Authorization': envKey,
+      'Content-Type': 'application/json',
+    };
   }
 
   async requestWithFallback(endpoint, params) {
-    // Try Access-Token (raw), then X-API-Key, then Access-Token (Bearer), then Authorization Bearer
+    // Prefer Authorization header (raw), then Authorization Bearer, then Access-Token (raw), Access-Token (Bearer), and finally X-API-Key
+    try {
+      logger.debug('Trying Authorization header (raw)');
+      return await axios.get(endpoint, { headers: this.authorizationRawHeaders, params });
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status !== 401) throw err;
+      logger.debug('Authorization (raw) failed with 401, trying Authorization Bearer...');
+    }
+    try {
+      logger.debug('Trying Authorization header (Bearer)');
+      return await axios.get(endpoint, { headers: this.bearerHeaders, params });
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status !== 401) throw err;
+      logger.debug('Authorization Bearer failed with 401, trying Access-Token (raw)...');
+    }
     try {
       logger.debug('Trying Access-Token header (raw)');
       return await axios.get(endpoint, { headers: this.accessTokenHeaders, params });
     } catch (err) {
       const status = err?.response?.status;
       if (status !== 401) throw err;
-      logger.debug('Access-Token raw failed with 401, trying X-API-Key...');
-    }
-    try {
-      logger.debug('Trying X-API-Key header');
-      return await axios.get(endpoint, { headers: this.headers, params });
-    } catch (err) {
-      const status = err?.response?.status;
-      if (status !== 401) throw err;
-      logger.debug('X-API-Key failed with 401, trying Access-Token Bearer...');
+      logger.debug('Access-Token (raw) failed with 401, trying Access-Token (Bearer)...');
     }
     try {
       logger.debug('Trying Access-Token header (Bearer)');
@@ -68,10 +80,10 @@ class CloudOceanAPI {
     } catch (err) {
       const status = err?.response?.status;
       if (status !== 401) throw err;
-      logger.debug('Access-Token Bearer failed with 401, trying Authorization Bearer...');
+      logger.debug('Access-Token (Bearer) failed with 401, trying X-API-Key...');
     }
-    logger.debug('Trying Authorization Bearer header');
-    return await axios.get(endpoint, { headers: this.bearerHeaders, params });
+    logger.debug('Trying X-API-Key header');
+    return await axios.get(endpoint, { headers: this.headers, params });
   }
 
   async getMeasuringPointReads(moduleUuid, measuringPointUuid, startDate, endDate) {
