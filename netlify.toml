@@ -98,3 +98,6 @@ status = 200
 
       [context.preview.headers.values]
       Cache-Control = "public, max-age=31536000, immutable"
+
+    [[context.preview.plugins]]
+    package = "@netlify/plugin-visual-editor"
