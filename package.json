@@ -13,7 +13,6 @@
   "dependencies": {
     "@neondatabase/serverless": "latest",
     "@netlify/neon": "latest",
-    "@qodo/command": "latest",
     "axios": "^1.7.9",
     "browserslist": "latest",
     "contentful": "^11.4.3",
