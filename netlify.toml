@@ -13,7 +13,7 @@ base = "/"
   SENTRY_LOG_LEVEL = "debug"
   NEXT_TELEMETRY_DISABLED = "1"
   NODE_OPTIONS = "--max_old_space_size=4096"
-  NODE_VERSION = "18.20.4"
+  NODE_VERSION = "20"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
@@ -21,9 +21,6 @@ package = "@netlify/plugin-nextjs"
 [[plugins]]
 package = "@netlify/plugin-lighthouse"
 
-[[plugins]]
-package = "@netlify/plugin-visual-editor"
-enabled = true
 
 [[headers]]
 for = "/_next/static/*"
@@ -64,6 +61,10 @@ status = 200
     remote_images = [
       "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
     ]
+
+    [[context.production.plugins]]
+    package = "@netlify/plugin-visual-editor"
+    enabled = true
 
   [context.main]
 
