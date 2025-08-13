@@ -1,5 +1,5 @@
 const { PDFDocument } = require('pdf-lib');
-const { upsertInvoiceByNumber } = require('../../services/contentful_writer');
+const contentful = require('contentful-management');
 const CloudOceanAPI = require('../../services/cloudoceanapi');
 const { calculateBilling } = require('../../src/lib/billing');
 
@@ -19,12 +19,16 @@ exports.handler = async (event) => {
 
     const { lineItems, totalKwh, cost } = calculateBilling(reads, rate);
 
-    // Upsert invoice to Contentful
-    const entryId = await upsertInvoiceByNumber({
-      spaceId: process.env.CONTENTFUL_SPACE_ID,
-      environmentId: process.env.CONTENTFUL_ENVIRONMENT || 'master',
-      invoiceNumber,
-      invoiceData: {
+    // Create or update invoice in Contentful (non-fatal if it fails)
+    let entryId = null;
+    try {
+      const client = contentful.createClient({
+        accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+      });
+      const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
+      const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || 'master');
+
+      const fields = {
         invoiceNumber,
         measuringPointUuid,
         moduleUuid,
@@ -34,8 +38,18 @@ exports.handler = async (event) => {
         totalAmount: cost,
         rate,
         lineItems,
+      };
+      const localized = {};
+      for (const [k, v] of Object.entries(fields)) {
+        localized[k] = { 'en-US': v };
       }
-    });
+      const entry = await env.createEntry('invoice', { fields: localized });
+      const published = await entry.publish();
+      entryId = published?.sys?.id || null;
+    } catch (_) {
+      // ignore Contentful errors for PDF generation path
+      entryId = null;
+    }
 
     // Generate a simple PDF summary
     const pdfDoc = await PDFDocument.create();
