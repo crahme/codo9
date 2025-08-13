@@ -21,9 +21,6 @@ package = "@netlify/plugin-nextjs"
 [[plugins]]
 package = "@netlify/plugin-lighthouse"
 
-[[plugins]]
-package = "@netlify/plugin-visual-editor"
-enabled = false
 
 
 [[headers]]
@@ -66,10 +63,7 @@ status = 200
       "^(?:https:\\/\\/images\\.ctfassets\\.net(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
     ]
 
-    [[context.production.plugins]]
-    package = "@netlify/plugin-visual-editor"
-    enabled = true
-
+    
   [context.main]
 
     [context.main.images]
