@@ -21,6 +21,10 @@ package = "@netlify/plugin-nextjs"
 [[plugins]]
 package = "@netlify/plugin-lighthouse"
 
+[[plugins]]
+package = "@netlify/plugin-visual-editor"
+enabled = false
+
 
 [[headers]]
 for = "/_next/static/*"
