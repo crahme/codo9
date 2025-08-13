@@ -10,11 +10,11 @@ async function updateInvoiceEntry({ spaceId, environmentId, entryId, invoiceData
   const entry = await env.getEntry(entryId);
 
   // Update fields as needed; adjust field names to match Contentful model
-  entry.fields.totalKwh = { 'en-US': invoiceData.totalKwh };
-  entry.fields.totalAmount = { 'en-US': invoiceData.cost };
-  if (invoiceData.lineItems) {
-    entry.fields.lineItems = { 'en-US': invoiceData.lineItems };
+  const localized = {};
+  for (const [k, v] of Object.entries(invoiceData || {})) {
+    localized[k] = { 'en-US': v };
   }
+  Object.assign(entry.fields, localized);
 
   const updatedEntry = await entry.update();
   await updatedEntry.publish();

@@ -71,7 +71,7 @@ require('./routes')(app); // Make sure you have a ./routes.js file
 // --- Cloud Ocean API Integration ---
 
 const CloudOceanAPI = require('./services/cloudoceanapi');
-const cloudOcean = new CloudOceanAPI(process.env.API_Key);
+const cloudOcean = new CloudOceanAPI();
 
 /**
  * Example function to fetch from Cloud Ocean and save to ConsumptionRecord.

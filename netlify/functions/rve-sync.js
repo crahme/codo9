@@ -16,12 +16,7 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required parameters: start, end, invoiceNumber' }) };
     }
 
-    const apiKey = process.env.API_KEY || process.env.API_Key;
-    if (!apiKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Missing API key (API_KEY)' }) };
-    }
-
-    const api = new CloudOceanAPI(apiKey);
+    const api = new CloudOceanAPI();
     const reads = await api.getMeasuringPointReads(moduleUuid, measuringPointUuid, start, end);
 
     const { lineItems, totalKwh, cost } = calculateBilling(reads, rate);

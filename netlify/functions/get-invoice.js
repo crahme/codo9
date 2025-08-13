@@ -1,5 +1,5 @@
 const fetch = require('node-fetch');
-const ACCESS_TOKEN = process.env.API_Key;
+const ACCESS_TOKEN = process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
 const RVE_BASE = 'https://api.develop.rve.ca';
 const MODULE_UUID = 'c667ff46-9730-425e-ad48-1e950691b3f9';
 

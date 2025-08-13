@@ -14,7 +14,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const cloudOcean = new CloudOceanAPI(process.env.API_Key);
+const cloudOcean = new CloudOceanAPI();
 const invoiceGenerator = new InvoiceGenerator(path.join(__dirname, 'static', 'invoices'));
 
 app.post('/api/generate-invoices', async (req, res) => {
@@ -78,7 +78,7 @@ app.post('/api/generate-invoices', async (req, res) => {
         // --- Contentful integration ---
         await updateInvoiceEntry({
           spaceId: process.env.CONTENTFUL_SPACE_ID,
-          environmentId: process.env.CONTENTFUL_ENVIRONMENT_ID || 'master',
+          environmentId: process.env.CONTENTFUL_ENVIRONMENT || 'master',
           entryId: process.env.CONTENTFUL_INVOICE_ENTRY_ID, // Set this in your env vars
           invoiceData: {
             totalKwh: parseFloat(consumption),

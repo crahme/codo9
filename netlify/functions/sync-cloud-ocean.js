@@ -12,7 +12,7 @@ ConsumptionRecord.init({
 }, { sequelize, modelName: 'ConsumptionRecord', timestamps: false });
 
 exports.handler = async function(event, context) {
-  const cloudOcean = new CloudOceanAPI(process.env.API_Key);
+  const cloudOcean = new CloudOceanAPI();
 
   try {
     // Replace with actual UUIDs from your repo context

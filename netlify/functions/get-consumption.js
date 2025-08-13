@@ -10,8 +10,8 @@ const MEASURING_POINTS = [
   'uuid-2',
   'uuid-3'
 ];
-const API_KEY = process.env.API_Key;
-const ACCESS_TOKEN = process.env.API_Key;
+const API_KEY = process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
+const ACCESS_TOKEN = process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
 
 exports.handler = async function(event, context) {
   // Example: fetch for a date range
