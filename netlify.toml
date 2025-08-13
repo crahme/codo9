@@ -13,7 +13,7 @@ base = "/"
   SENTRY_LOG_LEVEL = "debug"
   NEXT_TELEMETRY_DISABLED = "1"
   NODE_OPTIONS = "--max_old_space_size=4096"
-  NODE_VERSION = "20.18.1"
+  NODE_VERSION = "18.20.4"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
