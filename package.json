@@ -18,10 +18,8 @@
     "contentful": "^11.4.3",
     "contentful-cli": "^3.7.2",
     "contentful-management": "^11.54.0",
-    "curl": "^0.1.4",
-    "markdown-to-jsx": "^7.4.7",
-    "netlify": "^13.2.0",
-    "next": "^15.3.2",
+        "markdown-to-jsx": "^7.4.7",
+        "next": "^15.3.2",
     "pdf-lib": "latest",
     "pg": "latest",
     "puppeteer": "^23.11.1",
@@ -30,8 +28,7 @@
     "react-id-swiper": "latest",
     "sequelize": "latest",
     "sqlite3": "latest",
-    "stackbit": "^0.0.0",
-    "winston": "3.10.0"
+        "winston": "3.10.0"
   },
   "engines": {
     "node": ">=20"
