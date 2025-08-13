@@ -4,9 +4,9 @@ require('dotenv').config();
 const axios = require('axios');
 const CloudOceanAPI = require('./cloudoceanapi');
 
-const BASE_URL = process.env.CLOUD_OCEAN_BASE_URL || 'https://api.develop.rve.ca';
-const API_KEY = process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
-const MODULE_UUID = process.env.RVE_MODULE_UUID || 'c667ff46-9730-425e-ad48-1e950691b3f9';
+const BASE_URL =  'https://api.develop.rve.ca';
+const API_KEY = process.env.API_Key;
+const MODULE_UUID = 'c667ff46-9730-425e-ad48-1e950691b3f9';
 const START = (process.env.RVE_START || '2024-10-16').slice(0, 10);
 const END = (process.env.RVE_END || '2024-11-25').slice(0, 10);
 
