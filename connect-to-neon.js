@@ -20,10 +20,10 @@ async function connect() {
     console.log('Server time:', res.rows[0]);
   } catch (err) {
     console.error('Connection error:', err.stack);
-  } finally {
-    await client.end();
-    console.log('Disconnected.');
-  }
+  } //finally {
+    //await client.end();
+    //console.log('Disconnected.');
+  //}
 }
 
 connect();
