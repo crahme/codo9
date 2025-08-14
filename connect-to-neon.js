@@ -2,7 +2,7 @@
 const { Client } = require('pg');
 
 // Replace these with your actual Neon connection details
-const connectionString = 'postgresql://neondb_owner:npg_yMXmTz81aPCD@ep-polished-waterfall-a5szq7p4-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'';
+const connectionString = 'postgresql://neondb_owner:npg_yMXmTz81aPCD@ep-polished-waterfall-a5szq7p4-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 
 const client = new Client({
   connectionString,
