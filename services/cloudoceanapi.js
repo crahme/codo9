@@ -22,29 +22,34 @@ function toISO(date) {
 class CloudOceanAPI {
   constructor(apiKey) {
     this.baseUrl = process.env.CLOUD_OCEAN_BASE_URL || 'https://api.develop.rve.ca';
-    const envKey = apiKey || process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
-    if (!envKey) throw new Error('API key is required');
-    const cleanApiKey = envKey.startsWith('Bearer ') ? envKey.replace('Bearer ', '') : envKey;
+    const envKeyRaw = (apiKey || process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY || '').trim();
+    if (!envKeyRaw) throw new Error('API key is required');
+    const cleanApiKey = envKeyRaw.replace(/^Bearer\s+/i, '');
 
     this.headers = {
       'X-API-Key': cleanApiKey,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
     this.accessTokenHeaders = {
       'Access-Token': cleanApiKey,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
     this.accessTokenHeadersBearer = {
       'Access-Token': `Bearer ${cleanApiKey}`,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
     this.bearerHeaders = {
       'Authorization': `Bearer ${cleanApiKey}`,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
       this.authorizationRawHeaders = {
-      'Authorization': envKey,
+      'Authorization': envKeyRaw,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
   }
 
@@ -91,6 +96,8 @@ class CloudOceanAPI {
     const params = {
       start: toYMD(startDate),
       end: toYMD(endDate),
+      start_date: toYMD(startDate),
+      end_date: toYMD(endDate),
       limit: 50,
       offset: 0,
     };
@@ -120,6 +127,8 @@ class CloudOceanAPI {
     const params = {
       start: toYMD(startDate),
       end: toYMD(endDate),
+      start_date: toYMD(startDate),
+      end_date: toYMD(endDate),
       limit: 50,
       offset: 0,
     };
@@ -205,6 +214,8 @@ class CloudOceanAPI {
     const params = {
       start_date: toISO(startDate),
       end_date: toISO(endDate),
+      start: toISO(startDate),
+      end: toISO(endDate),
     };
     try {
       const response = await this.requestWithFallback(endpoint, params);
@@ -215,8 +226,12 @@ class CloudOceanAPI {
         logger.warn(`Device consumption not found for device ${deviceId}`);
         return [];
       }
+      if (status === 401) {
+        logger.warn('Cloud Ocean API authentication failed for device consumption - API key may lack required permissions');
+        return [];
+      }
       logger.error(`Error fetching consumption data: ${e.message}`);
-      throw e;
+      return [];
     }
   }
 
@@ -231,8 +246,12 @@ class CloudOceanAPI {
         logger.warn(`Device not found: ${deviceId}`);
         return null;
       }
+      if (status === 401) {
+        logger.warn('Cloud Ocean API authentication failed while fetching device info - API key may lack required permissions');
+        return null;
+      }
       logger.error(`Error fetching device info: ${e.message}`);
-      throw e;
+      return null;
     }
   }
 }
