@@ -42,7 +42,7 @@ async function listModuleMeasuringPoints(moduleUuid) {
   const url = `${BASE_URL}/v1/modules/${encodeURIComponent(moduleUuid)}/measuring-points`;
   const all = [];
   let offset = 0;
-  const limit = 100;
+  const limit = 50;
   while (true) {
     const res = await getWithFallback(url, { limit, offset });
     const data = res.data?.data || [];
