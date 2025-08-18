@@ -20,16 +20,16 @@
     "contentful-management": "^11.54.0",
     "markdown-to-jsx": "^7.4.7",
     "next": "^15.3.2",
-    "pino":"latest",
     "pdf-lib": "latest",
     "pg": "latest",
+    "pino": "^9.9.0",
     "puppeteer": "^23.11.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-id-swiper": "latest",
     "sequelize": "latest",
     "sqlite3": "latest",
-        "winston": "3.10.0"
+    "winston": "3.10.0"
   },
   "engines": {
     "node": ">=20"
