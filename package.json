@@ -21,6 +21,7 @@
     "markdown-to-jsx": "^7.4.7",
     "next": "^15.3.2",
     "pdf-lib": "latest",
+    "pdfkit": "^0.17.1",
     "pg": "latest",
     "pino": "^9.9.0",
     "puppeteer": "^23.11.1",
