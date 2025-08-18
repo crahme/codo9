@@ -20,6 +20,7 @@
     "contentful-management": "^11.54.0",
     "markdown-to-jsx": "^7.4.7",
     "next": "^15.3.2",
+    "nodemailer": "^7.0.5",
     "pdf-lib": "latest",
     "pdfkit": "^0.17.1",
     "pg": "latest",
