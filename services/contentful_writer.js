@@ -1,4 +1,5 @@
 const contentful = require('contentful-management');
+require('dotenv').config();
 
 const accessToken = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
 if (!accessToken) {
