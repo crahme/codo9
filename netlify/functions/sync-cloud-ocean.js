@@ -1,24 +1,28 @@
-const { Sequelize } = require('sequelize');
+const { Sequelize, Model, DataTypes } = require('sequelize');
 const databaseUrl = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 
 const sequelize = new Sequelize(databaseUrl, {
   dialect: databaseUrl.includes('postgres') ? 'postgres' : 'sqlite',
   logging: false
 });
+
+// Define the ConsumptionRecord model if not imported from elsewhere
 class ConsumptionRecord extends Model {}
 ConsumptionRecord.init({
   device_id: DataTypes.INTEGER,
   time_stamp: DataTypes.DATE,
   kwh_consumption: DataTypes.DOUBLE,
-  rate: DataTypes.DOUBLE,
-  created_at: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }
+  rate: DataTypes.DOUBLE
 }, { sequelize, modelName: 'ConsumptionRecord', timestamps: false });
+
+// Import or define CloudOceanAPI as needed
+// const CloudOceanAPI = require('path-to-your-cloudoceanapi');
+const CloudOceanAPI = require('../../services/cloudoceanapi'); // Adjust path as needed
 
 exports.handler = async function(event, context) {
   const cloudOcean = new CloudOceanAPI();
 
   try {
-    // Replace with actual UUIDs from your repo context
     const moduleUuid = 'c667ff46-9730-425e-ad48-1e950691b3f9';
     const pointUuid = '71ef9476-3855-4a3f-8fc5-333cfbf9e898';
     const startDate = new Date(Date.now() - 86400 * 1000 * 30);
