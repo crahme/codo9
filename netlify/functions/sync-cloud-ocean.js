@@ -1,7 +1,10 @@
-const { Sequelize, DataTypes, Model } = require('sequelize');
-const CloudOceanAPI = require('../../services/cloudoceanapi');
+const { Sequelize } = require('sequelize');
+const databaseUrl = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 
-const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL);
+const sequelize = new Sequelize(databaseUrl, {
+  dialect: databaseUrl.includes('postgres') ? 'postgres' : 'sqlite',
+  logging: false
+});
 class ConsumptionRecord extends Model {}
 ConsumptionRecord.init({
   device_id: DataTypes.INTEGER,
