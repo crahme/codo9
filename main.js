@@ -1,12 +1,15 @@
 require('dotenv').config();
+const express = require('express');
+const { Sequelize, DataTypes, Model } = require('sequelize');
+const path = require('path');
+const fs = require('fs');
 const logger = require('pino')({ level: 'info' });
-const app = require('./app'); // Importing the Express app
 
-// Start the server
-const PORT = 5000;
-const HOST = '0.0.0.0';
+// Express app and DB setup
+const app = express();
+const DATABASE_URL = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 
-logger.info('Starting Express server...');
-app.listen(PORT, HOST, () => {
-  logger.info(`Server is running on http://${HOST}:${PORT}`);
-});
+// ... your existing setup code ...
+
+// At the end of the file, export the app:
+module.exports = app;
