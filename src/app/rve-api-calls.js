@@ -10,7 +10,7 @@ url.searchParams.append('limit', 50);
 url.searchParams.append('offset', 0);
 
 // Use your API Key from environment variable
-const apiKey = process.env.API_KEY; // or CLOUD_OCEAN_API_KEY if that's your env var
+const apiKey = process.env.API_Key; // or CLOUD_OCEAN_API_KEY if that's your env var
 
 fetch(url.toString(), {
   method: 'GET',
