@@ -2,7 +2,7 @@
 
 import 'dotenv/config'; // Load environment variables from .env file
 import axios from 'axios';
-import CloudOceanAPI from '../lib/cloudoceanapi.js'; // Adjust the path as needed
+import CloudOceanAPI from '../services/cloudoceanapi.js'; // Adjust the path as needed
 load('dotenv').config(); // Ensure dotenv is loaded
 const BASE_URL =  'https://api.develop.rve.ca';
 const API_KEY = process.env.API_Key;
