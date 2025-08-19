@@ -151,4 +151,4 @@ ConsumptionRecord.belongsTo(Device, { foreignKey: 'device_id' });
 Device.hasMany(Invoice, { foreignKey: 'device_id', as: 'invoices' });
 Invoice.belongsTo(Device, { foreignKey: 'device_id' });
 
-module.exports = { Device, ConsumptionRecord, Invoice };
+export {Device, ConsumptionRecord, Invoice};
