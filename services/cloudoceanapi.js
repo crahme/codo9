@@ -257,4 +257,4 @@ class CloudOceanAPI {
   }
 }
 
-module.exports = CloudOceanAPI;
+export default CloudOceanAPI;
