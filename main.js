@@ -12,4 +12,4 @@ const DATABASE_URL = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 // ... your existing setup code ...
 
 // At the end of the file, export the app:
-module.exports = app;
+export default app;
