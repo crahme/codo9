@@ -3,8 +3,8 @@ import express from 'express';
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import path from 'path';
 import fs from  'fs';
-const logger = require('pino')({ level: 'info' });
-
+import pino from 'pino';
+const logger = pino({ level: 'info' });
 // Express app and DB setup     
 const app = express();
 const DATABASE_URL = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
