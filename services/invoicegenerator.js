@@ -1,8 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const PDFDocument = require('pdfkit');
-const moment = require('moment');
-const logger = require('pino')({ level: 'info' });
+import fs from 'fs';
+import path from 'path';
+import PDFDocument from 'pdfkit';
+import moment from 'moment';
+import pino from 'pino';
+const logger = pino({ level: 'info' });
 
 class InvoiceGenerator {
   constructor(outputDir) {
@@ -132,4 +133,4 @@ class InvoiceGenerator {
   }
 }
 
-module.exports = InvoiceGenerator;
+export default InvoiceGenerator;
