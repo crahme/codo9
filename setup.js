@@ -4,7 +4,7 @@
 // Usage: node setup.js
 
 import 'dotenv/config'; // Load environment variables from .env file
-const { Device, ConsumptionRecord, Invoice } = require('./models');
+import 'models.js';
 import  { Op } from 'sequelize';
 
 async function quickSetup() {
