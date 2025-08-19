@@ -140,7 +140,7 @@ async function main() {
   } catch (e) {
     console.warn('Failed to list devices from API; falling back to env device ID(s) if provided. Error:', e.message);
     const fallbackIds = [];
-    if (process.env.CLOUD_OCEAN_DEVICE_ID) fallbackIds.push(process.env.CLOUD_OCEAN_DEVICE_ID);
+    if (process.env.CLOUD_OCEAN_DEVICE_IDS) fallbackIds.push(process.env.CLOUD_OCEAN_DEVICE_ID);
     if (process.env.DEVICE_ID) fallbackIds.push(process.env.DEVICE_ID);
     const unique = Array.from(new Set(fallbackIds.filter(Boolean)));
     devices = unique.map((id) => ({ id }));
