@@ -1,4 +1,4 @@
-require('dotenv').config();
+import 'dotenv/config';
 const express = require('express');
 const { Sequelize, DataTypes, Model } = require('sequelize');
 const path = require('path');
