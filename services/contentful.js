@@ -1,4 +1,4 @@
-const contentful = require('contentful-management');
+import contentful from 'contentful-management';
 
 class ContentfulService {
   constructor(accessToken, spaceId, environmentId = 'master') {
@@ -25,4 +25,4 @@ class ContentfulService {
   }
 }
 
-module.exports = ContentfulService;
+export default ContentfulService;
