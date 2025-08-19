@@ -1,7 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
 import contentful from 'contentful-management';
-import CloudOceanAPI from '../../services/cloudocean';
-import { calculateBilling } from '../../services/billing';
+import CloudOceanAPI from '../../services/cloudoceanapi';
+import { calculateBilling } from '../../netlify/functions';
 
 
 export async function handler(event, context) {
