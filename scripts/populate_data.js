@@ -3,8 +3,8 @@ Script to populate the database with sample data for testing
 Translated from Python populate_data.py to Node.js using Sequelize models.
 */
 
-const { Op } = require('sequelize');
-const { Device, ConsumptionRecord, Invoice } = require('../models');
+import { Op } from 'sequelize';
+import { Device, ConsumptionRecord, Invoice } from '../models/index.js';
 
 function round2(n) {
   return Math.round(n * 100) / 100;
