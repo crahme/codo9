@@ -1,7 +1,9 @@
-const nodemailer = require('nodemailer');
-const fs = require('fs');
-const path = require('path');
-const logger = require('pino')({ level: 'info' });
+import nodemailer from 'nodemailer';
+import  'fs';
+import 'dotenv/config';
+import path from 'path';
+import pino from 'pino';
+const logger = pino({ level: 'info' });
 
 class EmailService {
   constructor(smtpServer, smtpPort, username, password) {
