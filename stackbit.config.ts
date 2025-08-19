@@ -1,9 +1,8 @@
 // stackbit.config.ts
 // Further refined siteMap for netlify dev log structure
 import 'dotenv/config'; // Ensure dotenv is loaded to access environment variables
-import pkg from '@stackbit/types';
+import {  defineStackbitConfig } from '@stackbit/types';
 import { ContentfulContentSource } from '@stackbit/cms-contentful';
-const { defineStackbitConfig } = pkg;
 // --- Environment Variable Checks --- (Keep as before)
 if (!process.env.CONTENTFUL_SPACE_ID) {
   console.warn('Warning: CONTENTFUL_SPACE_ID is not set in environment variables. Contentful integration may fail.');
