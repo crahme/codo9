@@ -1,5 +1,6 @@
 'use strict';
 
+import { fileURLToPath } from 'url';
 import 'dotenv/config'; // Load environment variables from .env file
 import axios from 'axios';
 import '../main.js';
@@ -163,8 +164,9 @@ async function main() {
 
   console.log('\nCloudOceanAPI all-points-and-devices test complete.');
 }
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 
-if (require.main === module) {
+if (isMain) {
   main().catch((err) => {
     const status = err?.response?.status;
     const body = err?.response?.data;
@@ -174,3 +176,13 @@ if (require.main === module) {
     process.exit(2);
   });
 }
+//if (require.main === module) {
+  //main().catch((err) => {
+    //const status = err?.response?.status;
+    //const body = err?.response?.data;
+    //console.error('Test failed:', err.message);
+    //if (status) console.error('Status:', status);
+    //if (body) console.error('Body:', JSON.stringify(body, null, 2));
+    //process.exit(2);
+  //});
+//}
