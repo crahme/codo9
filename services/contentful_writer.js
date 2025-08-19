@@ -62,4 +62,4 @@ async function upsertInvoiceByNumber({ spaceId, environmentId = 'master', invoic
   }
 }
 
-module.exports = { updateInvoiceEntry, upsertInvoiceByNumber };
+export { updateInvoiceEntry, upsertInvoiceByNumber };
