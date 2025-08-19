@@ -1,5 +1,6 @@
-const contentful = require('contentful-management');
-require('dotenv').config();
+import contentful from 'contentful-management';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const accessToken = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
 if (!accessToken) {
