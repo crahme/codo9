@@ -3,9 +3,9 @@
 // Quick setup script to populate database with all 11 measuring points
 // Usage: node setup.js
 
-require('dotenv').config();
+import 'dotenv/config'; // Load environment variables from .env file
 const { Device, ConsumptionRecord, Invoice } = require('./models');
-const { Op } = require('sequelize');
+import  { Op } from 'sequelize';
 
 async function quickSetup() {
   const sequelize = Device.sequelize;
