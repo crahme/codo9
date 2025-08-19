@@ -4,7 +4,7 @@ Translated from Python populate_data.py to Node.js using Sequelize models.
 */
 
 import { Op } from 'sequelize';
-import models from 'models.js';
+const { Device, ConsumptionRecord, Invoice } = require('../models'); // Adjust path as necessary
 
 function round2(n) {
   return Math.round(n * 100) / 100;
