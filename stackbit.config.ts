@@ -1,6 +1,6 @@
 // stackbit.config.ts
 // Further refined siteMap for netlify dev log structure
-
+import 'dotenv/config'; // Ensure dotenv is loaded to access environment variables
 import pkg from '@stackbit/types';
 import { ContentfulContentSource } from '@stackbit/cms-contentful';
 const { defineStackbitConfig } = pkg;
@@ -57,7 +57,13 @@ export default defineStackbitConfig({
       .map((document) => {
         const entryId = document.id as string | undefined; // Top-level ID from debug log
         const slugField = document.fields.slug;
-        const slug = typeof slugField === 'string' ? slugField : (slugField?.['en-US'] ?? slugField?.['default'] ?? undefined) as string | undefined;
+        // Handle both direct string and localized object cases
+        const slug =
+          typeof slugField === 'string'
+            ? slugField
+            : typeof slugField === 'object' && slugField !== null && 'en' in slugField
+              ? (slugField as { [locale: string]: string })['en']
+              : undefined;
 
         const titleField = document.fields.title; // title might also be an object with 'value'
         const title = (typeof titleField === 'object' && titleField !== null && 'value' in titleField ? titleField.value : titleField) as string | undefined;
