@@ -1,13 +1,19 @@
 // stackbit.config.ts
 // Further refined siteMap for netlify dev log structure
 
-import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
+import pkg from '@stackbit/types';
 import { ContentfulContentSource } from '@stackbit/cms-contentful';
-
+const { defineStackbitConfig } = pkg;
 // --- Environment Variable Checks --- (Keep as before)
-if (!process.env.CONTENTFUL_SPACE_ID) { /* ... */ }
-if (!process.env.CONTENTFUL_PREVIEW_TOKEN) { /* ... */ }
-if (!process.env.CONTENTFUL_MANAGEMENT_TOKEN) { /* ... */ }
+if (!process.env.CONTENTFUL_SPACE_ID) {
+  console.warn('Warning: CONTENTFUL_SPACE_ID is not set in environment variables. Contentful integration may fail.');
+}
+if (!process.env.CONTENTFUL_PREVIEW_TOKEN) {
+  console.warn('Warning: CONTENTFUL_PREVIEW_TOKEN is not set in environment variables. Contentful preview API access may fail.');
+}
+if (!process.env.CONTENTFUL_MANAGEMENT_TOKEN) {
+  console.warn('Warning: CONTENTFUL_MANAGEMENT_TOKEN is not set in environment variables. Contentful management API access may fail.');
+}
 // --- End Environment Variable Checks ---
 
 export default defineStackbitConfig({
@@ -41,7 +47,7 @@ export default defineStackbitConfig({
       return [];
     }
 
-    const entries: SiteMapEntry[] = documents
+    const entries = documents
       .filter((doc) => {
         // Filter for documents that are page models and have the necessary fields structure
         const isPageModel = doc && doc.modelName && (doc.modelName === 'page' || doc.modelName === 'invoice');
@@ -50,8 +56,8 @@ export default defineStackbitConfig({
       })
       .map((document) => {
         const entryId = document.id as string | undefined; // Top-level ID from debug log
-        const slugField = document.fields.slug; // slug is an object with a 'value'
-        const slug = slugField?.value as string | undefined;
+        const slugField = document.fields.slug;
+        const slug = typeof slugField === 'string' ? slugField : (slugField?.['en-US'] ?? slugField?.['default'] ?? undefined) as string | undefined;
 
         const titleField = document.fields.title; // title might also be an object with 'value'
         const title = (typeof titleField === 'object' && titleField !== null && 'value' in titleField ? titleField.value : titleField) as string | undefined;
@@ -85,7 +91,7 @@ export default defineStackbitConfig({
           isHomePage: isHomePage,
         };
       })
-      .filter((entry): entry is SiteMapEntry => entry !== null);
+      .filter((entry): entry is { stableId: string; label: string; urlPath: string; isHomePage: boolean } => entry !== null);
 
     console.log(`[siteMap] Generated ${entries.length} site map entries.`);
     if (entries.length > 0) {
