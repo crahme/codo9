@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-const { Sequelize, DataTypes, Model } = require('sequelize');
+import { Sequelize, DataTypes, Model } from 'sequelize';
 const path = require('path');
 const fs = require('fs');
 const logger = require('pino')({ level: 'info' });
