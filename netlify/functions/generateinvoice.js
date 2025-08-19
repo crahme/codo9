@@ -1,7 +1,8 @@
-const { PDFDocument } = require('pdf-lib');
-const contentful = require('contentful-management');
-const CloudOceanAPI = require('../../services/cloudoceanapi');
-const { calculateBilling } = require('../../src/lib/billing');
+import { PDFDocument } from 'pdf-lib';
+import contentful from 'contentful-management';
+import CloudOceanAPI from '../../services/cloudocean';
+import { calculateBilling } from '../../services/billing';
+
 
 exports.handler = async (event) => {
   try {

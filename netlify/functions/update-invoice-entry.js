@@ -1,5 +1,5 @@
-const fetch = require('node-fetch');
-const { Client } = require('pg');
+import fetch from 'node-fetch';
+import {Client} from 'pg';
 
 // Use the same DB env variable as get-consumption.js
 const DB_URL = process.env.NETLIFY_DATABASE_URL;

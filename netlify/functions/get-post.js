@@ -1,4 +1,4 @@
-const { neon } = require('@netlify/neon');
+import {neon} from 'neon-js'; // Ensure neon-js is installed and configured
 
 exports.handler = async (event) => {
   try {
