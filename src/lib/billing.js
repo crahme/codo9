@@ -41,4 +41,4 @@ function calculateBilling(reads, rate) {
   };
 }
 
-module.exports = { calculateBilling };
+export {calculateBilling} ;

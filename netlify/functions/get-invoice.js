@@ -28,7 +28,7 @@ async function fetchWithFallback(url, token) {
   throw new Error('All authentication header attempts failed without a response');
 }
 
-exports.handler = async function(event) {
+export async function handler(event, context) {
   const qs = event.queryStringParameters || {};
   const invoiceNumber = qs.invoiceNumber ?? qs.number;
   if (!invoiceNumber) {

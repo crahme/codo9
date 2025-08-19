@@ -4,7 +4,7 @@ import CloudOceanAPI from '../../services/cloudocean';
 import { calculateBilling } from '../../services/billing';
 
 
-exports.handler = async (event) => {
+export async function handler(event, context) {
   try {
     const qs = event.queryStringParameters || {};
 

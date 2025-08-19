@@ -14,7 +14,7 @@ const MEASURING_POINTS = [
 const API_KEY = process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
 const ACCESS_TOKEN = process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
 
-exports.handler = async function(event, context) {
+export async function handler(event, context){
   // Example: fetch for a date range
   const startDate = event.queryStringParameters.start || '2024-01-01';
   const endDate = event.queryStringParameters.end || '2024-12-31';
