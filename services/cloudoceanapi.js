@@ -1,5 +1,6 @@
-const axios = require('axios');
-const winston = require('winston');
+import axios from 'axios';
+import 'dotenv/config'; // Ensure environment variables are loaded
+import winston from 'winston';
 const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
