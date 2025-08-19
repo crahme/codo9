@@ -1,5 +1,6 @@
-const { Client } = require('pg');
-const fetch = require('node-fetch');
+import { Client } from 'pg';
+import fetch from 'node-fetch'; // Use import statement for consistency with other files
+
 
 // Environment variables from Netlify or your .env file
 const DB_URL = process.env.NETLIFY_DATABASE_URL;

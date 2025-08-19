@@ -1,4 +1,4 @@
-const { Sequelize, Model, DataTypes } = require('sequelize');
+import { Sequelize, Model, DataTypes } from 'sequelize';
 const databaseUrl = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 
 const sequelize = new Sequelize(databaseUrl, {

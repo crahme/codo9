@@ -24,7 +24,8 @@
     "nodemailer": "^7.0.5",
     "pdf-lib": "latest",
     "pdfkit": "^0.17.1",
-    "pg": "latest",
+    "pg": "^8.16.3",
+    "pg-hstore": "^2.3.4",
     "pino": "^9.9.0",
     "puppeteer": "^23.11.1",
     "react": "^18.3.1",
@@ -52,5 +53,4 @@
     "source-map-loader": "^5.0.0",
     "tailwindcss": "^3.4.3"
   }
-  
 }
