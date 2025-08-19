@@ -62,7 +62,7 @@ export default defineStackbitConfig({
           typeof slugField === 'string'
             ? slugField
             : typeof slugField === 'object' && slugField !== null && 'en' in slugField
-              ? (slugField as { [locale: string]: string })['en']
+              ? ((slugField as unknown) as { [locale: string]: string })['en']
               : undefined;
 
         const titleField = document.fields.title; // title might also be an object with 'value'
