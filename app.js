@@ -17,7 +17,7 @@ const sequelize = new Sequelize(DATABASE_URL, {
 });
 
 // Ensure static directories exist
-const staticDir = path.join(__dirname, 'static', 'invoices');
+const staticDir = path.join(__dirname, 'static', 'invoice');
 fs.mkdirSync(staticDir, { recursive: true });
 
 // Models
