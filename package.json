@@ -2,6 +2,7 @@
   "name": "nextjs-contentful-minimal-starter",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "prebuild": "npx update-browserslist-db@latest",
     "dev": "next dev",
