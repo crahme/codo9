@@ -10,6 +10,15 @@ const API_KEY = process.env.API_Key;
 const MODULE_UUID = 'c667ff46-9730-425e-ad48-1e950691b3f9';
 const START = (process.env.RVE_START || '2024-10-16').slice(0, 10);
 const END = (process.env.RVE_END || '2024-11-25').slice(0, 10);
+// At the top of cloudoceanapi_test_all.js
+import dotenv from 'dotenv';
+dotenv.config();
+
+const deviceIds = process.env.CLOUD_OCEAN_DEVICE_IDS
+  ? process.env.CLOUD_OCEAN_DEVICE_IDS.split(',').map(id => id.trim())
+  : [];
+
+console.log('Device IDs to test:', deviceIds);
 
 if (!API_KEY) {
   console.error('Missing API key. Set CLOUD_OCEAN_API_KEY or API_Key in your environment or .env file.');
