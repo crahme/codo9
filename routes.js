@@ -1,12 +1,15 @@
-const { Op } = require('sequelize');
-const path = require('path');
-const fs = require('fs');
-const moment = require('moment');
-const logger = require('pino')({ level: 'info' });
-const { Device, Invoice, ConsumptionRecord } = require('./models');
-const CloudOceanAPI = require('./services/cloudoceanapi');
-const InvoiceGenerator = require('./services/invoicegenerator');
-const { updateInvoiceEntry } = require('./services/contentful_writer'); // NEW
+import {Op} from 'sequelize';
+import path from 'path';
+import express from 'express';
+import fs from 'fs';
+import moment from 'moment';
+import pino from 'pino';
+const logger = pino({ level: 'info' });
+import {Device, ComsumptionRecord, Invoice} from './models'; // Adjust the import path as necessary
+import {CloudOceanAPI} from './services/cloud_ocean_api.js';
+import {InvoiceGenerator} from './services/invoice_generator.js';
+import dotenv from 'dotenv';
+import {updateInvoiceEntry} from './services/contentful_integration.js';
 
 module.exports = function(app) {
   app.use(require('express').json());

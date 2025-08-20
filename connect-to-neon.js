@@ -1,5 +1,5 @@
 // connect-to-neon.js
-const { Client } = require('pg');
+import { Client } from 'pg';
 
 // Replace these with your actual Neon connection details
 const connectionString = 'postgresql://neondb_owner:npg_yMXmTz81aPCD@ep-polished-waterfall-a5szq7p4-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
