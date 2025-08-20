@@ -13,7 +13,7 @@ const CONTENTFUL_INVOICE_TYPE = 'invoice';
 
 const ACCESS_TOKEN = process.env.API_Key;
 
-exports.handler = async function(event) {
+export async function handler(event, context) {
   // Accept start/end date from query params, or use defaults
   const startDate = event.queryStringParameters?.start || '2025-01-01';
   const endDate = event.queryStringParameters?.end || '2025-12-31';

@@ -1,6 +1,6 @@
 import {neon} from 'neon-js'; // Ensure neon-js is installed and configured
 
-exports.handler = async (event) => {
+export async function handler(event, context){
   try {
     const postId = event.queryStringParameters?.postId;
     if (!postId) {
