@@ -37,4 +37,4 @@ const nextConfig = {
   // cacheMaxMemorySize: 0,
 };
 
-export {nextConfig};
+export default nextConfig;
