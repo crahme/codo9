@@ -80,7 +80,7 @@ class CloudOceanAPI {
       );
       const data = res.data?.data || [];
       logger.log("Fetched CDR data:", data);
-      return res.data?.data || [];
+      return data;
     } catch (err) {
       logger.error(`Error fetching CDR: ${err.message}`);
       return [];
