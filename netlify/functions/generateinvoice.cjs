@@ -1,7 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
 import contentful from 'contentful-management';
-import CloudOceanAPI from '../../services/cloudoceanapi.js';
-import { calculateBilling } from './calculatebilling.js';
+import CloudOceanAPI from '../../services/cloudoceanapi.cjs';
+import { calculateBilling } from './calculatebilling.cjs';
 
 
 export async function handler(event, context) {
