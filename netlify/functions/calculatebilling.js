@@ -41,7 +41,7 @@ export function calculateBilling(reads, rate) {
   };
 }
 
-exports.handler = async (event) => {
+export async function handler(event) {
   try {
     const body = event.body ? JSON.parse(event.body) : {};
     const reads = body.reads || [];
