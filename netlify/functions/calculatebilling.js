@@ -11,7 +11,7 @@ function fmt2(n) {
   return round2(n).toFixed(2);
 }
 
-function calculateBilling(reads, rate) {
+export function calculateBilling(reads, rate) {
   const rateNum = toNumber(rate);
 
   const lineItems = Array.isArray(reads)
