@@ -64,7 +64,7 @@ async function listModuleMeasuringPoints(moduleUuid) {
 }
 
 async function listDevices() {
-  const url = `${BASE_URL}/v1/devices`;
+  const url = `${process.env.CLOUD_OCEAN_BASE_URL}/v1/devices`;
   const all = [];
   let offset = 0;
   const limit = 100;
