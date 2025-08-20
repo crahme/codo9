@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import 'dotenv/config'; // Load environment variables from .env file
 import axios from 'axios';
 import '../main.js';
-import CloudOceanAPI from './cloudoceanapi.cmjs'; // Adjust the path as needed
+import CloudOceanAPI from './cloudoceanapi.mjs'; // Adjust the path as needed
 const BASE_URL =  'https://api.develop.rve.ca';
 const API_KEY = process.env.API_Key;
 const MODULE_UUID = 'c667ff46-9730-425e-ad48-1e950691b3f9';
