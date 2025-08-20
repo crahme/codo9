@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import {CloudOceanAPI} from './cloudoceanapi.js';
+import {CloudOceanAPI} from './cloudoceanapi.cjs';
 
 async function main() {
   const apiKey = process.env.CLOUD_OCEAN_API_KEY || process.env.API_Key || process.env.API_KEY;
