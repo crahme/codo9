@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import  'fs';
 import 'dotenv/config';
-import path from 'path';
+import path from 'path';   
 import pino from 'pino';
 const logger = pino({ level: 'info' });
 
