@@ -33,8 +33,8 @@ function toISO(date) {
 
 class CloudOceanAPI {
   constructor() {
-    if (!process.env.CLOUD_OCEAN_API_KEY) {
-      throw new Error("CLOUD_OCEAN_API_KEY is required");
+    if (!process.env.API_Key) {
+      throw new Error("API_Key is required");
     }
   }
 
