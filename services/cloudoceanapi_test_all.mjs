@@ -49,7 +49,7 @@ async function getWithFallback(url, params) {
 }
 
 async function listModuleMeasuringPoints(moduleUuid) {
-  const url = `${BASE_URL}/v1/modules/${encodeURIComponent(moduleUuid)}/measuring-points`;
+  const url = `${process.env.CLOUD_OCEAN_BASE_URL}/v1/modules/${encodeURIComponent(moduleUuid)}/measuring-points`;
   const all = [];
   let offset = 0;
   const limit = 50;
