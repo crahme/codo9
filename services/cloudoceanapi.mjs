@@ -40,6 +40,7 @@ class CloudOceanAPI {
 
   async getMeasuringPointReads(moduleUuid, measuringPointUuid, startDate, endDate) {
     const params = {
+      API_KEY: '$BEARER{process.env.API_Key}',
       start: toYMD(startDate),
       end: toYMD(endDate),
       start_date: toYMD(startDate),
@@ -62,6 +63,7 @@ class CloudOceanAPI {
 
   async getMeasuringPointCdr(moduleUuid, measuringPointUuid, startDate, endDate) {
     const params = {
+      API_KEY: '$BEARER{process.env.API_Key}',
       start: toYMD(startDate),
       end: toYMD(endDate),
       start_date: toYMD(startDate),
