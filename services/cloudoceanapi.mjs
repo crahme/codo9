@@ -54,6 +54,7 @@ class CloudOceanAPI {
         `/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads`,
         { params }
       );
+      logger.log(`Fetched ${res.data?.data?.length || 0} reads for measuring point ${measuringPointUuid}`);
       return res.data?.data || [];
     } catch (err) {
       logger.error(`Error fetching measuring point reads: ${err.message}`);
