@@ -7,7 +7,7 @@ const DB_URL = process.env.NETLIFY_DATABASE_URL;
 // The invoice slug to update
 const SLUG = '/invoice/fac-2024-001';
 
-exports.handler = async function(event) {
+export async function updateInvoiceEntry(event) {
   const qs = (event && event.queryStringParameters) || {};
   const base = process.env.URL || process.env.SITE_URL || '';
   const slug = qs.slug || SLUG;
