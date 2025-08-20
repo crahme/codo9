@@ -8,8 +8,8 @@ import CloudOceanAPI from './cloudoceanapi.mjs'; // Adjust the path as needed
 const BASE_URL =  'https://api.develop.rve.ca';
 const API_KEY = process.env.API_Key;
 const MODULE_UUID = 'c667ff46-9730-425e-ad48-1e950691b3f9';
-const START = (process.env.RVE_START || '2024-10-16').slice(0, 10);
-const END = (process.env.RVE_END || '2024-11-25').slice(0, 10);
+const START = ('2024-10-16').slice(0, 10);
+const END = ('2024-11-25').slice(0, 10);
 // At the top of cloudoceanapi_test_all.js
 import dotenv from 'dotenv';
 dotenv.config();
