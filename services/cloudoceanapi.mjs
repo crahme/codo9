@@ -78,8 +78,8 @@ class CloudOceanAPI {
         `/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/cdr`,
         { params }
       );
-       const data = res.data?.data || [];
-      console.log("Fetched CDR data:", data)
+      const data = res.data?.data || [];
+      logger.log("Fetched CDR data:", data);
       return res.data?.data || [];
     } catch (err) {
       logger.error(`Error fetching CDR: ${err.message}`);
