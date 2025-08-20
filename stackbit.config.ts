@@ -1,9 +1,9 @@
 // stackbit.config.ts
-// Further refined siteMap for netlify dev log structure
-import 'dotenv/config'; // Ensure dotenv is loaded to access environment variables
-import {  defineStackbitConfig } from '@stackbit/types';
+import 'dotenv/config';
+import { defineStackbitConfig, SiteMapEntry } from '@stackbit/types';
 import { ContentfulContentSource } from '@stackbit/cms-contentful';
-// --- Environment Variable Checks --- (Keep as before)
+
+// --- Environment Variable Checks ---
 if (!process.env.CONTENTFUL_SPACE_ID) {
   console.warn('Warning: CONTENTFUL_SPACE_ID is not set in environment variables. Contentful integration may fail.');
 }
@@ -29,58 +29,78 @@ export default defineStackbitConfig({
   ],
 
   modelExtensions: [
-
-     { name: 'page', type: 'page', urlPath: '/{slug}' },
-    { name:'invoice', type: 'page', urlPath: '/invoice/{slug}' },
-
+    { name: 'page', type: 'page', urlPath: '/{slug}' },
+    { name: 'invoice', type: 'page', urlPath: '/invoice/{slug}' },
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
     { name: 'statItem', type: 'data' },
-    { name: 'invoiceSection', type: 'data' }, // Only if it exists
+    { name: 'invoiceSection', type: 'data' },
   ],
 
   siteMap: ({ documents }) => {
-  if (!Array.isArray(documents)) return [];
+    if (!Array.isArray(documents)) {
+      console.warn('[siteMap] Documents data is not an array. Returning empty map.');
+      return [];
+    }
 
-  const entries = documents
-    .filter((doc) => doc && doc.modelName && (doc.modelName === 'page' || doc.modelName === 'invoice'))
-    .map((document) => {
-      const entryId = document.id;
-      const slugField = document.fields?.slug;
+    const entries: (SiteMapEntry | null)[] = documents
+      .filter((doc) => {
+        const isPageModel = doc && doc.modelName && (doc.modelName === 'page' || doc.modelName === 'invoice');
+        const hasFields = doc && typeof doc.fields === 'object' && doc.fields !== null;
+        return isPageModel && hasFields;
+      })
+      .map((doc) => {
+        const entryId = doc.id as string | undefined;
+        const slugField = doc.fields.slug;
+        const slug =
+          typeof slugField === 'string'
+            ? slugField
+            : typeof slugField === 'object' && slugField !== null && 'en' in slugField
+            ? ((slugField as Record<string, string>)['en'])
+            : undefined;
 
-      let slug: string | undefined;
-      if (typeof slugField === 'string') slug = slugField;
-      else if (typeof slugField === 'object' && slugField !== null) {
-        const firstLocale = Object.keys(slugField)[0];
-        slug = slugField[firstLocale];
-      }
+        const titleField = doc.fields.title;
+        const title = typeof titleField === 'object' && titleField !== null && 'value' in titleField
+          ? titleField.value
+          : titleField;
 
-      if (!entryId || !slug) return null; // may return null here
+        if (!entryId || typeof slug !== 'string') {
+          console.warn(`[siteMap] Skipping document: Missing ID or valid slug string. Model: ${doc.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug}`);
+          return null;
+        }
 
-      let urlPath = '/';
-      let isHomePage = false;
+        let urlPath: string;
+        let isHomePage = false;
 
-      if (document.modelName === 'page') {
-        urlPath = slug.startsWith('/') ? slug : `/${slug}`;
-        isHomePage = urlPath === '/';
-      } else if (document.modelName === 'invoice') {
-        const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
-        urlPath = `/invoice/${cleanSlug}`;
-      }
+        if (doc.modelName === 'page') {
+          const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
+          urlPath = cleanSlug === '' ? '/' : `/${cleanSlug}`;
+          isHomePage = cleanSlug === '';
+        } else if (doc.modelName === 'invoice') {
+          const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
+          urlPath = `/invoice/${cleanSlug}`;
+        } else {
+          return null;
+        }
 
-      return {
-        stableId: entryId,
-        label: document.fields?.title || slug,
-        urlPath,
-        isHomePage,
-      };
-    });
+        return {
+          stableId: entryId,
+          label: title || slug,
+          urlPath,
+          isHomePage,
+        } as SiteMapEntry;
+      });
 
-  // Filter out any null entries explicitly
-  const validEntries = entries.filter((e): e is { stableId: string; label: string; urlPath: string; isHomePage: boolean } => e !== null);
+    const validEntries: SiteMapEntry[] = entries.filter((e): e is SiteMapEntry => e !== null);
 
-  return validEntries;
-},
+    console.log(`[siteMap] Generated ${validEntries.length} site map entries.`);
+    if (validEntries.length > 0) {
+      console.log('[siteMap] First generated entry:', validEntries[0]);
+    } else {
+      console.warn("[siteMap] No entries generated. Check data structure. Sample input documents (first 3):", documents.slice(0, 3));
+    }
 
+    return validEntries;
+  },
 });
