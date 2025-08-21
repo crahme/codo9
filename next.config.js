@@ -32,6 +32,10 @@ const nextConfig = {
     }
     return config;
   },
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  }
   // Uncomment and adjust if you use custom caching:
   // cacheHandler: require('./cache-handler.js'),
   // cacheMaxMemorySize: 0,
