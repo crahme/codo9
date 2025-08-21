@@ -5,7 +5,7 @@ import fs from 'fs';
 import moment from 'moment';
 import pino from 'pino';
 const logger = pino({ level: 'info' });
-import {Device, ComsumptionRecord, Invoice} from './models'; // Adjust the import path as necessary
+import {Device, ComsumptionRecord, Invoice} from './models.cjs'; // Adjust the import path as necessary
 import {CloudOceanAPI} from './services/cloud_ocean_api.js';
 import {InvoiceGenerator} from './services/invoice_generator.js';
 import dotenv from 'dotenv';
