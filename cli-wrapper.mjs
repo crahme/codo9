@@ -1,37 +1,45 @@
-import { Command } from "commander";
-import CloudOceanAPI from "./services/cloudoceanapi.mjs";
-import "dotenv/config";
+#!/usr/bin/env node
 
-const program = new Command();
+// cli-wrapper.mjs
+import pkg from "commander";
+import { listCdr } from "./services/cloudoceanapi.mjs"; // adjust path if needed
+
+const { program } = pkg;
 
 program
   .name("cloudocean")
-  .description("CLI to interact with CloudOcean API")
+  .description("CLI wrapper for CloudOcean API")
   .version("1.0.0");
 
-// Define `reads` as a standalone command object
-const reads = new Command("reads")
-  .description("Fetch measuring point reads")
-  .requiredOption("-m, --module <uuid>", "Module UUID")
-  .requiredOption("-p, --point <uuid>", "Measuring Point UUID")
-  .requiredOption("-s, --start <date>", "Start date (YYYY-MM-DD)")
-  .requiredOption("-e, --end <date>", "End date (YYYY-MM-DD)")
-  .action(async (opts) => {
+program
+  .command("reads")
+  .description("Fetch CDR data from CloudOcean API")
+  .option("-m, --module <uuid>", "Module UUID")
+  .option("-p, --point <uuid>", "Measuring Point UUID")
+  .option("-s, --start <date>", "Start date (YYYY-MM-DD)")
+  .option("-e, --end <date>", "End date (YYYY-MM-DD)")
+  .action(async (options) => {
+    if (!options.module || !options.point || !options.start || !options.end) {
+      console.error("❌ Missing required options. Use -m, -p, -s, -e.");
+      process.exit(1);
+    }
+
     try {
-      const api = new CloudOceanAPI();
-      const data = await api.getMeasuringPointReads(
-        opts.module,
-        opts.point,
-        opts.start,
-        opts.end
+      console.log("⏳ Fetching data...");
+      const data = await listCdr(
+        options.module,
+        options.point,
+        {
+          start: options.start,
+          end: options.end,
+        }
       );
+
+      console.log("✅ Data received:");
       console.log(JSON.stringify(data, null, 2));
     } catch (err) {
-      console.error("❌ Failed to fetch measuring point reads:", err.message);
+      console.error("❌ Failed to fetch data:", err.message);
     }
   });
-
-// Attach the command
-program.addCommand(reads);
 
 program.parse(process.argv);
