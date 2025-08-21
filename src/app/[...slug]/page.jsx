@@ -12,7 +12,8 @@ const componentMap = {
 
 export default async function ComposablePage({ params }) { 
   // ✅ params is passed in automatically
-  const slugArray = params.slug;
+   const resolvedParams = await params;
+   const slugArray = resolvedParams.slug;
   
   if (!Array.isArray(slugArray) || slugArray.length === 0) {
     console.warn("Invalid slug parameter received:", params);
