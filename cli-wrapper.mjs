@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import CloudOceanAPI from "./services/cloudoceanapi.mjs";
-import "dotenv/config";
-dotenv.config();
+import "dotenv/config"; 
 
 const program = new Command();
 
