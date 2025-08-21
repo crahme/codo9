@@ -11,7 +11,8 @@ const componentMap = {
 export default async function ComposablePage({ params }) { // <-- FIXED
   try {
     // Validate and construct the slug
-    const slugArray = params?.slug;
+    const { slug } = params; // ✅ params must be awaited
+    const slugArray = slug;
     if (!Array.isArray(slugArray) || slugArray.length === 0) {
       console.warn("Invalid slug parameter received:", params);
       return notFound();
@@ -149,4 +150,4 @@ export default async function ComposablePage({ params }) { // <-- FIXED
     console.error(`Error fetching or rendering page for slug '${params?.slug?.join('/')}':`, error);
     return notFound();
   }
-} // <-- This is the required extra bracket
+}// <-- This is the required extra bracket
