@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import CloudOceanAPI from "./services/cloudoceanapi.mjs";
-import pkg from "commander";   // CommonJS default import
-const { program } = pkg;
+import { Command } from "commander";
+const program = new Command();
 
 const api = new CloudOceanAPI();
 
