@@ -15,7 +15,7 @@ export default async function ComposablePage({ params }) {
   try {
     // Destructure slug from params (no await)
     const slugArray = params.slug; // ✅ do NOT await
-    if (!Array.isArray(slug) || slug.length === 0) {
+    if (!Array.isArray(slug) || slugArray.length === 0) {
       console.warn("Invalid slug parameter received:", params);
       return notFound();
     }
