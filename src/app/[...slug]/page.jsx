@@ -14,7 +14,7 @@ const componentMap = {
 export default async function ComposablePage({ params }) {
   try {
     // Destructure slug from params (no await)
-    const { slug } = params;
+    const slugArray = params.slug; // ✅ do NOT await
     if (!Array.isArray(slug) || slug.length === 0) {
       console.warn("Invalid slug parameter received:", params);
       return notFound();
