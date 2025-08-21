@@ -2,7 +2,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 import winston from "winston";
-
+dotenv.load();
 const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
