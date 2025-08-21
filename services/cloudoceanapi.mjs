@@ -149,5 +149,9 @@ class CloudOceanAPI {
     }
   }
 }
+export function listCdr(moduleUuid, measuringPointUuid, startDate, endDate) {
+  const api = new CloudOceanAPI();
+  return api.getMeasuringPointCdr(moduleUuid, measuringPointUuid, startDate, endDate);
+}
 
 export default CloudOceanAPI;
