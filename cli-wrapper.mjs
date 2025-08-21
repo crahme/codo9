@@ -3,6 +3,7 @@ import { Command } from "commander";
 import CloudOceanAPI from "./services/cloudoceanapi.mjs";
 import "dotenv/config";
 
+
 const program = new Command();
 
 function toISO(date) {
