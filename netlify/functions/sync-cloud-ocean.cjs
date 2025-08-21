@@ -17,7 +17,7 @@ ConsumptionRecord.init({
 
 // Import or define CloudOceanAPI as needed
 // const CloudOceanAPI = require('path-to-your-cloudoceanapi');
-const CloudOceanAPI = require('./services/cloudoceanapi.mjs'); // Adjust path as needed
+const CloudOceanAPI = require('../services/cloudoceanapi.mjs'); // Adjust path as needed
 
 export async function handler(event, context) {
   const cloudOcean = new CloudOceanAPI();
