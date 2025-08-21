@@ -16,12 +16,18 @@ program
 
 program
   .command("reads")
-  .requiredOption("-m, --module <uuid>", "Module UUID")
-  .requiredOption("-p, --point <uuid>", "Measuring Point UUID")
-  .requiredOption("-s, --start <date>", "Start date (YYYY-MM-DD)")
-  .requiredOption("-e, --end <date>", "End date (YYYY-MM-DD)")
+  .option("-m, --module <uuid>", "Module UUID")
+  .option("-p, --point <uuid>", "Measuring Point UUID")
+  .option("-s, --start <date>", "Start date (YYYY-MM-DD)")
+  .option("-e, --end <date>", "End date (YYYY-MM-DD)")
   .action(async (options) => {
     const { module: moduleUuid, point: mpUuid, start, end } = options;
+
+    // Manual required arguments check
+    if (!moduleUuid || !mpUuid || !start || !end) {
+      console.error("❌ All options -m, -p, -s, -e are required");
+      process.exit(1);
+    }
 
     let startISO, endISO;
     try {
