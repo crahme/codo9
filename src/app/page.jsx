@@ -7,7 +7,7 @@ import { Invoice } from '../components/Invoice.jsx';
 import { InvoiceSection } from '../components/InvoiceSection.jsx';
 import { InvoiceLineItem } from '../components/InvoiceLineItem.jsx';
 import { VisualEditorComponent } from '../components/VisualEditorComponent.jsx';
-import { getPageFromSlug } from '../utils/content.js';
+import { getPageFromSlug } from '../utils/content.cjs';
 
 // Map Contentful Content Type IDs to React components
 const componentMap = {
