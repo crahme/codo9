@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 // cli-wrapper.mjs
-import pkg from "commander";
+import {Command} from "commander";
 import { listCdr } from "./services/cloudoceanapi.mjs"; // adjust path if needed
 
-const { program } = pkg;
+const  program  = new Command();
 
 program
   .name("cloudocean")
