@@ -1,5 +1,6 @@
 import axios from "axios";
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
 import winston from "winston";
 
 const logger = winston.createLogger({
