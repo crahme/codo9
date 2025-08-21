@@ -1,6 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
 import contentful from 'contentful-management';
-import CloudOceanAPI from '../services/cloudoceanapi.mjs';
+const CloudOceanAPI = require('../../services/cloudoceanapi.mjs').default;
+
 import { calculateBilling } from './calculatebilling.cjs';
 
 
