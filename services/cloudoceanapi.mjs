@@ -67,8 +67,6 @@ class CloudOceanAPI {
       API_KEY: '$BEARER{process.env.API_Key}',
       start: toYMD(startDate),
       end: toYMD(endDate),
-      start_date: toYMD(startDate),
-      end_date: toYMD(endDate),
       limit: 50,
       offset: 0,
     };
@@ -125,8 +123,7 @@ class CloudOceanAPI {
 
   async getDeviceConsumption(deviceId, startDate, endDate) {
     const params = {
-      start_date: toISO(startDate),
-      end_date: toISO(endDate),
+      API_KEY:"$BEARER{process.env.API_Key}",
       start: toISO(startDate),
       end: toISO(endDate),
     };
