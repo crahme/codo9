@@ -1,42 +1,43 @@
 #!/usr/bin/env node
+import { Command } from "commander";
+import CloudOceanAPI from "./services/cloudoceanapi.mjs";
 
-// cli-wrapper.mjs
-import {Command} from "commander";
-import { listCdr } from "./services/cloudoceanapi.mjs"; // adjust path if needed
+const program = new Command();
 
-const  program  = new Command();
+function toISO(date) {
+  const d = new Date(date);
+  if (isNaN(d)) throw new Error(`Invalid date provided: ${date}`);
+  return d.toISOString();
+}
 
 program
   .name("cloudocean")
-  .description("CLI wrapper for CloudOcean API")
-  .version("1.0.0");
+  .description("Fetch CDR data from CloudOcean API");
 
 program
   .command("reads")
-  .description("Fetch CDR data from CloudOcean API")
-  .option("-m, --module <uuid>", "Module UUID")
-  .option("-p, --point <uuid>", "Measuring Point UUID")
-  .option("-s, --start <date>", "Start date (YYYY-MM-DD)")
-  .option("-e, --end <date>", "End date (YYYY-MM-DD)")
+  .requiredOption("-m, --module <uuid>", "Module UUID")
+  .requiredOption("-p, --point <uuid>", "Measuring Point UUID")
+  .requiredOption("-s, --start <date>", "Start date (YYYY-MM-DD)")
+  .requiredOption("-e, --end <date>", "End date (YYYY-MM-DD)")
   .action(async (options) => {
-    if (!options.module || !options.point || !options.start || !options.end) {
-      console.error("❌ Missing required options. Use -m, -p, -s, -e.");
+    const { module: moduleUuid, point: mpUuid, start, end } = options;
+
+    let startISO, endISO;
+    try {
+      startISO = toISO(start);
+      endISO = toISO(end);
+    } catch (err) {
+      console.error(`❌ ${err.message}`);
       process.exit(1);
     }
 
-    try {
-      console.log("⏳ Fetching data...");
-      const data = await listCdr(
-        options.module,
-        options.point,
-        {
-          start: options.start,
-          end: options.end,
-        }
-      );
+    const api = new CloudOceanAPI();
 
-      console.log("✅ Data received:");
-      console.log(JSON.stringify(data, null, 2));
+    console.log("⏳ Fetching data...");
+    try {
+      const data = await api.getMeasuringPointCdr(moduleUuid, mpUuid, startISO, endISO);
+      console.log("✅ Fetched data:", data);
     } catch (err) {
       console.error("❌ Failed to fetch data:", err.message);
     }
