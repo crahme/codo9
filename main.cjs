@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import path from 'path';
