@@ -1,5 +1,5 @@
 const CloudOceanAPI = require('../services/cloudoceanapi.cjs');
-const { upsertInvoiceByNumber } = require('../contentful_writer.cjs');
+const { upsertInvoiceByNumber } = require('../functions/contentful_writer.cjs');
 const { calculateBilling } = require('./calculatebilling.cjs');
 
 export async function handler(event, context) {
