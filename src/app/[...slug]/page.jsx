@@ -6,6 +6,8 @@ import { Stats } from '../../components/Stats.jsx';
 const componentMap = {
   hero: Hero,
   stats: Stats,
+  invoiceSection: InvoiceSection,
+  invoice:Invoice,
 };
 
 export default async function ComposablePage({ params }) { // <-- FIXED
