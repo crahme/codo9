@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { getPageFromSlug } from '../../utils/content.js';
 import { Hero } from '../../components/Hero.jsx';
 import { Stats } from '../../components/Stats.jsx';
-
+import { InvoiceSection } from '../../components/InvoiceSection.jsx';
+import { Invoice } from '../../components/Invoice.jsx';
 const componentMap = {
   hero: Hero,
   stats: Stats,
