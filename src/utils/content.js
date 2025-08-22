@@ -18,7 +18,7 @@ export async function getPageFromSlug(slug, contentType) {
   if (!client) return null;
 
   const entries = await client.getEntries({
-    content_type: "page",
+    content_type: contentType,
     "fields.slug": slug,
     limit: 1,
     include: 2,
