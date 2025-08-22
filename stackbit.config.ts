@@ -29,8 +29,8 @@ export default defineStackbitConfig({
   ],
 
   modelExtensions: [
-    { name: 'page', type: 'page', urlPath: '/{slug}' },
-    { name: 'invoice', type: 'page', urlPath: '/invoice/{slug}' },
+    { name: 'page', type: 'page', urlPath: '/{fields.slug}' },
+    { name: 'invoice', type: 'page', urlPath: '/invoice/{fields.slug}' },
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
@@ -53,12 +53,13 @@ export default defineStackbitConfig({
       .map((doc) => {
         const entryId = doc.id as string | undefined;
         const slugField = doc.fields.slug;
-        const slug =
-          typeof slugField === 'string'
-            ? slugField
-            : typeof slugField === 'object' && slugField !== null && 'en' in slugField
-            ? ((slugField as Record<string, string>)['en'])
-            : undefined;
+const slug =
+  typeof slugField === 'string'
+    ? slugField
+    : slugField && typeof slugField === 'object' && 'value' in slugField
+    ? (slugField as any).value
+    : undefined;
+
 
         const titleField = doc.fields.title;
         const title = typeof titleField === 'object' && titleField !== null && 'value' in titleField
