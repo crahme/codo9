@@ -1,8 +1,9 @@
-const { CloudOceanAPI } = require('../services/cloudoceanapi.mjs');
+;
 const { upsertInvoiceByNumber } = require('../functions/contentful_writer.cjs');
 const { calculateBilling } = require('./calculatebilling.cjs');
 
 export async function handler(event, context) {
+  const { CloudOceanAPI } = require('../services/cloudoceanapi.mjs');
   try {
     const qs = event.queryStringParameters || {};
     const moduleUuid = qs.moduleUuid || process.env.RVE_MODULE_UUID || 'c667ff46-9730-425e-ad48-1e950691b3f9';
