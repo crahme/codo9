@@ -3,6 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "netlify": {
+    "plugins": [
+      {
+        "package": "@netlify/plugin-nextjs",
+        "config": {
+          "extensions": [".js", ".mjs"]
+        }
+      }
+    ]
+  },
   "scripts": {
     "prebuild": "npx update-browserslist-db@latest",
     "dev": "next dev",
