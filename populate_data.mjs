@@ -1,135 +1,141 @@
-'use strict';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// Script to populate the database with sample data for testing
-// Usage: node populate_data.js
+import { Sequelize, DataTypes } from 'sequelize';
 
-require('dotenv').config();
-const { Device, ConsumptionRecord, Invoice } = require('./models');
-const { Op } = require('sequelize');
-
-function randomFloat(min, max, decimals = 2) {
-  const factor = Math.pow(10, decimals);
-  return Math.round((Math.random() * (max - min) + min) * factor) / factor;
+// Check if DATABASE_URL exists
+if (!process.env.DATABASE_URL) {
+    console.error('❌ DATABASE_URL environment variable is not defined.');
+    process.exit(1);
 }
 
-async function populateSampleData() {
-  const sequelize = Device.sequelize;
-  try {
-    // Drop and recreate all tables
-    await sequelize.sync({ force: true });
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    dialectOptions: {
+        ssl: {
+            require: true,
+            rejectUnauthorized: false
+        }
+    },
+    logging: false,
+});
 
-    // Add sample devices
-    const deviceData = [
-      {
-        model_number: 'SMP-901',
-        serial_number: 'DEV001',
-        location: 'Building A - Level 1',
-        status: 'active',
-        max_amperage: 32.0,
-        evse_count: 2,
-      },
-      {
-        model_number: 'SMP-901',
-        serial_number: 'DEV002',
-        location: 'Building B - Level 2',
-        status: 'active',
-        max_amperage: 32.0,
-        evse_count: 2,
-      },
-      {
-        model_number: 'SMP-901',
-        serial_number: 'DEV003',
-        location: 'Building C - Parking',
-        status: 'active',
-        max_amperage: 32.0,
-        evse_count: 4,
-      },
-    ];
+// Define models
+const Device = sequelize.define('Device', {
+    model_number: DataTypes.STRING,
+    serial_number: DataTypes.STRING,
+    location: DataTypes.STRING,
+    status: DataTypes.STRING,
+    max_amperage: DataTypes.FLOAT,
+    evse_count: DataTypes.INTEGER,
+}, { tableName: 'devices' });
 
-    const devices = await Device.bulkCreate(deviceData, { returning: true });
-    console.log(`Added ${devices.length} devices`);
+const ConsumptionRecord = sequelize.define('ConsumptionRecord', {
+    timestamp: DataTypes.DATE,
+    kwh_consumption: DataTypes.FLOAT,
+    rate: DataTypes.FLOAT,
+}, { tableName: 'consumption_records' });
 
-    // Add sample consumption records (90 days starting 2024-10-01)
-    const baseDate = new Date(2024, 9, 1); // October 1, 2024 (month is 0-based)
-    const consumptionRecords = [];
-    const rate = 0.12; // $0.12 per kWh
+// Define relationships
+Device.hasMany(ConsumptionRecord, { foreignKey: 'device_id' });
+ConsumptionRecord.belongsTo(Device, { foreignKey: 'device_id' });
 
-    for (const device of devices) {
-      for (let i = 0; i < 90; i++) {
-        const date = new Date(baseDate);
-        date.setDate(baseDate.getDate() + i);
-        const kwh = randomFloat(15.0, 55.0, 2);
-        consumptionRecords.push({
-          device_id: device.id,
-          timestamp: date,
-          kwh_consumption: kwh,
-          rate: rate,
-        });
-      }
-    }
-
-    await ConsumptionRecord.bulkCreate(consumptionRecords);
-    console.log(`Added ${consumptionRecords.length} consumption records`);
-
-    // Add sample invoices for Oct, Nov, Dec 2024
-    const invoices = [];
-    for (const device of devices) {
-      for (let month = 0; month < 3; month++) {
-        const startDate = new Date(2024, 9 + month, 1); // Oct=9, Nov=10, Dec=11
-        const endDate = month === 2
-          ? new Date(2024, 11, 31) // Dec 31, 2024
-          : new Date(2024, 9 + month + 1, 0); // Last day of month (day 0 of next month)
-
-        const periodRecords = await ConsumptionRecord.findAll({
-          where: {
-            device_id: device.id,
-            timestamp: { [Op.gte]: startDate, [Op.lte]: endDate },
-          },
-        });
-
-        const total_kwh = periodRecords.reduce((sum, r) => sum + (r.kwh_consumption || 0), 0);
-        const total_amount = Math.round(total_kwh * rate * 100) / 100;
-
-        invoices.push({
-          device_id: device.id,
-          invoice_number: `INV-${device.serial_number}-${2024}${String(10 + month).padStart(2, '0')}`,
-          billing_period_start: startDate,
-          billing_period_end: endDate,
-          total_kwh,
-          total_amount,
-          status: 'pending',
-        });
-      }
-    }
-
-    await Invoice.bulkCreate(invoices);
-    console.log(`Added ${invoices.length} invoices`);
-
-    // Print summary
-    const totalDevices = await Device.count();
-    const totalConsumptionRecords = await ConsumptionRecord.count();
-    const totalInvoices = await Invoice.count();
-
-    const allRecs = await ConsumptionRecord.findAll({ attributes: ['kwh_consumption'] });
-    const totalConsumption = allRecs.reduce((sum, r) => sum + (r.kwh_consumption || 0), 0);
-
-    console.log('\nDatabase populated successfully!');
-    console.log(`Total devices: ${totalDevices}`);
-    console.log(`Total consumption records: ${totalConsumptionRecords}`);
-    console.log(`Total invoices: ${totalInvoices}`);
-    console.log(`Total consumption: ${totalConsumption.toFixed(2)} kWh`);
-  } catch (err) {
-    console.error('Error populating data:', err);
-    process.exitCode = 1;
-  } finally {
+async function populateData() {
     try {
-      await Device.sequelize.close();
-    } catch (e) {
-      // ignore
+        console.log('Starting data population...');
+        
+        await sequelize.authenticate();
+        console.log('✅ Connected to database');
+
+        // Sync models
+        await sequelize.sync();
+        console.log('✅ Database synced');
+
+        // Check if devices already exist
+        const existingDevices = await Device.count();
+        if (existingDevices > 0) {
+            console.log(`ℹ️  ${existingDevices} devices already exist. Skipping device creation.`);
+        } else {
+            // Create devices
+            const measuring_points = [
+                { uuid: '71ef9476-3855-4a3f-8fc5-333cfbf9e898', location: 'Building A - Level 1' },
+                { uuid: 'fd7e69ef-cd01-4b9a-8958-2aa5051428d4', location: 'Building A - Level 2' },
+                { uuid: 'b7423cbc-d622-4247-bb9a-8d125e5e2351', location: 'Building B - Parking Garage' },
+                { uuid: '88f4f9b6-ce65-48c4-86e6-1969a64ad44c', location: 'Building B - Ground Floor' },
+                { uuid: 'df428bf7-dd2d-479c-b270-f8ac5c1398dc', location: 'Building C - East Wing' },
+                { uuid: '7744dcfc-a059-4257-ac96-6650feef9c87', location: 'Building C - West Wing' },
+                { uuid: 'b1445e6d-3573-403a-9f8e-e82f70556f7c', location: 'Building D - Main Entrance' },
+                { uuid: 'ef296fba-4fcc-4dcb-8eda-e6d1772cd819', location: 'Building D - Loading Dock' },
+                { uuid: '50206eae-41b8-4a84-abe4-434c7f79ae0a', location: 'Outdoor Lot - Section A' },
+                { uuid: 'de2d9680-f132-4529-b9a9-721265456a86', location: 'Outdoor Lot - Section B' },
+                { uuid: 'bd36337c-8139-495e-b026-f987b79225b8', location: 'Visitor Parking - Main Gate' },
+            ];
+
+            const devicesData = measuring_points.map((mp) => ({
+                model_number: 'SMP-901',
+                serial_number: mp.uuid.slice(0, 8).toUpperCase(),
+                location: mp.location,
+                status: 'active',
+                max_amperage: 32.0,
+                evse_count: 2,
+            }));
+
+            await Device.bulkCreate(devicesData);
+            console.log('✅ Created 11 devices');
+        }
+
+        // Add new consumption records for the current day
+        const devices = await Device.findAll();
+        const rate = 0.12;
+        const consumptionRows = [];
+
+        for (const device of devices) {
+            const recordDate = new Date();
+            const consumption = 30 + (Math.random() * 20); // 30-50 kWh
+            
+            consumptionRows.push({
+                device_id: device.id,
+                timestamp: recordDate,
+                kwh_consumption: Math.round(consumption * 100) / 100,
+                rate,
+            });
+        }
+
+        await ConsumptionRecord.bulkCreate(consumptionRows);
+        console.log(`✅ Added ${consumptionRows.length} new consumption records`);
+
+        // Print summary
+        const totalDevices = await Device.count();
+        const totalRecords = await ConsumptionRecord.count();
+        
+        console.log('\n' + '='.repeat(50));
+        console.log('DATA POPULATION COMPLETE');
+        console.log('='.repeat(50));
+        console.log(`Total devices: ${totalDevices}`);
+        console.log(`Total consumption records: ${totalRecords}`);
+
+        return true;
+
+    } catch (err) {
+        console.error('❌ Error populating data:', err.message);
+        return false;
+    } finally {
+        try {
+            await sequelize.close();
+            console.log('✅ Database connection closed');
+        } catch (closeErr) {
+            console.log('⚠️  Error closing connection:', closeErr.message);
+        }
     }
-  }
 }
 
-if (require.main === module) {
-  populateSampleData();
-}
+// Run the population
+populateData().then((success) => {
+    if (success) {
+        console.log('\n✅ Data population completed successfully!');
+        process.exit(0);
+    } else {
+        console.log('\n❌ Data population failed!');
+        process.exit(1);
+    }
+});
