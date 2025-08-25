@@ -13,7 +13,7 @@ class ContentfulService {
   }
 
   // Example: update entry
-  async updateInvoiceEntry(entryId, invoiceData) {
+async updateInvoiceEntry(entryId, invoiceData) {
     const env = await this.getEnvironment();
     const entry = await env.getEntry(entryId);
     Object.keys(invoiceData).forEach(key => {
@@ -26,3 +26,4 @@ class ContentfulService {
 }
 
 export default ContentfulService;
+export {updateInvoiceEntry}
