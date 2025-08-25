@@ -1,5 +1,5 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
+const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
   dialect: 'postgres',
   dialectOptions: {
     ssl: {
