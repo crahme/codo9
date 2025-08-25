@@ -1,5 +1,5 @@
 import  fetch from 'node-fetch';
-import {updateInvoiceEntry} from './update-invoice-entry.mjs';
+import {updateInvoiceEntry} from './update-invoice-entry.js';
 export async function handler(event, context) {
   const moduleUuid = "c667ff46-9730-425e-ad48-1e950691b3f9";
   const measuringPointUuid = "71ef9476-3855-4a3f-8fc5-333cfbf9e898";

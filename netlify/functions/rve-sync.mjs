@@ -1,5 +1,5 @@
-import { CloudOceanAPI } from '../services/cloudoceanapi.mjs';
-import {upsertInvoiceByNumber} from '../services/contentful.mjs';
+import { CloudOceanAPI } from '../services/cloudoceanapi.js';
+import {upsertInvoiceByNumber} from '../services/contentful.js';
 import { calculateBilling } from '../utils/billing.mjs';
 
 export async function handler(event, context) {
