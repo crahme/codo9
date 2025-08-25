@@ -1,7 +1,13 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
-const sequelize = new Sequelize('database', 'username', 'password', {
-  host: 'localhost',
-  dialect: 'postgres' // or 'postgres', 'sqlite', etc.
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
+    }
+  },
+  logging: false // Set to console.log to see SQL queries
 });
 
 // Device Model
