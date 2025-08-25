@@ -151,7 +151,12 @@ async function quickSetup() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+
+if (process.argv[1] === __filename) {
+  console.log('Starting database setup...');
   quickSetup().then((success) => {
     if (success) {
       console.log('\n✅ Database setup completed successfully!');
