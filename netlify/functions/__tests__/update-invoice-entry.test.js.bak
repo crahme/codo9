@@ -10,7 +10,7 @@ const { handler } = require('../update-invoice-entry');
 
 describe('update-invoice-entry handler', () => {
   beforeEach(() => {
-    'https://codo9.netlify.app' = 'http://localhost:8888';
+    process.env.URL = 'http://localhost:8888';
     fetch.mockReset();
   });
 
