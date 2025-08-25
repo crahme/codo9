@@ -13,6 +13,8 @@ base = "/"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
+   [plugins.inputs]
+    extensions = [".js", ".mjs", ".cjs"]  
 
 [[plugins]]
 package = "@netlify/plugin-lighthouse"
