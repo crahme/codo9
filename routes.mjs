@@ -7,9 +7,9 @@ import pino from 'pino';
 const logger = pino({ level: 'info' });
 import {Device, ComsumptionRecord, Invoice} from './models.mjs'; // Adjust the import path as necessary
 import {CloudOceanAPI} from './services/cloudoceanapi.mjs';
-import {InvoiceGenerator} from './services/invoice_generator.mjs';
+import {InvoiceGenerator} from './services/invoicegenerator.mjs';
 import dotenv from 'dotenv';
-import {updateInvoiceEntry} from './services/contentful_integration.js';
+import {updateInvoiceEntry} from './services/contentful.mjs';
 
 module.exports = function(app) {
   app.use(require('express').json());
