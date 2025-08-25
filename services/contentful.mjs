@@ -26,4 +26,4 @@ async updateInvoiceEntry(entryId, invoiceData) {
 }
 
 export default ContentfulService;
-export {updateInvoiceEntry}
+
