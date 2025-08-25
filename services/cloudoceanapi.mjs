@@ -32,7 +32,7 @@ function toISO(date) {
   throw new Error("Invalid date provided");
 }
 
-class CloudOceanAPI {
+export class CloudOceanAPI {
   constructor() {
     if (!process.env.API_Key) {
       throw new Error("API_Key is required");
