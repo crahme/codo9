@@ -1,4 +1,4 @@
-import { CloudOceanAPI } from '../services/cloudoceanapi.js';
+import { CloudOceanAPI } from `${process.cwd()}/services/cloudoceanapi.js`;
 import {upsertInvoiceByNumber} from '../services/contentful.js';
 import { calculateBilling } from '../utils/billing.mjs';
 
