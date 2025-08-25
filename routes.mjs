@@ -11,7 +11,7 @@ import {InvoiceGenerator} from './services/invoicegenerator.mjs';
 import dotenv from 'dotenv';
 import {updateInvoiceEntry} from './services/contentful.mjs';
 
-module.exports = function(app) {
+export default function(app) {
   app.use(require('express').json());
   app.use(require('express').urlencoded({ extended: true }));
 
