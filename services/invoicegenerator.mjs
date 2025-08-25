@@ -5,7 +5,7 @@ import moment from 'moment';
 import pino from 'pino';
 const logger = pino({ level: 'info' });
 
-class InvoiceGenerator {
+export class InvoiceGenerator {
   constructor(outputDir) {
     this.outputDir = outputDir;
 
