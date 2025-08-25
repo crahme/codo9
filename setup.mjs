@@ -151,7 +151,7 @@ async function quickSetup() {
   }
 }
 
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   quickSetup().then((success) => {
     if (success) {
       console.log('\n✅ Database setup completed successfully!');
