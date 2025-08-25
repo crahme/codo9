@@ -4,17 +4,21 @@
 // Usage: node setup.js
 
 import 'dotenv/config'; // Load environment variables from .env file
-import { Device, ConsumptionRecord, Invoice } from './models.mjs'; // Adjust the import path as needed
-import  { Op } from 'sequelize';
-import {connect} from './connect-to-neon.mjs';
+import { Device, ConsumptionRecord, Invoice, sequelize } from './models.mjs'; // Adjust the import path as needed
+import { Op } from 'sequelize';
 
 async function quickSetup() {
-  const sequelize = Device.sequelize;
-  connect();
   try {
+    console.log('Starting database setup...');
+    
+    // Test connection first
+    await sequelize.authenticate();
+    console.log('✅ Connected to database successfully');
+
     // Clear existing data and recreate schema
+    console.log('Syncing database schema...');
     await sequelize.sync({ force: true });
-   
+    console.log('✅ Database schema synced');
 
     // All 11 measuring points with data from Cloud Ocean (UUIDs for reference)
     const measuring_points = [
@@ -42,7 +46,7 @@ async function quickSetup() {
     }));
 
     const devices = await Device.bulkCreate(devicesData, { returning: true });
-    console.log(`Created ${devices.length} devices with real measuring point UUIDs`);
+    console.log(`✅ Created ${devices.length} devices with real measuring point UUIDs`);
 
     // Create consumption records from 2024-10-16 to 2024-11-25 (40 days)
     const startDate = new Date(2024, 9, 16); // months are 0-based (9 = October)
@@ -81,8 +85,14 @@ async function quickSetup() {
       }
     }
 
-    await ConsumptionRecord.bulkCreate(consumptionRows);
-    console.log('Created consumption records for all devices');
+    // Batch insert to avoid memory issues
+    const batchSize = 1000;
+    for (let i = 0; i < consumptionRows.length; i += batchSize) {
+      const batch = consumptionRows.slice(i, i + batchSize);
+      await ConsumptionRecord.bulkCreate(batch);
+      console.log(`✅ Processed ${Math.min(i + batchSize, consumptionRows.length)}/${consumptionRows.length} records`);
+    }
+    console.log('✅ Created consumption records for all devices');
 
     // Create invoices for October and November 2024
     const invoices = [];
@@ -117,7 +127,7 @@ async function quickSetup() {
     }
 
     await Invoice.bulkCreate(invoices);
-    console.log(`Created ${invoices.length} invoices`);
+    console.log(`✅ Created ${invoices.length} invoices`);
 
     // Print summary
     const totalDevices = await Device.count();
@@ -145,12 +155,18 @@ async function quickSetup() {
 
     return true;
   } catch (err) {
-    console.error('Error setting up database:', err);
+    console.error('❌ Error setting up database:', err.message);
+    if (err.parent) {
+      console.error('❌ Database error:', err.parent.message);
+    }
     return false;
   } finally {
     try {
-      await Device.sequelize.close();
-    } catch (_) {}
+      await sequelize.close();
+      console.log('✅ Database connection closed');
+    } catch (closeErr) {
+      console.log('⚠️  Error closing connection:', closeErr.message);
+    }
   }
 }
 
@@ -159,13 +175,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 
 if (process.argv[1] === __filename) {
-  console.log('Starting database setup...');
   quickSetup().then((success) => {
     if (success) {
       console.log('\n✅ Database setup completed successfully!');
+      process.exit(0);
     } else {
       console.log('\n❌ Database setup failed!');
-      process.exitCode = 1;
+      process.exit(1);
     }
+  }).catch((err) => {
+    console.error('❌ Unhandled error:', err);
+    process.exit(1);
   });
 }
