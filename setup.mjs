@@ -11,13 +11,13 @@ if (!process.env.NETLIFY_DATABASE_URL) {
     process.exit(1);
 }
 
-console.log('Using database:', process.env.DATABASE_URL.replace(/:[^:]*@/, ':****@'));
+console.log('Using database:', process.env.NETLIFY_DATABASE_URL.replace(/:[^:]*@/, ':****@'));
 
 // Import Sequelize
 import { Sequelize, DataTypes } from 'sequelize';
 
 // Create sequelize instance
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
+const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
     dialect: 'postgres',
     dialectOptions: {
         ssl: {
