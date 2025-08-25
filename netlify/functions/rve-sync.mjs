@@ -1,4 +1,4 @@
-import {CloudOceanAPI} from '../services/cloudoceanapi.mjs';
+const { CloudOceanAPI } = require('../services/cloudoceanapi.mjs');
 const { upsertInvoiceByNumber } = require('../functions/contentful_writer.cjs');
 const { calculateBilling } = require('./calculatebilling.cjs');
 
