@@ -2,7 +2,7 @@ import contentful from 'contentful-management';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const accessToken = 'CFPAT-hFTZ7nEiZeGQyM3jhdGwlFHun-JUAPX5Wn9ytsLR9Hk';
+const accessToken = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
 if (!accessToken) {
   throw new Error('CONTENTFUL_MANAGEMENT_TOKEN is not set in environment variables.');
 }

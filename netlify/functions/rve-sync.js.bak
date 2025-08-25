@@ -6,11 +6,11 @@ export async function handler(event, context) {
 
   try {
     const qs = event.queryStringParameters || {};
-    const moduleUuid = qs.moduleUuid || undefined || 'c667ff46-9730-425e-ad48-1e950691b3f9';
-    const measuringPointUuid = qs.measuringPointUuid || undefined || '71ef9476-3855-4a3f-8fc5-333cfbf9e898';
+    const moduleUuid = qs.moduleUuid || process.env.RVE_MODULE_UUID || 'c667ff46-9730-425e-ad48-1e950691b3f9';
+    const measuringPointUuid = qs.measuringPointUuid || process.env.RVE_MEASURING_POINT_UUID || '71ef9476-3855-4a3f-8fc5-333cfbf9e898';
     const start = qs.start;
     const end = qs.end;
-    const rate = qs.rate ?? undefined ?? 0.12;
+    const rate = qs.rate ?? process.env.DEFAULT_RATE ?? 0.12;
     const invoiceNumber = qs.invoiceNumber;
 
     if (!start || !end || !invoiceNumber) {
@@ -24,8 +24,8 @@ export async function handler(event, context) {
 
     // Upsert into Contentful by invoiceNumber
     const entryId = await upsertInvoiceByNumber({
-      spaceId: 't3t3mhakehxg',
-      environmentId: 'master' || 'master',
+      spaceId: process.env.CONTENTFUL_SPACE_ID,
+      environmentId: process.env.CONTENTFUL_ENVIRONMENT || 'master',
       invoiceNumber,
       invoiceData: {
         invoiceNumber,

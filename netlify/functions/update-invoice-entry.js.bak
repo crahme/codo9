@@ -2,14 +2,14 @@ import fetch from 'node-fetch';
 import {Client} from 'pg';
 
 // Use the same DB env variable as get-consumption.js
-const DB_URL = 'postgresql://neondb_owner:npg_yMXmTz81aPCD@ep-polished-waterfall-a5szq7p4-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const DB_URL = process.env.NETLIFY_DATABASE_URL;
 
 // The invoice slug to update
 const SLUG = '/invoice/fac-2024-001';
 
 export async function updateInvoiceEntry(event) {
   const qs = (event && event.queryStringParameters) || {};
-  const base = 'https://codo9.netlify.app' || 'https://codo9.netlify.app' || '';
+  const base = process.env.URL || process.env.SITE_URL || '';
   const slug = qs.slug || SLUG;
   const start = qs.start || '2024-10-16';
   const end = qs.end || '2024-11-25';

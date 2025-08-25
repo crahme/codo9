@@ -1,5 +1,5 @@
 import { Sequelize, Model, DataTypes } from 'sequelize';
-const databaseUrl = 'postgresql://neondb_owner:npg_yMXmTz81aPCD@ep-polished-waterfall-a5szq7p4-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require' || 'sqlite:./invoices.db';
+const databaseUrl = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 
 const sequelize = new Sequelize(databaseUrl, {
   dialect: databaseUrl.includes('postgres') ? 'postgres' : 'sqlite',
