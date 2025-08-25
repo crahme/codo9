@@ -5,7 +5,7 @@
 
 import 'dotenv/config'; // Load environment variables from .env file
 import { Device, ConsumptionRecord, Invoice,Sequelize} from './models.mjs'; // Adjust the import path as needed
-import { Op, Sequelize } from 'sequelize';
+import { Op } from 'sequelize';
 
 async function quickSetup() {
   try {
