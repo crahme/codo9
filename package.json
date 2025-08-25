@@ -3,20 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "netlify": {
-    "plugins": [
-      {
-        "package": "@netlify/plugin-nextjs",
-        "config": {
-          "extensions": [".js", ".mjs", ".cjs"]
-        }
-      }
-    ]
-  },
+  
   "scripts": {
     "prebuild": "npx update-browserslist-db@latest",
     "dev": "next dev",
     "build": "next build",
+    "build:functions": "esbuild netlify/functions/**/*.mjs --bundle --platform=node --target=node20 --outdir=.netlify/functions --format=esm --external:sequelize --external:pg --external:@neondatabase/serverless",
     "start": "next start",
     "import": "node ./contentful/import.js",
     "test": "jest --runInBand"
