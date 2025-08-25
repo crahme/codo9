@@ -4,12 +4,12 @@ dotenv.config();
 import { Sequelize, DataTypes } from 'sequelize';
 
 // Check if DATABASE_URL exists
-if (!process.env.DATABASE_URL) {
+if (!process.env.NETLIFY_DATABASE_URL) {
     console.error('❌ DATABASE_URL environment variable is not defined.');
     process.exit(1);
 }
 
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
+const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
     dialect: 'postgres',
     dialectOptions: {
         ssl: {
