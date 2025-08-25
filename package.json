@@ -8,7 +8,7 @@
       {
         "package": "@netlify/plugin-nextjs",
         "config": {
-          "extensions": [".js", ".mjs"]
+          "extensions": [".js", ".mjs", ".cjs"]
         }
       }
     ]
