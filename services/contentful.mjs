@@ -13,7 +13,7 @@ class ContentfulService {
   }
 
   // Example: update entry
-async updateInvoiceEntry(entryId, invoiceData) {
+  async updateInvoiceEntry(entryId, invoiceData) {
     const env = await this.getEnvironment();
     const entry = await env.getEntry(entryId);
     Object.keys(invoiceData).forEach(key => {
@@ -25,5 +25,14 @@ async updateInvoiceEntry(entryId, invoiceData) {
   }
 }
 
-export default ContentfulService;
+// Create a default instance (you'll need to provide actual values)
+const contentfulService = new ContentfulService(
+  process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+  process.env.CONTENTFUL_SPACE_ID,
+  process.env.CONTENTFUL_ENVIRONMENT_ID || 'master'
+);
 
+// Export both the class and the method
+export default ContentfulService;
+export const updateInvoiceEntry = (entryId, invoiceData) => 
+  contentfulService.updateInvoiceEntry(entryId, invoiceData);
