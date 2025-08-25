@@ -6,12 +6,14 @@
 import 'dotenv/config'; // Load environment variables from .env file
 import { Device, ConsumptionRecord, Invoice } from './models.mjs'; // Adjust the import path as needed
 import  { Op } from 'sequelize';
+import {connect} from './connect-to-neon.mjs';
 
 async function quickSetup() {
   const sequelize = Device.sequelize;
   try {
     // Clear existing data and recreate schema
     await sequelize.sync({ force: true });
+    connect();
 
     // All 11 measuring points with data from Cloud Ocean (UUIDs for reference)
     const measuring_points = [

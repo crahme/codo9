@@ -11,7 +11,7 @@ const client = new Client({
   },
 });
 
-async function connect() {
+export async function connect() {
   try {
     await client.connect();
     console.log('Connected to Neon Postgres!');
