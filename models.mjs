@@ -1,4 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
+import dotenv from 'dotenv';
+dotenv.config();
 const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
   dialect: 'postgres',
   dialectOptions: {
