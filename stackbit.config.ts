@@ -1,13 +1,18 @@
 // stackbit.config.ts
-// Further refined siteMap for netlify dev log structure
-
-import { defineStackbitConfig, SiteMapEntry } from "@stackbit/types";
+import 'dotenv/config';
+import { defineStackbitConfig, SiteMapEntry } from '@stackbit/types';
 import { ContentfulContentSource } from '@stackbit/cms-contentful';
 
-// --- Environment Variable Checks --- (Keep as before)
-if (!process.env.CONTENTFUL_SPACE_ID) { /* ... */ }
-if (!process.env.CONTENTFUL_PREVIEW_TOKEN) { /* ... */ }
-if (!process.env.CONTENTFUL_MANAGEMENT_TOKEN) { /* ... */ }
+// --- Environment Variable Checks ---
+if (!process.env.CONTENTFUL_SPACE_ID) {
+  console.warn('Warning: CONTENTFUL_SPACE_ID is not set in environment variables. Contentful integration may fail.');
+}
+if (!process.env.CONTENTFUL_PREVIEW_TOKEN) {
+  console.warn('Warning: CONTENTFUL_PREVIEW_TOKEN is not set in environment variables. Contentful preview API access may fail.');
+}
+if (!process.env.CONTENTFUL_MANAGEMENT_TOKEN) {
+  console.warn('Warning: CONTENTFUL_MANAGEMENT_TOKEN is not set in environment variables. Contentful management API access may fail.');
+}
 // --- End Environment Variable Checks ---
 
 export default defineStackbitConfig({
@@ -24,15 +29,13 @@ export default defineStackbitConfig({
   ],
 
   modelExtensions: [
-
-     { name: 'page', type: 'page', urlPath: '/{slug}' },
-    { name:'invoice', type: 'page', urlPath: '/invoice/{slug}' },
-
+    { name: 'page', type: 'page', urlPath: '/{fields.slug}' },
+    { name: 'invoice', type: 'page', urlPath: '/invoice/{fields.slug}' },
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
     { name: 'statItem', type: 'data' },
-    { name: 'invoiceSection', type: 'data' }, // Only if it exists
+    { name: 'invoiceSection', type: 'data' },
   ],
 
   siteMap: ({ documents }) => {
@@ -41,58 +44,64 @@ export default defineStackbitConfig({
       return [];
     }
 
-    const entries: SiteMapEntry[] = documents
+    const entries: (SiteMapEntry | null)[] = documents
       .filter((doc) => {
-        // Filter for documents that are page models and have the necessary fields structure
         const isPageModel = doc && doc.modelName && (doc.modelName === 'page' || doc.modelName === 'invoice');
         const hasFields = doc && typeof doc.fields === 'object' && doc.fields !== null;
         return isPageModel && hasFields;
       })
-      .map((document) => {
-        const entryId = document.id as string | undefined; // Top-level ID from debug log
-        const slugField = document.fields.slug; // slug is an object with a 'value'
-        const slug = slugField?.value as string | undefined;
+      .map((doc) => {
+        const entryId = doc.id as string | undefined;
+        const slugField = doc.fields.slug;
+const slug =
+  typeof slugField === 'string'
+    ? slugField
+    : slugField && typeof slugField === 'object' && 'value' in slugField
+    ? (slugField as any).value
+    : undefined;
 
-        const titleField = document.fields.title; // title might also be an object with 'value'
-        const title = (typeof titleField === 'object' && titleField !== null && 'value' in titleField ? titleField.value : titleField) as string | undefined;
 
-        if (!entryId || typeof slug !== 'string') { // Ensure slug is a string
-          console.warn(`[siteMap] Skipping document: Missing ID or valid slug string. Model: ${document.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug}`);
+        const titleField = doc.fields.title;
+        const title = typeof titleField === 'object' && titleField !== null && 'value' in titleField
+          ? titleField.value
+          : titleField;
+
+        if (!entryId || typeof slug !== 'string') {
+          console.warn(`[siteMap] Skipping document: Missing ID or valid slug string. Model: ${doc.modelName}, ID: ${entryId || 'UNKNOWN'}, Slug: ${slug}`);
           return null;
         }
 
-        let urlPath: string | null = null;
+        let urlPath: string;
         let isHomePage = false;
 
-        if (document.modelName === 'page') {
-          const cleanSlug = slug.startsWith('/') && slug.length > 1 ? slug.substring(1) : slug;
-          urlPath = cleanSlug === '/' ? '/' : `/${cleanSlug}`;
-          isHomePage = cleanSlug === '/';
-        } else if (document.modelName === 'invoice') {
+        if (doc.modelName === 'page') {
+          const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
+          urlPath = cleanSlug === '' ? '/' : `/${cleanSlug}`;
+          isHomePage = cleanSlug === '';
+        } else if (doc.modelName === 'invoice') {
           const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
           urlPath = `/invoice/${cleanSlug}`;
-        }
-
-        if (!urlPath) {
-          console.warn(`[siteMap] Could not determine urlPath for document: ID ${entryId}, Model ${document.modelName}`);
+        } else {
           return null;
         }
 
         return {
           stableId: entryId,
           label: title || slug,
-          urlPath: urlPath,
-          isHomePage: isHomePage,
-        };
-      })
-      .filter((entry): entry is SiteMapEntry => entry !== null);
+          urlPath,
+          isHomePage,
+        } as SiteMapEntry;
+      });
 
-    console.log(`[siteMap] Generated ${entries.length} site map entries.`);
-    if (entries.length > 0) {
-        console.log('[siteMap] First generated entry:', entries[0]);
+    const validEntries: SiteMapEntry[] = entries.filter((e): e is SiteMapEntry => e !== null);
+
+    console.log(`[siteMap] Generated ${validEntries.length} site map entries.`);
+    if (validEntries.length > 0) {
+      console.log('[siteMap] First generated entry:', validEntries[0]);
     } else {
-        console.warn("[siteMap] No entries generated. Check filtering and data structure assumptions. Sample input documents (first 3):", documents.slice(0,3).map(d => ({ id: d.id, modelName: d.modelName, fields: d.fields })));
+      console.warn("[siteMap] No entries generated. Check data structure. Sample input documents (first 3):", documents.slice(0, 3));
     }
-    return entries;
+
+    return validEntries;
   },
 });

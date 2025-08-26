@@ -11,7 +11,7 @@ async function fetchCloudOceanReads(start, end, limit = 50, offset = 0) {
   const url = `${BASE_URL}?start=${start}&end=${end}&limit=${limit}&offset=${offset}`;
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${process.env.CLOUD_OCEAN_API_KEY}`, // Add this
+      'Authorization': `Bearer ${process.env.API_KEY}`, // Add this
       'Content-Type': 'application/json'
     }
   });

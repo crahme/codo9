@@ -11,7 +11,7 @@ function fmt2(n) {
   return round2(n).toFixed(2);
 }
 
-export function calculateBilling(reads, rate) {
+function calculateBilling(reads, rate) {
   const rateNum = toNumber(rate);
 
   const lineItems = Array.isArray(reads)
@@ -41,16 +41,4 @@ export function calculateBilling(reads, rate) {
   };
 }
 
-export async function handler(event) {
-  try {
-    const body = event.body ? JSON.parse(event.body) : {};
-    const reads = body.reads || [];
-    const rate = body.rate ?? 0;
-
-    const result = calculateBilling(reads, rate);
-    return { statusCode: 200, body: JSON.stringify(result) };
-  } catch (err) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid input', details: err.message }) };
-  }
-};
-
+export {calculateBilling} ;

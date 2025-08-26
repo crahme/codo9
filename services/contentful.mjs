@@ -1,4 +1,4 @@
-const contentful = require('contentful-management');
+import contentful from 'contentful-management';
 
 class ContentfulService {
   constructor(accessToken, spaceId, environmentId = 'master') {
@@ -25,4 +25,14 @@ class ContentfulService {
   }
 }
 
-module.exports = ContentfulService;
+// Create a default instance (you'll need to provide actual values)
+const contentfulService = new ContentfulService(
+  process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+  process.env.CONTENTFUL_SPACE_ID,
+  process.env.CONTENTFUL_ENVIRONMENT_ID || 'master'
+);
+
+// Export both the class and the method
+export default ContentfulService;
+export const updateInvoiceEntry = (entryId, invoiceData) => 
+  contentfulService.updateInvoiceEntry(entryId, invoiceData);

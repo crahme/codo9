@@ -2,16 +2,19 @@ import { notFound } from 'next/navigation';
 import { getPageFromSlug } from '../../utils/content.js';
 import { Hero } from '../../components/Hero.jsx';
 import { Stats } from '../../components/Stats.jsx';
-
+import { InvoiceSection } from '../../components/InvoiceSection.jsx';
+import { Invoice } from '../../components/Invoice.jsx';
 const componentMap = {
   hero: Hero,
   stats: Stats,
+  invoiceSection: InvoiceSection,
+  invoice:Invoice,
 };
 
 export default async function ComposablePage({ params }) { // <-- FIXED
   try {
     // Validate and construct the slug
-    const slugArray = params?.slug;
+    const { slug: slugArray } = await params;
     if (!Array.isArray(slugArray) || slugArray.length === 0) {
       console.warn("Invalid slug parameter received:", params);
       return notFound();

@@ -32,11 +32,30 @@ yarn-error.log*
 .vercel
 
 .stackbit/cache
-<<<<<<< HEAD
-# Sentry Config File
-.env.sentry-build-plugin
-=======
->>>>>>> eecd1e5025cf0c8c16939bad842a8898876096c0
 
 # Local Netlify folder
 .netlify
+calculatebilling.js.bak
+contentful_writer.js.bak
+fetchKwh.js.bak
+generateinvoice.js.bak
+get-consumption.js.bak
+get-invoice.js.bak
+get-post.js.bak
+push-invoice.js.bak
+rve-sync.js.bak
+serveinvoice.js.bak
+sync-cloud-ocean.js.bak
+update-invoice-entry.js.bak
+netlify/functions/_tests_/calculatebilling.test.js.bak
+netlify/functions/_tests_/contentful_writer.test.js.bak
+netlify/functions/_tests_/fetchKwh.test.js.bak
+netlify/functions/_tests_/generateinvoice.test.js.bak
+netlify/functions/_tests_/get-consumption.test.js.bak
+netlify/functions/_tests_/get-invoice.test.js.bak
+netlify/functions/_tests_/get-post.test.js.bak
+netlify/functions/_tests_/push-invoice.test.js.bak
+netlify/functions/_tests_/rve-sync.test.js.bak
+netlify/functions/_tests_/serveinvoice.test.js.bak
+netlify/functions/_tests_/sync-cloud-ocean.test.js.bak
+netlify/functions/_tests_/update-invoice-entry.test.js.bak

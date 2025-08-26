@@ -2,16 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import contentful from 'contentful-management';
 const CloudOceanAPI = require('../services/cloudoceanapi.mjs').default;
 
-<<<<<<< HEAD
-exports.handler = async (event) => {
-  const moduleUuid = "c667ff46-9730-425e-ad48-1e950691b3f9";
-  const measuringPointUuid = "71ef9476-3855-4a3f-8fc5-333cfbf9e898";
-  const start = new Date("2024-10-16");
-  const end = new Date("2024-11-25");
-  const rate = 0.12;
-=======
 import { calculateBilling } from './calculatebilling.js';
->>>>>>> preview
 
 
 export async function handler(event, context) {

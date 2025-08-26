@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    
+
   images: {
     remotePatterns: [
       {
@@ -19,20 +21,27 @@ const nextConfig = {
     'http://localhost:3000',
     // Add more dev/preview URLs if needed
   ],
-  webpack: (config, { isServer, dev }) => {
-    config.devtool = dev ? 'eval-source-map' : 'source-map';
-    if (!isServer) {
-      config.module.rules.push({
-        test: /\.js$/,
-        enforce: 'pre',
-        use: ['source-map-loader'],
-      });
+    webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // Only suppress source map warnings, don't change devtool
+      config.ignoreWarnings = [
+        ...(config.ignoreWarnings || []),
+        {
+          module: /node_modules\/@next\/react-refresh-utils/,
+          message: /Failed to parse source map/,
+        },
+      ];
     }
     return config;
   },
+
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  }
   // Uncomment and adjust if you use custom caching:
   // cacheHandler: require('./cache-handler.js'),
   // cacheMaxMemorySize: 0,
 };
 
-module.exports = nextConfig;
+export default nextConfig;

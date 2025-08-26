@@ -7,11 +7,7 @@ export async function handler(event, context) {
   const start = qs.start || "2024-10-16";
   const end = qs.end || "2024-11-25";
 
-<<<<<<< HEAD
-  const url = 'https://api.develop.rve.ca/v1/modules/${moduleUuid}/measuring-points/${measuringPointUuid}/reads?start=${start}&end=${end}';
-=======
   const url = `https://api.develop.rve.ca/v1/modules/${encodeURIComponent(moduleUuid)}/measuring-points/${encodeURIComponent(measuringPointUuid)}/reads?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
->>>>>>> preview
 
   try {
     const response = await fetch(url, {

@@ -1,8 +1,8 @@
 // connect-to-neon.js
-const { Client } = require('pg');
+import { Client } from 'pg';
 
 // Replace these with your actual Neon connection details
-const connectionString = 'postgresql://neondb_owner:npg_yMXmTz81aPCD@ep-polished-waterfall-a5szq7p4-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require'';
+const connectionString = 'postgresql://neondb_owner:npg_yMXmTz81aPCD@ep-polished-waterfall-a5szq7p4-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 
 const client = new Client({
   connectionString,
@@ -11,7 +11,7 @@ const client = new Client({
   },
 });
 
-async function connect() {
+export async function connect() {
   try {
     await client.connect();
     console.log('Connected to Neon Postgres!');
@@ -20,10 +20,10 @@ async function connect() {
     console.log('Server time:', res.rows[0]);
   } catch (err) {
     console.error('Connection error:', err.stack);
-  } finally {
-    await client.end();
-    console.log('Disconnected.');
-  }
+  } //finally {
+    //await client.end();
+    //console.log('Disconnected.');
+  //}
 }
 
 connect();

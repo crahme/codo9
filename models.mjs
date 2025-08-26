@@ -1,5 +1,16 @@
-const { Sequelize, DataTypes, Model } = require('sequelize');
-const sequelize = require('./db'); // Assuming your Sequelize instance is exported from a db.js file
+import { Sequelize, DataTypes, Model } from 'sequelize';
+import dotenv from 'dotenv';
+dotenv.config();
+const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
+    }
+  },
+  logging: false // Set to console.log to see SQL queries
+});
 
 // Device Model
 class Device extends Model {}
@@ -10,7 +21,7 @@ Device.init({
     autoIncrement: true
   },
   model_number: {
-    type: DataTypes.STRING(20),
+    type: DataTypes.STRING(50),
     allowNull: false
   },
   serial_number: {
@@ -20,6 +31,14 @@ Device.init({
   },
   location: {
     type: DataTypes.STRING(200)
+  },
+  status: {
+    type: DataTypes.STRING(20),
+    defaultValue: 'active'
+  },
+  installation_date: {
+    type: DataTypes.DATE,
+    defaultValue: Sequelize.NOW
   },
   max_amperage: {
     type: DataTypes.FLOAT
@@ -140,4 +159,4 @@ ConsumptionRecord.belongsTo(Device, { foreignKey: 'device_id' });
 Device.hasMany(Invoice, { foreignKey: 'device_id', as: 'invoices' });
 Invoice.belongsTo(Device, { foreignKey: 'device_id' });
 
-module.exports = { Device, ConsumptionRecord, Invoice };
+export {Device, ConsumptionRecord, Invoice, Sequelize};
