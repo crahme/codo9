@@ -9,11 +9,11 @@ export async function handler(event, context) {
   try {
     const qs = event.queryStringParameters || {};
 
-    const moduleUuid = qs.moduleUuid || process.env.RVE_MODULE_UUID || 'c667ff46-9730-425e-ad48-1e950691b3f9';
-    const measuringPointUuid = qs.measuringPointUuid || process.env.RVE_MEASURING_POINT_UUID || '71ef9476-3855-4a3f-8fc5-333cfbf9e898';
+    const moduleUuid = qs.moduleUuid || undefined || 'c667ff46-9730-425e-ad48-1e950691b3f9';
+    const measuringPointUuid = qs.measuringPointUuid || undefined || '71ef9476-3855-4a3f-8fc5-333cfbf9e898';
     const start = (qs.start || '2024-10-16').slice(0, 10);
     const end = (qs.end || '2024-11-25').slice(0, 10);
-    const rate = Number(qs.rate ?? process.env.DEFAULT_RATE ?? 0.12);
+    const rate = Number(qs.rate ?? undefined ?? 0.12);
     const invoiceNumber = qs.invoiceNumber || `INV-${measuringPointUuid.slice(0,8).toUpperCase()}-${start.replace(/-/g,'')}`;
 
     const cloudOcean = new CloudOceanAPI();
@@ -25,10 +25,10 @@ export async function handler(event, context) {
     let entryId = null;
     try {
       const client = contentful.createClient({
-        accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+        accessToken: 'CFPAT-hFTZ7nEiZeGQyM3jhdGwlFHun-JUAPX5Wn9ytsLR9Hk',
       });
-      const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-      const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || 'master');
+      const space = await client.getSpace('t3t3mhakehxg');
+      const env = await space.getEnvironment('master' || 'master');
 
       const fields = {
         invoiceNumber,
