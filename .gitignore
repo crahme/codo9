@@ -32,11 +32,6 @@ yarn-error.log*
 .vercel
 
 .stackbit/cache
-<<<<<<< HEAD
-# Sentry Config File
-.env.sentry-build-plugin
-=======
->>>>>>> eecd1e5025cf0c8c16939bad842a8898876096c0
 
 # Local Netlify folder
 .netlify
