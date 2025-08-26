@@ -15,11 +15,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "latest",
-<<<<<<< HEAD
-    "@qodo/command": "^0.20.2",
-=======
     "@netlify/neon": "latest",
->>>>>>> preview
     "axios": "^1.7.9",
     "browserslist": "latest",
     "contentful": "^11.4.3",
@@ -29,32 +25,22 @@
     "markdown-to-jsx": "^7.4.7",
     "neon-js": "^1.1.2",
     "next": "^15.3.2",
-<<<<<<< HEAD
-    "pdf-lib": "latest",
-    "pg": "latest",
-=======
     "nodemailer": "^7.0.5",
     "pdf-lib": "latest",
     "pdfkit": "^0.17.1",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
     "pino": "^9.9.0",
->>>>>>> preview
     "puppeteer": "^23.11.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-id-swiper": "latest",
     "sequelize": "latest",
     "sqlite3": "latest",
-<<<<<<< HEAD
-    "stackbit": "^0.0.0",
-    "winston": "3.10.0"
-=======
     "winston": "3.10.0"
   },
   "engines": {
     "node": ">=20"
->>>>>>> preview
   },
   "devDependencies": {
     "@netlify/plugin-lighthouse": "^6.0.1",
