@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  
   "scripts": {
     "prebuild": "npx update-browserslist-db@latest",
     "dev": "next dev",
@@ -43,8 +42,9 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.28.3",
+    "@netlify/blobs": "^1.0.0",
     "@netlify/plugin-lighthouse": "^6.0.1",
-    "@netlify/blobs":"^1.0.0",
     "@netlify/plugin-nextjs": "^5.12.0",
     "@stackbit/cms-contentful": "^1.0.30",
     "@stackbit/types": "^2.1.12",
