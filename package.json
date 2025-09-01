@@ -15,7 +15,6 @@
   "dependencies": {
     "@neondatabase/serverless": "latest",
     "@netlify/neon": "latest",
-    "@tailwindcss/postcss": "^4.1.12",
     "axios": "^1.7.9",
     "body-parser": "^2.2.0",
     "browserslist": "latest",
@@ -52,7 +51,8 @@
     "@netlify/plugin-nextjs": "^5.12.0",
     "@stackbit/cms-contentful": "^1.0.30",
     "@stackbit/types": "^2.1.12",
-    "autoprefixer": "^10.4.19",
+    "@tailwindcss/postcss": "^4.1.12",
+    "autoprefixer": "^10.4.21",
     "contentful-import": "^9.4.39",
     "dotenv": "^17.2.1",
     "eslint": "^9.34.0",
