@@ -31,7 +31,7 @@ const MEASURING_POINTS = [
 const client = axios.create({
   baseURL: BASE_URL,
   headers: {
-    "Authorization": `Bearer ${API_KEY}`, // Correct header
+    "Access-Token": `Bearer ${API_KEY}`, // Correct header
     "Content-Type": "application/json",
   },
 });
