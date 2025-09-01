@@ -33,32 +33,32 @@
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
     "pino": "^9.9.0",
-    "puppeteer": "^23.11.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "puppeteer": "^24.18.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "react-id-swiper": "latest",
     "sequelize": "latest",
     "sqlite3": "latest",
-    "winston": "3.10.0"
+    "winston": "^3.17.0"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.3",
-    "@netlify/blobs": "^1.0.0",
+    "@netlify/blobs": "^10.0.10",
     "@netlify/plugin-lighthouse": "^6.0.1",
     "@netlify/plugin-nextjs": "^5.12.0",
     "@stackbit/cms-contentful": "^1.0.30",
     "@stackbit/types": "^2.1.12",
     "autoprefixer": "^10.4.19",
     "contentful-import": "^9.4.39",
-    "dotenv": "^16.6.1",
-    "eslint": "^8.57.1",
+    "dotenv": "^17.2.1",
+    "eslint": "^9.34.0",
     "eslint-config-next": "^15.0.0",
     "jest": "^30.0.5",
     "postcss": "^8.4.38",
     "source-map-loader": "^5.0.0",
-    "tailwindcss": "^3.4.3"
+    "tailwindcss": "^4.1.12"
   }
 }
