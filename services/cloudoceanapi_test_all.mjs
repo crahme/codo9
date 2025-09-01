@@ -1,91 +1,52 @@
-'use strict';
+import axios from "axios";
 
-import { fileURLToPath } from 'url';
-import 'dotenv/config';
-import axios from 'axios';
+// ==================== CONFIG ====================
+const BASE_URL = process.env.CLOUD_OCEAN_BASE_URL; // Adjust if different
+const API_KEY = process.env.API_Key;  // Set your API key in env
+const MODULE_UUID = "c667ff46-9730-425e-ad48-1e950691b3f9";
 
-// ===== Config =====
-const BASE_URL = process.env.CLOUD_OCEAN_BASE_URL || 'https://api.develop.rve.ca';
-const API_KEY = process.env.API_Key;
-const MODULE_UUID = 'c667ff46-9730-425e-ad48-1e950691b3f9';
-const START = '2024-10-16';
-const END = '2024-11-25';
+const START = "2024-10-16";
+const END = "2024-11-25";
 
-if (!API_KEY) {
-  console.error('❌ Missing API key. Set API_Key in your .env file.');
-  process.exit(1);
-}
+// ==================== MEASURING POINTS ====================
+const MEASURING_POINTS = [
+  { uuid: '71ef9476-3855-4a3f-8fc5-333cfbf9e898', name: 'EV Charger Station 01', location: 'Building A - Level 1' },
+  { uuid: 'fd7e69ef-cd01-4b9a-8958-2aa5051428d4', name: 'EV Charger Station 02', location: 'Building A - Level 2' },
+  { uuid: 'b7423cbc-d622-4247-bb9a-8d125e5e2351', name: 'EV Charger Station 03', location: 'Building B - Parking Garage' },
+  { uuid: '88f4f9b6-ce65-48c4-86e6-1969a64ad44c', name: 'EV Charger Station 04', location: 'Building B - Ground Floor' },
+  { uuid: 'df428bf7-dd2d-479c-b270-f8ac5c1398dc', name: 'EV Charger Station 05', location: 'Building C - East Wing' },
+  { uuid: '7744dcfc-a059-4257-ac96-6650feef9c87', name: 'EV Charger Station 06', location: 'Building C - West Wing' },
+  { uuid: 'b1445e6d-3573-403a-9f8e-e82f70556f7c', name: 'EV Charger Station 07', location: 'Building D - Main Entrance' },
+  { uuid: 'ef296fba-4fcc-4dcb-8eda-e6d1772cd819', name: 'EV Charger Station 08', location: 'Building D - Loading Dock' },
+  { uuid: '50206eae-41b8-4a84-abe4-434c7f79ae0a', name: 'EV Charger Station 09', location: 'Outdoor Lot - Section A' },
+  { uuid: 'de2d9680-f132-4529-b9a9-721265456a86', name: 'EV Charger Station 10', location: 'Outdoor Lot - Section B' },
+  { uuid: 'bd36337c-8139-495e-b026-f987b79225b8', name: 'EV Charger Station 11', location: 'Visitor Parking - Main Gate' },
+];
 
-// ===== Axios client =====
+// ==================== API CLIENT ====================
 const client = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Access-Token': API_KEY.startsWith('Bearer ')
-      ? API_KEY
-      : `Bearer ${API_KEY}`,
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
+    Authorization: `Bearer ${API_KEY}`, // ✅ Use Authorization header
+    "Content-Type": "application/json",
   },
 });
 
-// ===== Helpers =====
-async function listModuleMeasuringPoints(moduleUuid) {
-  const all = [];
-  let offset = 0;
-  const limit = 50;
-  while (true) {
-    const res = await client.get(`/v1/modules/${moduleUuid}/measuring-points`, {
-      params: { limit, offset },
-    });
-    const data = res.data?.data || [];
-    all.push(...data);
-    if (data.length < limit) break;
-    offset += limit;
-  }
-  return all;
-}
-
-async function listDevices() {
-  const all = [];
-  let offset = 0;
-  const limit = 100;
-  while (true) {
-    const res = await client.get(`/v1/devices`, { params: { limit, offset } });
-    const data = res.data?.data || [];
-    all.push(...data);
-    if (data.length < limit) break;
-    offset += limit;
-  }
-  return all;
-}
-
-// ===== Main =====
+// ==================== MAIN FUNCTION ====================
 async function main() {
-  console.log('🔎 Fetching all measuring points & devices');
+  console.log("🔎 Fetching reads & CDR for predefined measuring points");
   console.log({ moduleUuid: MODULE_UUID, start: START, end: END });
-
-  // --- Measuring Points ---
-  let measuringPoints = [];
-  try {
-    measuringPoints = await listModuleMeasuringPoints(MODULE_UUID);
-  } catch (e) {
-    console.error('⚠️ Failed to list measuring points:', e.message);
-    process.exit(1);
-  }
-
-  console.log(`Found ${measuringPoints.length} measuring points`);
 
   let totalReads = 0;
   let totalCdr = 0;
   let totalKwh = 0;
 
-  for (const mp of measuringPoints) {
-    const mpUuid = mp.uuid || mp.id;
-    if (!mpUuid) continue;
+  for (const mp of MEASURING_POINTS) {
+    const mpUuid = mp.uuid;
 
-    console.log(`\n📌 Measuring point: ${mpUuid} (${mp.name || 'unknown'})`);
+    console.log(`\n📌 Measuring point: ${mpUuid} (${mp.name}) @ ${mp.location}`);
 
-    // Reads
+    // ========== Reads ==========
     let reads = [];
     try {
       const res = await client.get(
@@ -98,7 +59,7 @@ async function main() {
       console.warn(`   ❌ Failed to fetch reads: ${e.message}`);
     }
 
-    // CDR
+    // ========== CDR ==========
     let cdr = [];
     try {
       const res = await client.get(
@@ -111,7 +72,7 @@ async function main() {
       console.warn(`   ❌ Failed to fetch CDR: ${e.message}`);
     }
 
-    // kWh sum
+    // ========== kWh ==========
     const mpKwh = reads.reduce(
       (sum, r) => sum + parseFloat(r.consumption || 0),
       0
@@ -124,57 +85,15 @@ async function main() {
     console.log(`   🔋 kWh: ${mpKwh}`);
   }
 
-  // --- Devices ---
-  let devices = [];
-  try {
-    devices = await listDevices();
-  } catch (e) {
-    console.error('⚠️ Failed to list devices:', e.message);
-  }
-
-  console.log(`\nFound ${devices.length} devices`);
-
-  let totalDeviceCons = 0;
-  for (const d of devices) {
-    const id = d.id || d.uuid;
-    if (!id) continue;
-
-    try {
-      const info = await client.get(`/v1/devices/${id}`);
-      const cons = await client.get(`/v1/devices/${id}/consumption`, {
-        params: { start: START, end: END },
-      });
-
-      const count = Array.isArray(cons.data?.data)
-        ? cons.data.data.length
-        : 0;
-      console.log(
-        `   Device ${id}: info=${info.status === 200 ? 'ok' : 'n/a'}, consumption records=${count}`
-      );
-      totalDeviceCons += count;
-    } catch (e) {
-      console.warn(`   Device ${id}: ❌ ${e.message}`);
-    }
-  }
-
-  // --- Summary ---
-  console.log('\n📊 SUMMARY');
-  console.log(`  Total measuring points: ${measuringPoints.length}`);
+  // ==================== SUMMARY ====================
+  console.log("\n📊 SUMMARY");
+  console.log(`  Total measuring points: ${MEASURING_POINTS.length}`);
   console.log(`  Total reads: ${totalReads}`);
   console.log(`  Total CDR: ${totalCdr}`);
   console.log(`  Total kWh: ${totalKwh}`);
-  console.log(`  Total devices: ${devices.length}`);
-  console.log(`  Device consumption records: ${totalDeviceCons}`);
 }
 
-const isMain = process.argv[1] === fileURLToPath(import.meta.url);
-if (isMain) {
-  main().catch((err) => {
-    console.error('Test failed:', err.message);
-    if (err.response) {
-      console.error('Status:', err.response.status);
-      console.error('Body:', JSON.stringify(err.response.data, null, 2));
-    }
-    process.exit(2);
-  });
-}
+// ==================== RUN ====================
+main().catch((err) => {
+  console.error("❌ Script failed:", err.message);
+});
