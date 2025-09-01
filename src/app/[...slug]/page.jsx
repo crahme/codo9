@@ -24,9 +24,7 @@ export default async function ComposablePage({ params }) { // <-- FIXED
     let pageSlug = slugArray.join('/');
     pageSlug = pageSlug.replace(/\/index\.html?$/i, ''); // <-- FIXED
     const fullPath = `/${pageSlug}`;
-    if (fullPath === "/invoice") {
-      redirect("/invoice/fac-2024-001");
-    }
+   
 
     const page = await getPageFromSlug(fullPath);
 
