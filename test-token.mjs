@@ -33,3 +33,4 @@ async function fetchReads() {
     console.error("❌ Error:", err.response?.status, err.response?.data);
   }
 }
+fetchReads();
