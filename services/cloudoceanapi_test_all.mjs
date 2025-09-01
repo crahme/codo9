@@ -8,8 +8,9 @@ const BASE_URL = process.env.CLOUD_OCEAN_BASE_URL; // Adjust if different
 const API_KEY = process.env.API_Key;  // Set your API key in env
 const MODULE_UUID = "c667ff46-9730-425e-ad48-1e950691b3f9";
 
-const START = "2024-10-16";
-const END = "2024-11-25";
+const START = '2024-10-16T00:00:00Z';
+const END = '2024-11-25T23:59:59Z';
+
 
 // ==================== MEASURING POINTS ====================
 const MEASURING_POINTS = [
