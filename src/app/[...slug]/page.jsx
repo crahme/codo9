@@ -25,8 +25,6 @@ export default async function ComposablePage({ params }) { // <-- FIXED
     pageSlug = pageSlug.replace(/\/index\.html?$/i, ''); // <-- FIXED
     const fullPath = `/${pageSlug}`;
    
-   console.log("🔎 FullPath:", fullPath);
-   console.log("📄 Page data from Contentful:", JSON.stringify(page, null, 2));
     const page = await getPageFromSlug(fullPath);
 
     if (!page || !page.sys?.contentType?.sys?.id) {
