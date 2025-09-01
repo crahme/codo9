@@ -1,4 +1,7 @@
 import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // ==================== CONFIG ====================
 const BASE_URL = process.env.CLOUD_OCEAN_BASE_URL; // Adjust if different
