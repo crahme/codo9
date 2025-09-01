@@ -54,7 +54,7 @@ async function main() {
     try {
       const res = await client.get(
         `/v1/modules/${MODULE_UUID}/measuring-points/${mpUuid}/reads`,
-        { params: { start: START, end: END, limit: 1000 } }
+        { params: { start: START, end: END, limit: 50, offset:0 } }
       );
       reads = res.data?.data || [];
       console.log(`   ✅ Reads: ${reads.length}`);
@@ -68,7 +68,7 @@ async function main() {
     try {
       const res = await client.get(
         `/v1/modules/${MODULE_UUID}/measuring-points/${mpUuid}/cdr`,
-        { params: { start: START, end: END, limit: 1000 } }
+        { params: { start: START, end: END, limit: 50,  offset:0 } }
       );
       cdr = res.data?.data || [];
       console.log(`   ✅ CDR: ${cdr.length}`);
