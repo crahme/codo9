@@ -1,5 +1,6 @@
-module.exports = {
+export default {
   presets: [
-    'next/babel', // includes React, JSX, and ESNext support
-  ],
-}
+    ["@babel/preset-env", { targets: { node: "current" } }],
+    ["@babel/preset-react", { runtime: "automatic" }]
+  ]
+};

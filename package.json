@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
     "@netlify/blobs": "^10.0.10",
     "@netlify/plugin-lighthouse": "^6.0.1",
     "@netlify/plugin-nextjs": "^5.12.0",
