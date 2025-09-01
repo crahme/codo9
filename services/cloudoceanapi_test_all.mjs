@@ -8,8 +8,9 @@ const BASE_URL = process.env.CLOUD_OCEAN_BASE_URL; // API base URL
 const API_KEY = process.env.API_Key;  // API key from .env
 const MODULE_UUID = "c667ff46-9730-425e-ad48-1e950691b3f9";
 
+// Start & End dates in ISO 8601
 const START = '2024-10-16T00:00:00Z';
-const END = '2024-11-25T23:59:59Z';
+const END   = '2024-11-25T23:59:59Z';
 
 // ==================== MEASURING POINTS ====================
 const MEASURING_POINTS = [
@@ -30,7 +31,7 @@ const MEASURING_POINTS = [
 const client = axios.create({
   baseURL: BASE_URL,
   headers: {
-    "Access-Token": API_KEY.startsWith('Bearer ') ? API_KEY : `Bearer ${API_KEY}`,
+    "Authorization": `Bearer ${API_KEY}`, // Correct header
     "Content-Type": "application/json",
   },
 });
@@ -53,12 +54,13 @@ async function main() {
     try {
       const res = await client.get(
         `/v1/modules/${MODULE_UUID}/measuring-points/${mpUuid}/reads`,
-        { params: { start: START, end: END, limit: 1000, offset: 0 } }
+        { params: { start: START, end: END, limit: 1000 } }
       );
       reads = res.data?.data || [];
       console.log(`   ✅ Reads: ${reads.length}`);
     } catch (e) {
       console.warn(`   ❌ Failed to fetch reads: ${e.response?.status || e.message}`);
+      if (e.response?.data) console.warn("   Response:", e.response.data);
     }
 
     // ========== CDR ==========
@@ -66,12 +68,13 @@ async function main() {
     try {
       const res = await client.get(
         `/v1/modules/${MODULE_UUID}/measuring-points/${mpUuid}/cdr`,
-        { params: { start: START, end: END, limit: 1000, offset: 0 } }
+        { params: { start: START, end: END, limit: 1000 } }
       );
       cdr = res.data?.data || [];
       console.log(`   ✅ CDR: ${cdr.length}`);
     } catch (e) {
       console.warn(`   ❌ Failed to fetch CDR: ${e.response?.status || e.message}`);
+      if (e.response?.data) console.warn("   Response:", e.response.data);
     }
 
     // ========== kWh ==========
@@ -95,8 +98,5 @@ async function main() {
 // ==================== RUN ====================
 main().catch((err) => {
   console.error("❌ Script failed:", err.message);
-  if (err.response) {
-    console.error("Status:", err.response.status);
-    console.error("Body:", JSON.stringify(err.response.data, null, 2));
-  }
+  if (err.response?.data) console.error("Response:", err.response.data);
 });
