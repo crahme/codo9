@@ -53,16 +53,13 @@ export default defineStackbitConfig({
       })
       .map((doc) => {
         const entryId = doc.id as string | undefined;
-        const getFieldValue = (field) => {
-  if (typeof field === 'string') return field;
-  if (field && typeof field === 'object' && 'value' in field) return field.value;
-  if (field && typeof field === 'object' && field['en-US']) return field['en-US']; // For localized fields
-  return undefined;
-};
-
-// Usage:
-const slug = getFieldValue(doc.fields.slug);
-
+             const slugField = doc.fields.slug;
+const slug =
+  typeof slugField === 'string'
+    ? slugField
+    : slugField && typeof slugField === 'object' && 'value' in slugField
+    ? (slugField as any).value
+    : undefined;
 
         const titleField = doc.fields.title;
         const title = typeof titleField === 'object' && titleField !== null && 'value' in titleField
