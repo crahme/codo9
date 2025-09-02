@@ -4,12 +4,14 @@ import { Hero } from '../../components/Hero.jsx';
 import { Stats } from '../../components/Stats.jsx';
 import { InvoiceSection } from '../../components/InvoiceSection.jsx';
 import { Invoice } from '../../components/Invoice.jsx';
+import { VisualEditorComponent } from '../../components/VisualEditorComponent.jsx';
 
 const componentMap = {
   hero: Hero,
   stats: Stats,
   invoiceSection: InvoiceSection,
   invoice: Invoice,
+  VisualEditorComponent: VisualEditorComponent,
 };
 
 export default async function ComposablePage({ params }) {
