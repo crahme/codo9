@@ -1,5 +1,6 @@
 // stackbit.config.ts
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config();
 import { defineStackbitConfig, SiteMapEntry } from '@stackbit/types';
 import { ContentfulContentSource } from '@stackbit/cms-contentful';
 
