@@ -10,6 +10,12 @@ const logger = pino({ level: 'info' });
 const app = express();
 const DATABASE_URL = process.env.NETLIFY_DATABASE_URL || 'sqlite:./invoices.db';
 
+const PORT = 5000;
+const HOST = '0.0.0.0';
+logger.info('Starting Express server...');
+app.listen(PORT, HOST, () => {
+logger.info(`Server is running on http://${HOST}:${PORT}`);
+});
 // ... your existing setup code ...
 
 // At the end of the file, export the app:
