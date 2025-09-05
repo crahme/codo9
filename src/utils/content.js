@@ -32,9 +32,18 @@ export async function getPageFromSlug(slugPath, explicitType) {
     : ['page', 'invoice'];
 
   // Try a few slug representations since Contentful entries may store with or without leading '/'
+  const last = trimmed.split('/').pop();
   const slugCandidates = isHome
     ? ['/', '']
-    : [trimmed, '/' + trimmed, cleaned];
+    : Array.from(new Set([
+        trimmed,
+        '/' + trimmed,
+        cleaned,
+        last || '',
+        last ? '/' + last : '',
+        last ? (last + '/') : '',
+        last ? ('/' + last + '/') : ''
+      ].filter(Boolean)));
 
   for (const type of typesToTry) {
     for (const s of slugCandidates) {
@@ -45,7 +54,17 @@ export async function getPageFromSlug(slugPath, explicitType) {
           limit: 1,
           include: 3,
         });
-        const item = entries.items && entries.items[0];
+        let item = entries.items && entries.items[0];
+        // Fallback: for invoices, also try invoiceNumber matching by last segment
+        if (!item && type === 'invoice' && last) {
+          const byNumber = await client.getEntries({
+            content_type: type,
+            'fields.invoiceNumber': last,
+            limit: 1,
+            include: 3,
+          });
+          item = byNumber.items && byNumber.items[0];
+        }
         if (item) return item;
       } catch (_) {
         // Ignore and continue trying candidates
