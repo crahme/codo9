@@ -1,7 +1,17 @@
 // stackbit.config.ts
 import dotenv from 'dotenv';
-dotenv.config
-import { defineStackbitConfig, SiteMapEntry } from '@stackbit/types';
+dotenv.config();
+import types from '@stackbit/types';
+const { defineStackbitConfig } = types;
+// Note: SiteMapEntry is a TypeScript type from @stackbit/types (CJS). If you compile with TS, you can uncomment the next line:
+// import type { SiteMapEntry } from '@stackbit/types';
+// As a fallback for direct runtime execution without TS, declare a minimal structural type:
+type SiteMapEntry = {
+  stableId: string;
+  label: string;
+  urlPath: string;
+  isHomePage?: boolean;
+};
 import { ContentfulContentSource } from '@stackbit/cms-contentful';
 
 // --- Environment Variable Checks ---
