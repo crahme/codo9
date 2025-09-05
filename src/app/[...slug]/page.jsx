@@ -169,7 +169,11 @@ export default async function ComposablePage({ params }) {
     return notFound();
 
   } catch (error) {
-    // FIXED: Use the already resolved params instead of awaiting in error handler
+    const digest = error && error.digest;
+    // Suppress logging for framework-generated 404s (notFound)
+    if (digest === 'NEXT_NOT_FOUND' || (typeof digest === 'string' && digest.includes('NEXT_HTTP_ERROR_FALLBACK;404'))) {
+      throw error; // Let Next.js handle the 404 without extra noise
+    }
     const errorSlug = slugArray ? slugArray.join('/') : 'unknown';
     console.error(`Error fetching or rendering page for slug '${errorSlug}':`, error);
     return notFound();
