@@ -10,6 +10,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Client } from "pg";
 
+// --- Load .env ---
 function loadEnv() {
   try {
     const envPath = path.join(process.cwd(), ".env");
@@ -32,11 +33,9 @@ function loadEnv() {
 }
 loadEnv();
 
-function formatDateYYYYMMDD(d) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+// --- Date helpers ---
+function formatDateISO(d) {
+  return d.toISOString().split(".")[0] + "Z"; // YYYY-MM-DDTHH:mm:ssZ
 }
 function addDays(date, days) {
   const d = new Date(date.getTime());
@@ -44,6 +43,7 @@ function addDays(date, days) {
   return d;
 }
 
+// --- CloudOcean API ---
 class CloudOceanAPI {
   constructor(apiKey) {
     this.apiKey = apiKey || process.env.API_Key;
@@ -51,46 +51,38 @@ class CloudOceanAPI {
   }
 
   async getModuleConsumption({ module_uuid, measuring_point_uuids, start_date, end_date }) {
-  const results = [];
+    const results = [];
 
-  for (const point_uuid of measuring_point_uuids) {
-    const url = `${this.baseUrl.replace(/\/$/, "")}/v1/modules/${module_uuid}/measuring-points/${point_uuid}/reads?start=${start_date}&end=${end_date}&limit=50&offset=0`;
-    
-    console.log("➡️  Requesting:", url);
+    const startISO = formatDateISO(start_date);
+    const endISO = formatDateISO(end_date);
 
-    // Try Authorization header first
-    let res = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Token": `Bearer ${this.apiKey}`,
-        "Accept": "application/json",
-      },
-    });
+    for (const point_uuid of measuring_point_uuids) {
+      const url = `${this.baseUrl.replace(/\/$/, "")}/v1/modules/${module_uuid}/measuring-points/${point_uuid}/reads?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&limit=50&offset=0`;
 
-    if (res.status === 404 || res.status === 401) {
-      console.warn(`⚠️  ${res.status} on ${point_uuid}. Retrying with Access-Token...`);
-      res = await fetch(url, {
+      console.log("➡️  Requesting:", url);
+
+      let res = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
-          "Access-Token": `Bearer ${this.apiKey}`, // fallback
+          "Access-Token": this.apiKey,
           "Accept": "application/json",
         },
       });
+
+      if (!res.ok) {
+        console.error(`❌ Failed for ${point_uuid} with status ${res.status}`);
+        continue;
+      }
+
+      const data = await res.json();
+      results.push({ point_uuid, data });
     }
 
-    if (!res.ok) {
-      console.error(`❌ Failed for ${point_uuid} with status ${res.status}`);
-      continue;
-    }
-
-    const data = await res.json();
-    results.push({ point_uuid, data });
+    return results;
   }
-
-  return results;
-}
 }
 
+// --- Postgres helpers ---
 async function withTransaction(client, fn) {
   await client.query("BEGIN");
   try {
@@ -147,17 +139,11 @@ async function insertDevice(client, device) {
     `INSERT INTO devices (model_number, serial_number, location, status, max_amperage, evse_count)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id`,
-    [
-      device.model_number,
-      device.serial_number,
-      device.location,
-      device.status,
-      device.max_amperage,
-      device.evse_count,
-    ]
+    [device.model_number, device.serial_number, device.location, device.status, device.max_amperage, device.evse_count]
   );
   return res.rows[0].id;
 }
+
 async function insertConsumptionRecord(client, record) {
   await client.query(
     `INSERT INTO consumption_records (device_id, timestamp, kwh_consumption, rate)
@@ -165,26 +151,16 @@ async function insertConsumptionRecord(client, record) {
     [record.device_id, record.timestamp, record.kwh_consumption, record.rate]
   );
 }
+
 async function insertInvoice(client, invoice) {
   await client.query(
     `INSERT INTO invoices (device_id, invoice_number, billing_period_start, billing_period_end, total_kwh, total_amount, status)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [
-      invoice.device_id,
-      invoice.invoice_number,
-      invoice.billing_period_start,
-      invoice.billing_period_end,
-      invoice.total_kwh,
-      invoice.total_amount,
-      invoice.status,
-    ]
+    [invoice.device_id, invoice.invoice_number, invoice.billing_period_start, invoice.billing_period_end, invoice.total_kwh, invoice.total_amount, invoice.status]
   );
 }
-async function queryCount(client, table) {
-  const res = await client.query(`SELECT COUNT(*) AS c FROM ${table}`);
-  return Number(res.rows[0].c);
-}
 
+// --- Main sync function ---
 export async function sync_real_data() {
   const apiKey = process.env.API_Key;
   const dbUrl = process.env.NETLIFY_DATABASE_URL;
@@ -237,24 +213,24 @@ export async function sync_real_data() {
 
     const start_date = new Date("2024-10-16T00:00:00Z");
     const end_date = new Date("2024-11-25T00:00:00Z");
-    const TOTAL_DAYS = Math.floor((end_date - start_date) / (24 * 60 * 60 * 1000)) + 1;
 
     const measuring_point_uuids = measuring_points.map(mp => mp.uuid);
     const real_consumption = await cloud_ocean.getModuleConsumption({
-      module_uuid, measuring_point_uuids, start_date, end_date
+      module_uuid,
+      measuring_point_uuids,
+      start_date,
+      end_date
     });
 
-    const has_real_data = Object.values(real_consumption).some(v => Number(v) > 0);
+    const has_real_data = real_consumption.length > 0 && real_consumption.some(r => r.data.length > 0);
 
     if (has_real_data) {
       console.log("🎉 SUCCESS: Real consumption data received");
-      // ... insert real data logic (same as before) ...
+      // TODO: Insert real data into DB here
     } else {
       console.warn("⚠️ No real data, falling back to demo generation");
-      // ... demo data generation logic (same as before) ...
+      // TODO: Demo data generation logic
     }
-
-    // ... invoice creation & summary (same as before) ...
 
     return true;
   } catch (err) {
@@ -265,6 +241,7 @@ export async function sync_real_data() {
   }
 }
 
+// --- Run script if called directly ---
 const isMain = (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url));
 if (isMain) {
   const success = await sync_real_data();
