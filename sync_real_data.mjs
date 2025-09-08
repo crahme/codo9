@@ -109,6 +109,76 @@ async function withTransaction(client, fn) {
 // same as original snippet above
 
 // ----------------- MAIN SYNC FUNCTION -----------------
+async function createSchema(client) {
+  await client.query(`
+    DROP TABLE IF EXISTS consumption_records;
+    DROP TABLE IF EXISTS invoices;
+    DROP TABLE IF EXISTS devices;
+  `);
+
+  await client.query(`
+    CREATE TABLE devices (
+      id SERIAL PRIMARY KEY,
+      model_number TEXT,
+      serial_number TEXT,
+      location TEXT,
+      status TEXT,
+      max_amperage NUMERIC,
+      evse_count INTEGER
+    );
+
+    CREATE TABLE consumption_records (
+      id SERIAL PRIMARY KEY,
+      device_id INTEGER REFERENCES devices(id) ON DELETE CASCADE,
+      timestamp TIMESTAMPTZ,
+      kwh_consumption NUMERIC,
+      rate NUMERIC
+    );
+
+    CREATE TABLE invoices (
+      id SERIAL PRIMARY KEY,
+      device_id INTEGER REFERENCES devices(id) ON DELETE CASCADE,
+      invoice_number TEXT,
+      billing_period_start TIMESTAMPTZ,
+      billing_period_end TIMESTAMPTZ,
+      total_kwh NUMERIC,
+      total_amount NUMERIC,
+      status TEXT
+    );
+  `);
+}
+
+async function insertDevice(client, device) {
+  const res = await client.query(
+    `INSERT INTO devices (model_number, serial_number, location, status, max_amperage, evse_count)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id`,
+    [device.model_number, device.serial_number, device.location, device.status, device.max_amperage, device.evse_count]
+  );
+  return res.rows[0].id;
+}
+
+async function insertConsumptionRecord(client, record) {
+  await client.query(
+    `INSERT INTO consumption_records (device_id, timestamp, kwh_consumption, rate)
+     VALUES ($1, $2, $3, $4)`,
+    [record.device_id, record.timestamp, record.kwh_consumption, record.rate]
+  );
+}
+
+async function insertInvoice(client, invoice) {
+  await client.query(
+    `INSERT INTO invoices (device_id, invoice_number, billing_period_start, billing_period_end, total_kwh, total_amount, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [invoice.device_id, invoice.invoice_number, invoice.billing_period_start, invoice.billing_period_end, invoice.total_kwh, invoice.total_amount, invoice.status]
+  );
+}
+
+async function queryCount(client, table) {
+  const res = await client.query(`SELECT COUNT(*) AS c FROM ${table}`);
+  return Number(res.rows[0].c);
+}
+
 export async function sync_real_data() {
   const apiKey = process.env.API_Key;
   const dbUrl = process.env.NETLIFY_DATABASE_URL;
