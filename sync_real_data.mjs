@@ -1,16 +1,9 @@
 // sync_real_data.mjs
-// ES Module script for syncing real or demo data into Postgres.
-// Environment variables:
-// - API_Key: Cloud Ocean API key
-// - NETLIFY_DATABASE_URL: Postgres connection string
-// - CLOUD_OCEAN_BASE_URL: API base URL (default: https://api.develop.rve.ca)
-
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Client } from "pg";
 
-// Load .env file
 function loadEnv() {
   try {
     const envPath = path.join(process.cwd(), ".env");
@@ -31,14 +24,12 @@ function loadEnv() {
 }
 loadEnv();
 
-// Utility functions
 function addDays(date, days) {
   const d = new Date(date.getTime());
   d.setDate(d.getDate() + days);
   return d;
 }
 
-// CloudOcean API class
 class CloudOceanAPI {
   constructor(apiKey) {
     this.apiKey = apiKey || process.env.API_Key;
@@ -47,43 +38,45 @@ class CloudOceanAPI {
 
   async getModuleConsumption({ module_uuid, measuring_point_uuids, start_date, end_date }) {
     const results = [];
+    const failedPoints = [];
 
     for (const point_uuid of measuring_point_uuids) {
       const url = `${this.baseUrl.replace(/\/$/, "")}/v1/modules/${module_uuid}/measuring-points/${point_uuid}/reads?start=${encodeURIComponent(start_date)}&end=${encodeURIComponent(end_date)}&limit=50&offset=0`;
-
       console.log("➡️  Requesting:", url);
 
       let attempts = 0;
+      let success = false;
       let res;
 
-      while (attempts < 5) { // retry up to 5 times
+      while (attempts < 5 && !success) {
         attempts++;
         try {
           res = await fetch(url, {
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Token": this.apiKey, // Cloud Ocean requires API key directly
-              "Accept": "application/json",
-            },
+            headers: { "Content-Type": "application/json", "Access-Token": this.apiKey, "Accept": "application/json" },
           });
 
-          if (res.ok) break; // success
-          if (res.status >= 500) {
-            console.warn(`⚠️  Server error ${res.status} for ${point_uuid}, retrying in ${attempts * 2}s...`);
-            await new Promise(r => setTimeout(r, attempts * 2000));
+          if (res.ok) {
+            success = true;
+            break;
+          } else if (res.status >= 500) {
+            const wait = (2 ** attempts) * 1000 + Math.floor(Math.random() * 500);
+            console.warn(`⚠️  Server error ${res.status} for ${point_uuid}, retrying in ${wait / 1000}s...`);
+            await new Promise(r => setTimeout(r, wait));
           } else {
             console.error(`❌ Failed for ${point_uuid} with status ${res.status}`);
-            res = null;
             break;
           }
         } catch (err) {
-          console.warn(`⚠️  Network error for ${point_uuid}: ${err.message}, retrying in ${attempts * 2}s`);
-          await new Promise(r => setTimeout(r, attempts * 2000));
+          const wait = (2 ** attempts) * 1000 + Math.floor(Math.random() * 500);
+          console.warn(`⚠️  Network error for ${point_uuid}: ${err.message}, retrying in ${wait / 1000}s`);
+          await new Promise(r => setTimeout(r, wait));
         }
       }
 
-      if (!res || !res.ok) {
-        console.error(`❌ Giving up for ${point_uuid}`);
+      if (!success) {
+        console.error(`❌ Giving up for ${point_uuid} after ${attempts} attempts, using demo data`);
+        failedPoints.push(point_uuid);
+        results.push({ point_uuid, data: null }); // null signals demo fallback
         continue;
       }
 
@@ -95,7 +88,6 @@ class CloudOceanAPI {
   }
 }
 
-// Postgres helpers
 async function withTransaction(client, fn) {
   await client.query("BEGIN");
   try {
@@ -113,7 +105,9 @@ async function createSchema(client) {
     DROP TABLE IF EXISTS consumption_records;
     DROP TABLE IF EXISTS invoices;
     DROP TABLE IF EXISTS devices;
+  `);
 
+  await client.query(`
     CREATE TABLE devices (
       id SERIAL PRIMARY KEY,
       model_number TEXT,
@@ -156,39 +150,36 @@ async function insertDevice(client, device) {
 
 async function insertConsumptionRecord(client, record) {
   await client.query(
-    `INSERT INTO consumption_records (device_id, timestamp, kwh_consumption, rate)
-     VALUES ($1,$2,$3,$4)`,
+    `INSERT INTO consumption_records (device_id,timestamp,kwh_consumption,rate) VALUES ($1,$2,$3,$4)`,
     [record.device_id, record.timestamp, record.kwh_consumption, record.rate]
   );
 }
 
-async function insertInvoice(client, invoice) {
-  await client.query(
-    `INSERT INTO invoices (device_id, invoice_number, billing_period_start, billing_period_end, total_kwh, total_amount, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [invoice.device_id, invoice.invoice_number, invoice.billing_period_start, invoice.billing_period_end, invoice.total_kwh, invoice.total_amount, invoice.status]
-  );
+async function generateDemoData(device_id, start_date, end_date) {
+  const data = [];
+  let current = new Date(start_date);
+  while (current <= end_date) {
+    data.push({
+      device_id,
+      timestamp: new Date(current),
+      kwh_consumption: parseFloat((Math.random() * 10).toFixed(2)),
+      rate: 0.20,
+    });
+    current = addDays(current, 1);
+  }
+  return data;
 }
 
-// Main sync function
 export async function sync_real_data() {
-  const apiKey = process.env.API_Key;
   const dbUrl = process.env.NETLIFY_DATABASE_URL;
-
-  if (!dbUrl) {
-    console.error("❌ NETLIFY_DATABASE_URL is required.");
-    return false;
-  }
+  if (!dbUrl) { console.error("❌ NETLIFY_DATABASE_URL is required."); return false; }
 
   const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  await client.connect();
 
   try {
-    await client.connect();
-    await withTransaction(client, async () => { await createSchema(client); });
+    await withTransaction(client, () => createSchema(client));
 
-    const cloud_ocean = new CloudOceanAPI(apiKey);
-
-    const module_uuid = "c667ff46-9730-425e-ad48-1e950691b3f9";
     const measuring_points = [
       { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", location: "Building A - Level 1" },
       { uuid: "fd7e69ef-cd01-4b9a-8958-2aa5051428d4", location: "Building A - Level 2" },
@@ -215,70 +206,49 @@ export async function sync_real_data() {
           max_amperage: 32.0,
           evse_count: 2,
         });
-        devices.push({ id, serial_number: serial, location: mp.location });
+        devices.push({ id, serial_number: serial, location: mp.location, uuid: mp.uuid });
+      }
+    });
+    console.log(`✅ Created ${devices.length} devices`);
+
+    const start_date = new Date("2024-10-16T00:00:00Z");
+    const end_date = new Date("2024-11-25T00:00:00Z");
+
+    const cloud_ocean = new CloudOceanAPI(process.env.API_Key);
+    const real_consumption = await cloud_ocean.getModuleConsumption({
+      module_uuid: "c667ff46-9730-425e-ad48-1e950691b3f9",
+      measuring_point_uuids: devices.map(d => d.uuid),
+      start_date,
+      end_date,
+    });
+
+    await withTransaction(client, async () => {
+      for (const record of real_consumption) {
+        const device = devices.find(d => d.uuid === record.point_uuid);
+        if (!device) continue;
+
+        let data = record.data;
+        if (!data) {
+          // Fallback to demo
+          data = await generateDemoData(device.id, start_date, end_date);
+        }
+
+        for (const rec of data) {
+          await insertConsumptionRecord(client, rec);
+        }
       }
     });
 
-    console.log(`✅ Created ${devices.length} devices`);
-
-    const start_date = "2024-10-16T00:00:00Z";
-    const end_date = "2024-11-25T00:00:00Z";
-
-    const measuring_point_uuids = measuring_points.map(mp => mp.uuid);
-    const real_consumption = await cloud_ocean.getModuleConsumption({
-      module_uuid, measuring_point_uuids, start_date, end_date
-    });
-
-    const has_real_data = real_consumption.length > 0;
-
-    if (has_real_data) {
-      console.log("🎉 SUCCESS: Real consumption data received");
-      // Insert real data
-      await withTransaction(client, async () => {
-        for (const r of real_consumption) {
-          const device = devices.find(d => d.serial_number === r.point_uuid.slice(0, 8).toUpperCase());
-          if (!device || !r.data?.reads) continue;
-          for (const read of r.data.reads) {
-            await insertConsumptionRecord(client, {
-              device_id: device.id,
-              timestamp: read.timestamp,
-              kwh_consumption: read.kwh_consumption,
-              rate: read.rate,
-            });
-          }
-        }
-      });
-    } else {
-      console.warn("⚠️ No real data, generating demo data");
-      // Generate demo data
-      await withTransaction(client, async () => {
-        for (const device of devices) {
-          const days = 30;
-          for (let i = 0; i < days; i++) {
-            const timestamp = addDays(new Date(start_date), i).toISOString();
-            await insertConsumptionRecord(client, {
-              device_id: device.id,
-              timestamp,
-              kwh_consumption: Math.random() * 50,
-              rate: 0.25,
-            });
-          }
-        }
-      });
-    }
-
-    console.log("✅ Data sync complete");
-
+    console.log("🎉 Data sync complete!");
     return true;
   } catch (err) {
     console.error("❌ Error syncing data:", err.message);
     return false;
   } finally {
-    try { await client.end(); } catch (_) {}
+    await client.end();
   }
 }
 
-// Run if executed directly
 const isMain = (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url));
 if (isMain) {
   const success = await sync_real_data();
