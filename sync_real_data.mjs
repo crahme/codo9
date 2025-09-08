@@ -221,7 +221,7 @@ export async function sync_real_data() {
 
     console.log(`Fetching real data from ${formatDateYYYYMMDD(start_date)} to ${formatDateYYYYMMDD(end_date)}`);
     const uuids = measuring_points.map(mp => mp.uuid);
-    const real_data = await cloud_ocean.getModuleConsumption({ module_uuid, measuring_point_uuids: uuids, start_date, end_date });
+    const real_data = await cloud_ocean.getModuleConsumption({ module_uuid, measuring_points: uuids, start_date, end_date });
 
     const has_real_data = Object.values(real_data).some(v => v > 0);
 
