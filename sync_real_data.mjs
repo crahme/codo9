@@ -52,12 +52,12 @@ class CloudOceanAPI {
     this.baseUrl = process.env.CLOUD_OCEAN_BASE_URL || "https://api.develop.rve.ca/v1";
   }
 
-  async getModuleConsumption({ module_uuid, measuring_point_uuids, start_date, end_date }) {
+  async getModuleConsumption({ module_uuid, measuring_points, start_date, end_date }) {
     const result = {};
-    for (const id of measuring_point_uuids) result[id] = 0;
+    for (const mp_uuid of measuring_points) result[mp_uuid] = 0;
     if (!this.apiKey) return result;
 
-    const url = `${this.baseUrl}/modules/${module_uuid}/v1/measuring-points/id/reads`;
+    const url = `${this.baseUrl}/v1/modules/${module_uuid}/measuring-points/${mp_uuid}/reads`;
     const body = {
       measuring_point_uuids,
       start_date: formatDateYYYYMMDD(start_date),
