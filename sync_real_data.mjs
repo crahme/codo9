@@ -72,7 +72,7 @@ class CloudOceanAPI {
             "Content-Type": "application/json",
             "Acess-Token": `Bearer ${this.apiKey}`,
           },
-          body: JSON.stringify(body),
+          //body: JSON.stringify(body),
         });
         if (!res.ok) throw new Error(`Server error ${res.status}`);
         return res.json();
