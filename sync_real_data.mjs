@@ -187,7 +187,7 @@ export async function sync_real_data() {
   try {
     await withTransaction(client, async () => createSchema(client));
 
-    const cloud_ocean = new CloudOceanAPI(apiKey);
+    const cloud_ocean = new CloudOceanAPI(apiKey,dbUrl);
     const module_uuid = "c667ff46-9730-425e-ad48-1e950691b3f9";
 
     const measuring_points = [
