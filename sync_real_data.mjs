@@ -71,6 +71,7 @@ class CloudOceanAPI {
           headers: {
             "Content-Type": "application/json",
             "Acess-Token": `Bearer ${this.apiKey}`,
+            "Accept": "application/json"
           },
           //body: JSON.stringify(body),
         });
