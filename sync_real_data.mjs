@@ -175,6 +175,7 @@ async function queryCount(client, table) {
 export async function sync_real_data() {
   const apiKey = process.env.API_Key;
   const dbUrl = process.env.NETLIFY_DATABASE_URL;
+  const baseUrl = process.env.CLOUD_OCEAN_BASE_URL || "https://api.develop.rve.ca/v1";
 
   if (!dbUrl) {
     console.error("NETLIFY_DATABASE_URL is required.");
@@ -187,7 +188,7 @@ export async function sync_real_data() {
   try {
     await withTransaction(client, async () => createSchema(client));
 
-    const cloud_ocean = new CloudOceanAPI(apiKey,dbUrl);
+    const cloud_ocean = new CloudOceanAPI(apiKey,baseUrl);
     const module_uuid = "c667ff46-9730-425e-ad48-1e950691b3f9";
 
     const measuring_points = [
