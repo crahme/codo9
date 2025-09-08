@@ -67,10 +67,10 @@ class CloudOceanAPI {
     try {
       const data = await retry(async () => {
         const res = await fetch(url, {
-          method: "POST",
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${this.apiKey}`,
+            "Acess-Token": `Bearer ${this.apiKey}`,
           },
           body: JSON.stringify(body),
         });
