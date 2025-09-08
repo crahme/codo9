@@ -62,7 +62,7 @@ class CloudOceanAPI {
     let res = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
-        "Access-Token": `Bearer ${this.apiKey}`,
+        "Access-Token": `${this.apiKey}`,
       },
     });
 
