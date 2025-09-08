@@ -51,66 +51,42 @@ class CloudOceanAPI {
   }
 
   async getModuleConsumption({ module_uuid, measuring_point_uuids, start_date, end_date }) {
-    const result = {};
-    for (const id of measuring_point_uuids) result[id] = 0;
+  const results = [];
 
-    if (!this.baseUrl || !this.apiKey || typeof fetch === "undefined") {
-      return result;
-    }
-
-    const url = `${this.baseUrl.replace(/\/$/, "")}/module/consumption`; // adjust if needed
-    const body = {
-      module_uuid,
-      measuring_point_uuids,
-      start_date: formatDateYYYYMMDD(start_date),
-      end_date: formatDateYYYYMMDD(end_date),
-    };
-
+  for (const point_uuid of measuring_point_uuids) {
+    const url = `${this.baseUrl.replace(/\/$/, "")}/v1/modules/${module_uuid}/measuring-points/${point_uuid}/reads?start=${start_date}&end=${end_date}&limit=50&offset=0`;
+    
     console.log("➡️  Requesting:", url);
-    console.log("➡️  Body:", body);
 
     // Try Authorization header first
     let res = await fetch(url, {
-      method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Access-Token": `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify(body),
     });
 
-    // If not OK, retry with Access-Token header
-    if (!res.ok) {
-      console.warn(`⚠️  API request failed with ${res.status}. Retrying with Access-Token header...`);
+    if (res.status === 404 || res.status === 401) {
+      console.warn(`⚠️  ${res.status} on ${point_uuid}. Retrying with Access-Token...`);
       res = await fetch(url, {
-        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Access-Token": this.apiKey,
+          "Access-Token": this.apiKey, // fallback
         },
-        body: JSON.stringify(body),
       });
     }
 
     if (!res.ok) {
-      console.warn(`❌ CloudOcean API request failed with status ${res.status}`);
-      return result;
+      console.error(`❌ Failed for ${point_uuid} with status ${res.status}`);
+      continue;
     }
 
-    try {
-      const data = await res.json();
-      console.log("✅ API response received:", data);
-      if (data && typeof data === "object") {
-        for (const id of measuring_point_uuids) {
-          if (typeof data[id] === "number") result[id] = data[id];
-        }
-      }
-    } catch (err) {
-      console.warn("⚠️ Failed to parse API JSON:", err.message);
-    }
-
-    return result;
+    const data = await res.json();
+    results.push({ point_uuid, data });
   }
+
+  return results;
+}
 }
 
 async function withTransaction(client, fn) {
