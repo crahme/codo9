@@ -255,9 +255,12 @@ export async function sync_real_data() {
 
     console.log(`Created ${devices.length} devices with real measuring point UUIDs`);
 
-    // Date range
-    const start_date = new Date(Date.UTC(2024, 9, 16)); // 2024-10-16
-    const end_date = new Date(Date.UTC(2024, 10, 25)); // 2024-11-25
+    // Date range (explicit YYYY-MM-DD) inclusive: 2024-10-16 to 2024-11-25
+    const START_DATE_STR = "2024-10-16";
+    const END_DATE_STR = "2024-11-25";
+    const start_date = new Date(`${START_DATE_STR}T00:00:00Z`);
+    const end_date = new Date(`${END_DATE_STR}T00:00:00Z`);
+    const TOTAL_DAYS = Math.floor((end_date - start_date) / (24 * 60 * 60 * 1000)) + 1;
 
     console.log(
       `Attempting to fetch real data from ${formatDateYYYYMMDD(start_date)} to ${formatDateYYYYMMDD(end_date)}`
@@ -284,14 +287,14 @@ export async function sync_real_data() {
           const mp_uuid = measuring_points[i].uuid;
           const total_consumption = Number(real_consumption[mp_uuid] || 0);
           if (total_consumption > 0) {
-            const daily_consumption = total_consumption / 30;
-            for (let d = 0; d < 30; d++) {
+            const daily_consumption = total_consumption / TOTAL_DAYS;
+            for (let d = 0; d < TOTAL_DAYS; d++) {
               const record_date = addDays(start_date, d);
               const variation = 0.8 + (d % 5) * 0.1; // 0.8 to 1.2
               const consumption = daily_consumption * variation;
               await insertConsumptionRecord(client, {
                 device_id: device.id,
-                timestamp: record_date.toISOString(),
+                timestamp: formatDateYYYYMMDD(record_date),
                 kwh_consumption: Number(consumption.toFixed(2)),
                 rate: 0.12,
               });
@@ -313,7 +316,7 @@ export async function sync_real_data() {
 
       await withTransaction(client, async () => {
         for (const device of devices) {
-          for (let i = 0; i < 40; i++) { // 40 days from 2024-10-16 to 2024-11-25
+          for (let i = 0; i < TOTAL_DAYS; i++) { // inclusive days from 2024-10-16 to 2024-11-25
             const record_date = addDays(start_date, i);
 
             const base_consumption_map = {
@@ -336,7 +339,7 @@ export async function sync_real_data() {
 
             await insertConsumptionRecord(client, {
               device_id: device.id,
-              timestamp: record_date.toISOString(),
+              timestamp: formatDateYYYYMMDD(record_date),
               kwh_consumption: Number(consumption.toFixed(2)),
               rate: 0.12,
             });
@@ -351,16 +354,8 @@ export async function sync_real_data() {
     const invoices = [];
 
     const monthPeriods = [
-      { // October
-        start: new Date(Date.UTC(2024, 9, 1)),
-        end: new Date(Date.UTC(2024, 9, 31)),
-        suffix: "202410",
-      },
-      { // November
-        start: new Date(Date.UTC(2024, 10, 1)),
-        end: new Date(Date.UTC(2024, 10, 25)), // Match our data range
-        suffix: "202411",
-      },
+      { start: "2024-10-01", end: "2024-10-31", suffix: "202410" },
+      { start: "2024-11-01", end: "2024-11-25", suffix: "202411" }, // Match our data range
     ];
 
     for (const device of devices) {
@@ -368,7 +363,7 @@ export async function sync_real_data() {
         const res = await client.query(
           `SELECT kwh_consumption FROM consumption_records
            WHERE device_id = $1 AND timestamp >= $2 AND timestamp <= $3`,
-          [device.id, period.start.toISOString(), period.end.toISOString()]
+          [device.id, period.start, period.end]
         );
         const total_kwh = res.rows.reduce((sum, r) => sum + Number(r.kwh_consumption || 0), 0);
         const total_amount = Number((total_kwh * 0.12).toFixed(2));
@@ -376,8 +371,8 @@ export async function sync_real_data() {
         invoices.push({
           device_id: device.id,
           invoice_number: `INV-${device.serial_number}-${period.suffix}`,
-          billing_period_start: period.start.toISOString(),
-          billing_period_end: period.end.toISOString(),
+          billing_period_start: period.start,
+          billing_period_end: period.end,
           total_kwh,
           total_amount,
           status: "pending",
