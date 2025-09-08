@@ -57,7 +57,7 @@ class CloudOceanAPI {
     for (const id of measuring_point_uuids) result[id] = 0;
     if (!this.apiKey) return result;
 
-    const url = `${this.baseUrl}/modules/${module_uuid}/consumption`;
+    const url = `${this.baseUrl}/modules/${module_uuid}/v1/measuring-points/id/reads`;
     const body = {
       measuring_point_uuids,
       start_date: formatDateYYYYMMDD(start_date),
