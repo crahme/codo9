@@ -48,8 +48,8 @@ async function retry(fn, attempts = 5, initialDelay = 2000) {
 // -------------------- CloudOcean API --------------------
 class CloudOceanAPI {
   constructor(apiKey, baseUrl) {
-    this.apiKey = apiKey;
-    this.baseUrl = baseUrl || "https://api.develop.rve.ca/v1";
+    this.apiKey = process.env.API_Key;
+    this.baseUrl = process.env.CLOUD_OCEAN_BASE_URL || "https://api.develop.rve.ca/v1";
   }
 
   async getModuleConsumption({ module_uuid, measuring_point_uuids, start_date, end_date }) {
