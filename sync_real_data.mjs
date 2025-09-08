@@ -49,9 +49,9 @@ function addDays(date, days) {
 
 class CloudOceanAPI {
   constructor(apiKey) {
-    this.apiKey = apiKey;
+    this.apiKey = process.env.API_Key;
     // Optional: allow overriding base URL via env if available
-    this.baseUrl = process.env.CLOUDOCEAN_BASE_URL || null;
+    this.baseUrl = process.env.CLOUD_OCEAN_BASE_URL || null;
   }
 
   async getModuleConsumption({ module_uuid, measuring_point_uuids, start_date, end_date }) {
@@ -76,7 +76,7 @@ class CloudOceanAPI {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
+          "Access-Token": `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(body),
       });
