@@ -63,6 +63,7 @@ class CloudOceanAPI {
       headers: {
         "Content-Type": "application/json",
         "Access-Token": `Bearer ${this.apiKey}`,
+        "Accept": "application/json",
       },
     });
 
@@ -72,6 +73,7 @@ class CloudOceanAPI {
         headers: {
           "Content-Type": "application/json",
           "Access-Token": `Bearer ${this.apiKey}`, // fallback
+          "Accept": "application/json",
         },
       });
     }
