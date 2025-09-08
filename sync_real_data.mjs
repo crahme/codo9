@@ -70,7 +70,7 @@ class CloudOceanAPI {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${this.apiKey}`,
+            "Authorization": `Bearer ${this.apiKey}`,
           },
           body: JSON.stringify(body),
         });
