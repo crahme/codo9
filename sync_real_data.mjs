@@ -71,7 +71,7 @@ class CloudOceanAPI {
       res = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
-          "Access-Token": this.apiKey, // fallback
+          "Access-Token": `${this.apiKey}`, // fallback
         },
       });
     }
