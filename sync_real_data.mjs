@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { Client } from 'pg';
 import dotenv from 'dotenv';
 import pino from 'pino';
-
+import { Sequelize, Model, DataTypes } from 'sequelize';
 // Initialize logger and load environment variables
 const logger = pino({ 
     level: process.env.LOG_LEVEL || 'info',
