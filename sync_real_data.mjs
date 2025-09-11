@@ -1,5 +1,5 @@
 import { setTimeout } from 'timers/promises';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import pino from 'pino';
 import dotenv from 'dotenv';
