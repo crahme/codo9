@@ -33,7 +33,7 @@ const API_HEADERS = {
     'Access-Token': `Bearer ${process.env.API_Key}`,
     'Content-Type': 'application/json',
     'Accept': 'application/json'
-}
+};
 // Constants
 const MEASURING_POINTS = [
     { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
