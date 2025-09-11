@@ -124,7 +124,7 @@ class CloudOceanAPI {
         }
     }
 
-    async getModuleConsumption(moduleUuid, measuringPoints, startDate, endDate) {
+       async getModuleConsumption(moduleUuid, measuringPoints, startDate, endDate) {
         const result = {};
         for (const point of measuringPoints) {
             try {
@@ -132,13 +132,26 @@ class CloudOceanAPI {
                 url.searchParams.set('start', startDate.toISOString().split('T')[0]);
                 url.searchParams.set('end', endDate.toISOString().split('T')[0]);
 
-                const data = await this.fetchWithRetry(url.toString(), {
-                    headers: {
-                        'Access-Token': `Bearer ${this.apiKey}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
+                logger.debug(`Making request to ${url}`);
+
+                const response = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: this.headers
                 });
+
+                const data = await response.json();
+                
+                // Add detailed response logging
+                logger.debug('API Response:', {
+                    url: url.toString(),
+                    statusCode: response.status,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    body: data
+                });
+
+                if (!data.consumption && data.consumption !== 0) {
+                    logger.warn(`No consumption data found for ${point.name}. API response:`, data);
+                }
 
                 result[point.uuid] = parseFloat(data.consumption) || 0;
                 logger.info(`Fetched consumption for ${point.name}: ${result[point.uuid]} kWh`);
