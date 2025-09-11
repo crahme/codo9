@@ -131,32 +131,55 @@ class CloudOceanAPI {
                 url.searchParams.set('start', startDate.toISOString().split('T')[0]);
                 url.searchParams.set('end', endDate.toISOString().split('T')[0]);
 
-                logger.debug(`Making request to ${url}`);
+                // Log request details
+                logger.debug({
+                    msg: 'Making API request',
+                    url: url.toString(),
+                    headers: this.headers,
+                    params: {
+                        start: startDate.toISOString().split('T')[0],
+                        end: endDate.toISOString().split('T')[0]
+                    }
+                });
 
                 const response = await fetch(url.toString(), {
                     method: 'GET',
-                    headers: this.headers,
-                    timeout: 30000
+                    headers: this.headers
                 });
 
                 const data = await response.json();
-                
-                // Add detailed response logging
-                logger.debug('API Response:', {
-                    url: url.toString(),
-                    statusCode: response.status,
+
+                // Log full response for debugging
+                logger.debug({
+                    msg: 'API Response received',
+                    status: response.status,
+                    statusText: response.statusText,
                     headers: Object.fromEntries(response.headers.entries()),
                     body: data
                 });
 
-                if (!data.consumption && data.consumption !== 0) {
-                    logger.warn(`No consumption data found for ${point.name}. API response:`, data);
+                if (!data || typeof data.consumption === 'undefined') {
+                    logger.warn({
+                        msg: `Invalid response format for ${point.name}`,
+                        data: data,
+                        station: point.name,
+                        uuid: point.uuid
+                    });
+                    result[point.uuid] = 0;
+                    continue;
                 }
 
                 result[point.uuid] = parseFloat(data.consumption) || 0;
                 logger.info(`Fetched consumption for ${point.name}: ${result[point.uuid]} kWh`);
+
             } catch (error) {
-                logger.error(`Failed to fetch data for ${point.name} (${point.uuid}): ${error.message}`);
+                logger.error({
+                    msg: `API request failed for ${point.name}`,
+                    error: error.message,
+                    stack: error.stack,
+                    station: point.name,
+                    uuid: point.uuid
+                });
                 result[point.uuid] = 0;
             }
         }
