@@ -134,7 +134,7 @@ class CloudOceanAPI {
 
                 const data = await this.fetchWithRetry(url.toString(), {
                     headers: {
-                        'Authorization': `Bearer ${this.apiKey}`,
+                        'Access-Token': `Bearer ${this.apiKey}`,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     }
