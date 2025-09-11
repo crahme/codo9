@@ -9,74 +9,12 @@ import { Sequelize, Model, DataTypes } from 'sequelize';
 const logger = pino({ level: 'info' });
 dotenv.config();
 
-// Constants
+// Constants for database
+const DATABASE_URL = process.env.NETLIFY_DATABASE_URL;
 const MODULE_UUID = "c667ff46-9730-425e-ad48-1e950691b3f9";
-const MEASURING_POINTS = [
-    {
-        uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898",
-        name: "EV Charger Station 01",
-        location: "Building A - Level 1"
-    },
-     {
-                    "uuid": "fd7e69ef-cd01-4b9a-8958-2aa5051428d4", 
-                    "name": "EV Charger Station 02",
-                    "location": "Building A - Level 2"
-                },
-                {
-                    "uuid": "b7423cbc-d622-4247-bb9a-8d125e5e2351",
-                    "name": "EV Charger Station 03", 
-                    "location": "Building B - Parking Garage"
-                },
-                {
-                    "uuid": "88f4f9b6-ce65-48c4-86e6-1969a64ad44c",
-                    "name": "EV Charger Station 04",
-                    "location": "Building B - Ground Floor"
-                },
-                {
-                    "uuid": "df428bf7-dd2d-479c-b270-f8ac5c1398dc",
-                    "name": "EV Charger Station 05",
-                    "location": "Building C - East Wing"
-                },
-                {
-                    "uuid": "7744dcfc-a059-4257-ac96-6650feef9c87",
-                    "name": "EV Charger Station 06",
-                    "location": "Building C - West Wing"
-                },
-                {
-                    "uuid": "b1445e6d-3573-403a-9f8e-e82f70556f7c",
-                    "name": "EV Charger Station 07",
-                    "location": "Building D - Main Entrance"
-                },
-                {
-                    "uuid": "ef296fba-4fcc-4dcb-8eda-e6d1772cd819",
-                    "name": "EV Charger Station 08",
-                    "location": "Building D - Loading Dock"
-                },
-                {
-                    "uuid": "50206eae-41b8-4a84-abe4-434c7f79ae0a",
-                    "name": "EV Charger Station 09",
-                    "location": "Outdoor Lot - Section A"
-                },
-                {
-                    "uuid": "de2d9680-f132-4529-b9a9-721265456a86",
-                    "name": "EV Charger Station 10",
-                    "location": "Outdoor Lot - Section B"
-                },
-                {
-                    "uuid": "bd36337c-8139-495e-b026-f987b79225b8",
-                    "name": "EV Charger Station 11",
-                    "location": "Visitor Parking - Main Gate"
-                }
-    // ... other measuring points (copy from Python version)
-];
-
-// Database Models
-class Device extends Model {}
-class ConsumptionRecord extends Model {}
-class Invoice extends Model {}
 
 // Database setup
-const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
+const sequelize = new Sequelize(DATABASE_URL, {
     dialect: 'postgres',
     logging: false,
     ssl: true,
@@ -88,6 +26,11 @@ const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
     }
 });
 
+// Define models
+class Device extends Model {}
+class ConsumptionRecord extends Model {}
+class Invoice extends Model {}
+
 // Initialize models
 Device.init({
     model_number: DataTypes.STRING,
@@ -96,14 +39,14 @@ Device.init({
     status: DataTypes.STRING,
     max_amperage: DataTypes.FLOAT,
     evse_count: DataTypes.INTEGER
-}, { sequelize });
+}, { sequelize, modelName: 'Device' });
 
 ConsumptionRecord.init({
     device_id: DataTypes.INTEGER,
     timestamp: DataTypes.DATE,
     kwh_consumption: DataTypes.FLOAT,
     rate: DataTypes.FLOAT
-}, { sequelize });
+}, { sequelize, modelName: 'ConsumptionRecord' });
 
 Invoice.init({
     device_id: DataTypes.INTEGER,
@@ -113,9 +56,8 @@ Invoice.init({
     total_kwh: DataTypes.FLOAT,
     total_amount: DataTypes.FLOAT,
     status: DataTypes.STRING
-}, { sequelize });
+}, { sequelize, modelName: 'Invoice' });
 
-// Cloud Ocean API class
 class CloudOceanAPI {
     constructor() {
         this.apiKey = process.env.API_Key;
@@ -154,7 +96,7 @@ async function syncRealData() {
         await sequelize.sync({ force: true });
         const cloudOcean = new CloudOceanAPI();
 
-        // Create devices
+        // Create devices from measuring points
         const devices = [];
         for (const mp of MEASURING_POINTS) {
             const device = await Device.create({
@@ -171,7 +113,7 @@ async function syncRealData() {
         logger.info(`Created ${devices.length} devices with real measuring point UUIDs`);
 
         // Fetch real consumption data
-        const startDate = new Date(2024, 9, 16);
+        const startDate = new Date(2024, 9, 16); // Note: month is 0-based in JS
         const endDate = new Date(2024, 10, 25);
 
         const measuringPointUuids = MEASURING_POINTS.map(mp => mp.uuid);
@@ -187,24 +129,109 @@ async function syncRealData() {
 
         if (hasRealData) {
             // Create consumption records based on real data
-            // ... (similar to Python version)
+            for (let i = 0; i < devices.length; i++) {
+                const device = devices[i];
+                const mp = MEASURING_POINTS[i];
+                const totalConsumption = realConsumption[mp.uuid] || 0;
+
+                if (totalConsumption > 0) {
+                    const dailyConsumption = totalConsumption / 30;
+                    for (let day = 0; day < 30; day++) {
+                        const recordDate = new Date(startDate);
+                        recordDate.setDate(startDate.getDate() + day);
+                        
+                        const variation = 0.8 + (day % 5) * 0.1;
+                        const consumption = dailyConsumption * variation;
+
+                        await ConsumptionRecord.create({
+                            device_id: device.id,
+                            timestamp: recordDate,
+                            kwh_consumption: Math.round(consumption * 100) / 100,
+                            rate: 0.12
+                        });
+                    }
+                }
+            }
         } else {
             // Create demo data
-            // ... (similar to Python version)
+            logger.warn("No real data available, creating demo records...");
+            
+            const baseConsumption = {
+                'Building A': 45.0,
+                'Building B': 38.0,
+                'Building C': 42.0,
+                'Building D': 35.0,
+                'Outdoor Lot': 30.0,
+                'Visitor Parking': 25.0
+            };
+
+            for (const device of devices) {
+                for (let i = 0; i < 40; i++) {
+                    const recordDate = new Date(startDate);
+                    recordDate.setDate(startDate.getDate() + i);
+
+                    const locationKey = device.location.split(' - ')[0];
+                    const dailyBase = baseConsumption[locationKey] || 35.0;
+
+                    const dayVariation = 0.8 + (i % 7) * 0.1;
+                    const deviceVariation = 0.9 + (device.id % 3) * 0.2;
+                    const randomVariation = 0.85 + (i % 4) * 0.15;
+
+                    const consumption = dailyBase * dayVariation * deviceVariation * randomVariation;
+
+                    await ConsumptionRecord.create({
+                        device_id: device.id,
+                        timestamp: recordDate,
+                        kwh_consumption: Math.round(consumption * 100) / 100,
+                        rate: 0.12
+                    });
+                }
+            }
         }
 
         // Create invoices
-        // ... (similar to Python version)
+        for (const device of devices) {
+            for (let month = 0; month < 2; month++) {
+                const invoiceStart = new Date(2024, 9 + month, 1);
+                const invoiceEnd = month === 0 
+                    ? new Date(2024, 9, 31)
+                    : new Date(2024, 10, 25);
+
+                const records = await ConsumptionRecord.findAll({
+                    where: {
+                        device_id: device.id,
+                        timestamp: {
+                            [Sequelize.Op.between]: [invoiceStart, invoiceEnd]
+                        }
+                    }
+                });
+
+                const totalKwh = records.reduce((sum, record) => sum + record.kwh_consumption, 0);
+                const totalAmount = Math.round(totalKwh * 0.12 * 100) / 100;
+
+                await Invoice.create({
+                    device_id: device.id,
+                    invoice_number: `INV-${device.serial_number}-2024${10 + month}`,
+                    billing_period_start: invoiceStart,
+                    billing_period_end: invoiceEnd,
+                    total_kwh: totalKwh,
+                    total_amount: totalAmount,
+                    status: 'pending'
+                });
+            }
+        }
 
         // Print summary
         const deviceCount = await Device.count();
         const recordCount = await ConsumptionRecord.count();
         const invoiceCount = await Invoice.count();
-        
+        const totalConsumption = await ConsumptionRecord.sum('kwh_consumption');
+
         logger.info('===== DATABASE SYNC COMPLETE =====');
         logger.info(`Total devices: ${deviceCount}`);
         logger.info(`Total consumption records: ${recordCount}`);
         logger.info(`Total invoices: ${invoiceCount}`);
+        logger.info(`Total consumption: ${totalConsumption.toFixed(2)} kWh`);
 
         return true;
     } catch (error) {
