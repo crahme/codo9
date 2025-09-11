@@ -79,11 +79,12 @@ class CloudOceanAPI {
         if (!this.apiKey) {
             throw new Error('API_Key not set in environment variables');
         }
-
+        this.headers = { ...API_HEADERS };
         logger.debug('API Configuration:', {
             baseUrl: this.baseUrl,
             hasApiKey: !!this.apiKey,
-            apiKeyLength: this.apiKey?.length
+            apiKeyLength: this.apiKey?.length,
+            headers: Object.keys(this.headers)
         });
     }
 
