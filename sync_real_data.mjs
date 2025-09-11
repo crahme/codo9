@@ -156,7 +156,7 @@ export async function syncRealData() {
 }
 
 // Run if called directly
-if (import.meta.url === url.pathToFileURL(process.argv[1]).href) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const success = await syncRealData();
     process.exit(success ? 0 : 1);
