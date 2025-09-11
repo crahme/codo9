@@ -17,6 +17,18 @@ const logger = pino({
     }
 });
 dotenv.config();
+const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
+    dialect: 'postgres',
+    logging: msg => logger.debug(msg),
+    ssl: true,
+    dialectOptions: {
+        ssl: {
+            require: true,
+            rejectUnauthorized: false
+        }
+    }
+});
+
 
 // Constants
 const MEASURING_POINTS = [
