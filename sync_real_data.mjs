@@ -135,7 +135,8 @@ class CloudOceanAPI {
 
                 const response = await fetch(url.toString(), {
                     method: 'GET',
-                    headers: this.headers
+                    headers: this.headers,
+                    timeout: 30000
                 });
 
                 const data = await response.json();
