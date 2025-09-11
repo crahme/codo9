@@ -131,58 +131,39 @@ class CloudOceanAPI {
                 url.searchParams.set('start', startDate.toISOString().split('T')[0]);
                 url.searchParams.set('end', endDate.toISOString().split('T')[0]);
 
-                // Log request details
-                logger.debug({
-                    msg: 'Making API request',
-                    url: url.toString(),
-                    headers: this.headers,
-                    params: {
-                        start: startDate.toISOString().split('T')[0],
-                        end: endDate.toISOString().split('T')[0]
-                    }
-                });
-
-                const response = await fetch(url.toString(), {
+                const data = await this.fetchWithRetry(url.toString(), {
                     method: 'GET',
                     headers: this.headers
                 });
 
-                const data = await response.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    // Sort readings by timestamp
+                    const sortedData = data.sort((a, b) => 
+                        new Date(a.time_stamp) - new Date(b.time_stamp)
+                    );
 
-                // Log full response for debugging
-                logger.debug({
-                    msg: 'API Response received',
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: Object.fromEntries(response.headers.entries()),
-                    body: data
-                });
+                    // Calculate consumption as difference between last and first reading
+                    const firstReading = sortedData[0].cumulative_kwh;
+                    const lastReading = sortedData[sortedData.length - 1].cumulative_kwh;
+                    const consumption = Math.max(0, lastReading - firstReading);
 
-                if (!data || typeof data.consumption === 'undefined') {
-                    logger.warn({
-                        msg: `Invalid response format for ${point.name}`,
-                        data: data,
-                        station: point.name,
-                        uuid: point.uuid
-                    });
+                    result[point.uuid] = consumption;
+                    logger.info(`Fetched consumption for ${point.name}: ${consumption.toFixed(2)} kWh`);
+                    logger.debug(`First reading: ${firstReading}, Last reading: ${lastReading}`);
+                } else {
+                    logger.warn(`No readings found for ${point.name}`);
                     result[point.uuid] = 0;
-                    continue;
                 }
-
-                result[point.uuid] = parseFloat(data.consumption) || 0;
-                logger.info(`Fetched consumption for ${point.name}: ${result[point.uuid]} kWh`);
-
             } catch (error) {
-                logger.error({
-                    msg: `API request failed for ${point.name}`,
-                    error: error.message,
-                    stack: error.stack,
-                    station: point.name,
-                    uuid: point.uuid
-                });
+                logger.error(`Failed to fetch data for ${point.name} (${point.uuid}): ${error.message}`);
                 result[point.uuid] = 0;
             }
         }
+
+        // Log total consumption
+        const totalConsumption = Object.values(result).reduce((sum, val) => sum + val, 0);
+        logger.info(`Total consumption across all points: ${totalConsumption.toFixed(2)} kWh`);
+
         return result;
     }
 }
