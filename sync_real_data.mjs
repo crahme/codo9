@@ -1,11 +1,8 @@
 import { setTimeout } from 'timers/promises';
-import fs from 'fs/promises';
-import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { Client } from 'pg';
 import dotenv from 'dotenv';
 import pino from 'pino';
-import { Sequelize, Model, DataTypes } from 'sequelize';
+
 // Initialize logger and load environment variables
 const logger = pino({ 
     level: process.env.LOG_LEVEL || 'info',
@@ -16,24 +13,9 @@ const logger = pino({
         }
     }
 });
-dotenv.config();
-const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
-    dialect: 'postgres',
-    logging: msg => logger.debug(msg),
-    ssl: true,
-    dialectOptions: {
-        ssl: {
-            require: true,
-            rejectUnauthorized: false
-        }
-    }
-});
 
-const API_HEADERS = {
-    'Access-Token': `Bearer ${process.env.API_Key}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-};
+dotenv.config();
+
 // Constants
 const MEASURING_POINTS = [
     { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
@@ -50,130 +32,129 @@ const MEASURING_POINTS = [
 ];
 
 const MODULE_UUID = "c667ff46-9730-425e-ad48-1e950691b3f9";
-const RETRY_CONFIG = { maxAttempts: 3, initialDelay: 2000, maxDelay: 10000 };
-
-// Database Models
-class Device extends Model {}
-Device.init({
-    model_number: DataTypes.STRING,
-    serial_number: DataTypes.STRING,
-    location: DataTypes.STRING,
-    status: DataTypes.STRING,
-    max_amperage: DataTypes.FLOAT,
-    evse_count: DataTypes.INTEGER
-}, { sequelize, modelName: 'Device' });
-
-class ConsumptionRecord extends Model {}
-ConsumptionRecord.init({
-    device_id: DataTypes.INTEGER,
-    timestamp: DataTypes.DATE,
-    kwh_consumption: DataTypes.FLOAT,
-    rate: DataTypes.FLOAT
-}, { sequelize, modelName: 'ConsumptionRecord' });
+const RETRY_CONFIG = {
+    maxAttempts: 5,
+    initialDelay: 8000,
+    maxDelay: 60000,
+    backoffFactor: 1.5
+};
 
 class CloudOceanAPI {
     constructor() {
-        this.apiKey = process.env.API_Key;
         this.baseUrl = process.env.CLOUD_OCEAN_BASE_URL || "https://api.develop.rve.ca/v1";
+        this.headers = {
+            'Access-Token': `Bearer ${process.env.API_KEY}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        };
         
-        if (!this.apiKey) {
-            throw new Error('API_Key not set in environment variables');
+        if (!process.env.API_KEY) {
+            throw new Error('API_KEY not set in environment variables');
         }
-        this.headers = { ...API_HEADERS };
-        logger.debug('API Configuration:', {
-            baseUrl: this.baseUrl,
-            hasApiKey: !!this.apiKey,
-            headers: Object.keys(this.headers)
-        });
     }
 
-    async fetchWithRetry(url, options) {
-        let delay = RETRY_CONFIG.initialDelay;
-        
-        for (let attempt = 1; attempt <= RETRY_CONFIG.maxAttempts; attempt++) {
-            try {
-                logger.debug(`Making request to: ${url}`);
-                const response = await fetch(url, options);
+    async fetchWithBackoff(url, options, attempt = 1) {
+        try {
+            logger.debug(`Request attempt ${attempt}/${RETRY_CONFIG.maxAttempts} to: ${url}`);
+            const response = await fetch(url, options);
+            const contentType = response.headers.get('content-type');
+            
+            if (!response.ok) {
+                const errorBody = contentType?.includes('application/json') 
+                    ? await response.json()
+                    : await response.text();
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    logger.debug(`Successful response from ${url}`);
-                    return data;
+                logger.warn(`Request failed (${response.status}): ${JSON.stringify(errorBody)}`);
+
+                if (response.status === 503 && attempt < RETRY_CONFIG.maxAttempts) {
+                    const delay = Math.min(
+                        RETRY_CONFIG.initialDelay * Math.pow(RETRY_CONFIG.backoffFactor, attempt - 1),
+                        RETRY_CONFIG.maxDelay
+                    );
+                    const jitter = Math.random() * 1000;
+                    
+                    logger.info(`Service unavailable. Waiting ${Math.floor((delay + jitter)/1000)}s before retry...`);
+                    await setTimeout(delay + jitter);
+                    return this.fetchWithBackoff(url, options, attempt + 1);
                 }
-                
-                const errorBody = await response.text();
-                logger.warn(`Request failed (${response.status}): ${errorBody}`);
-                
-                if (response.status === 401) {
-                    throw new Error(`Authentication failed - please check your API key`);
-                }
-                
-                if (attempt === RETRY_CONFIG.maxAttempts) {
-                    throw new Error(`Failed after ${attempt} attempts: ${response.status} ${response.statusText}`);
-                }
-                
-                delay = Math.min(delay * 2, RETRY_CONFIG.maxDelay);
-                logger.info(`Retrying in ${delay/1000}s... (attempt ${attempt}/${RETRY_CONFIG.maxAttempts})`);
-                await setTimeout(delay);
-                
-            } catch (error) {
-                if (attempt === RETRY_CONFIG.maxAttempts) throw error;
-                logger.warn(`Attempt ${attempt} failed: ${error.message}`);
+
+                throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorBody)}`);
             }
+
+            return response.json();
+        } catch (error) {
+            if (attempt < RETRY_CONFIG.maxAttempts && 
+                (error.name === 'TypeError' || error.name === 'FetchError' || error.message.includes('503'))) {
+                const delay = Math.min(
+                    RETRY_CONFIG.initialDelay * Math.pow(RETRY_CONFIG.backoffFactor, attempt - 1),
+                    RETRY_CONFIG.maxDelay
+                );
+                logger.warn(`Attempt ${attempt} failed: ${error.message}`);
+                await setTimeout(delay);
+                return this.fetchWithBackoff(url, options, attempt + 1);
+            }
+            throw error;
         }
     }
 
-       async getModuleConsumption(moduleUuid, measuringPoints, startDate, endDate) {
-        const result = {};
+    async getModuleConsumption(moduleUuid, measuringPoints, startDate, endDate) {
+        const results = [];
+        let successCount = 0;
+        const totalPoints = measuringPoints.length;
+
         for (const point of measuringPoints) {
             try {
+                logger.info(`Processing ${point.name}...`);
                 const url = new URL(`${this.baseUrl}/modules/${moduleUuid}/measuring-points/${point.uuid}/reads`);
                 url.searchParams.set('start', startDate.toISOString().split('T')[0]);
                 url.searchParams.set('end', endDate.toISOString().split('T')[0]);
 
-                const data = await this.fetchWithRetry(url.toString(), {
+                const data = await this.fetchWithBackoff(url.toString(), {
                     method: 'GET',
                     headers: this.headers
                 });
 
                 if (Array.isArray(data) && data.length > 0) {
-                    // Sort readings by timestamp
                     const sortedData = data.sort((a, b) => 
                         new Date(a.time_stamp) - new Date(b.time_stamp)
                     );
 
-                    // Calculate consumption as difference between last and first reading
                     const firstReading = sortedData[0].cumulative_kwh;
                     const lastReading = sortedData[sortedData.length - 1].cumulative_kwh;
                     const consumption = Math.max(0, lastReading - firstReading);
 
-                    result[point.uuid] = consumption;
-                    logger.info(`Fetched consumption for ${point.name}: ${consumption.toFixed(2)} kWh`);
-                    logger.debug(`First reading: ${firstReading}, Last reading: ${lastReading}`);
+                    results.push({
+                        uuid: point.uuid,
+                        name: point.name,
+                        location: point.location,
+                        consumption,
+                        firstReading: sortedData[0],
+                        lastReading: sortedData[sortedData.length - 1]
+                    });
+
+                    successCount++;
+                    logger.info(`Successfully processed ${point.name}: ${consumption.toFixed(2)} kWh`);
                 } else {
                     logger.warn(`No readings found for ${point.name}`);
-                    result[point.uuid] = 0;
                 }
             } catch (error) {
-                logger.error(`Failed to fetch data for ${point.name} (${point.uuid}): ${error.message}`);
-                result[point.uuid] = 0;
+                logger.error(`Failed to process ${point.name}: ${error.message}`);
             }
         }
 
-        // Log total consumption
-        const totalConsumption = Object.values(result).reduce((sum, val) => sum + val, 0);
-        logger.info(`Total consumption across all points: ${totalConsumption.toFixed(2)} kWh`);
+        if (successCount === 0) {
+            throw new Error('Failed to fetch data for any measuring points');
+        }
 
-        return result;
+        const totalConsumption = results.reduce((sum, r) => sum + r.consumption, 0);
+        logger.info(`Successfully processed ${successCount}/${totalPoints} stations`);
+        logger.info(`Total consumption: ${totalConsumption.toFixed(2)} kWh`);
+
+        return results;
     }
 }
 
 async function syncRealData() {
-    const dbUrl = process.env.NETLIFY_DATABASE_URL;
-    if (!dbUrl) {
-        throw new Error('NETLIFY_DATABASE_URL is not set in environment variables');
-    }
-
     const api = new CloudOceanAPI();
     logger.info('Starting data sync...');
 
@@ -183,29 +164,31 @@ async function syncRealData() {
         
         logger.info(`Fetching consumption data for date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
 
-        const consumption = await api.getModuleConsumption(
+        const results = await api.getModuleConsumption(
             MODULE_UUID,
             MEASURING_POINTS,
             startDate,
             endDate
         );
 
-        const totalConsumption = Object.values(consumption).reduce((sum, val) => sum + val, 0);
-        logger.info(`Total consumption across all points: ${totalConsumption.toFixed(2)} kWh`);
-
-        return true;
+        return { success: true, data: results };
     } catch (error) {
         logger.error('Sync failed:', error.stack || error.message);
-        return false;
+        return { success: false, error: error.message };
     }
 }
 
 // Run if called directly
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     syncRealData()
-        .then(success => {
-            logger.info(success ? '✅ Data sync completed successfully!' : '❌ Data sync failed!');
-            process.exit(success ? 0 : 1);
+        .then(result => {
+            if (result.success) {
+                logger.info('✅ Data sync completed successfully!');
+                process.exit(0);
+            } else {
+                logger.error('❌ Data sync failed:', result.error);
+                process.exit(1);
+            }
         })
         .catch(error => {
             logger.error('Fatal error:', error);
