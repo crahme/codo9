@@ -30,7 +30,7 @@ const sequelize = new Sequelize(process.env.NETLIFY_DATABASE_URL, {
 });
 
 const API_HEADERS = {
-    'Access-Token': `${process.env.API_Key}`,
+    'Access-Token': process.env.API_Key,
     'Content-Type': 'application/json',
     'Accept': 'application/json'
 };
