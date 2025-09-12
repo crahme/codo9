@@ -5,7 +5,7 @@ export class CloudOceanService {
         this.baseUrl = 'https://api.develop.rve.ca/v1';
         this.moduleId = 'c667ff46-9730-425e-ad48-1e950691b3f9';
         this.headers = {
-            'Authorization': `Bearer ${process.env.API_KEY}`,
+            'Access-Token': `Bearer ${process.env.API_KEY}`,
             'Content-Type': 'application/json'
         };
         this.maxRetries = 3;
