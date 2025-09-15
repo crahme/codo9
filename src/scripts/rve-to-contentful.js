@@ -5,7 +5,7 @@ const { createClient } = pkg;
 import fetch from 'node-fetch';
 
 // Initialize Contentful client
-const client = contentful.createClient({
+const client = createClient({
   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN
 });
 
