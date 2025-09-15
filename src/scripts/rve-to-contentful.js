@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { createClient } from 'contentful-management';
-import CloudOceanService from '../services/CloudOceanService.js';
+import {CloudOceanService} from '../services/CloudOceanService.js';
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 
