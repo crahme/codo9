@@ -11,7 +11,7 @@ const client = axios.create({
   headers: {
     "Access-Token": `Bearer ${process.env.API_Key}`, // raw token from .env
     "Content-Type": "application/json",
-    "Accept": "application/json",
+    "Accept": "application/json"
   },
 });
 
