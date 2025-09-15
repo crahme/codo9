@@ -157,8 +157,6 @@ function generateInvoicePDF(invoiceData) {
         energyConsumed: station.consumption.toFixed(2),
         unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
         amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
-        stationName: station.name,
-        location: station.location,
       })),
     };
 
