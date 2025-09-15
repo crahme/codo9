@@ -5,17 +5,18 @@ dotenv.config();
 import { CloudOceanService } from "../services/CloudOceanService.js";
 import contentful from "contentful-management";
 
-// --- Contentful client setup ---
+// --- Contentful setup ---
 const client = contentful.createClient({
   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
 });
 
 async function getEnvironment() {
   const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-  return space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
+  const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
+  return env;
 }
 
-// --- Convert plain text to Rich Text for Contentful ---
+// --- Convert plain text to Contentful Rich Text ---
 function toRichText(text) {
   return {
     nodeType: "document",
@@ -39,7 +40,8 @@ function toRichText(text) {
 
 // --- Create line item entries ---
 async function createLineItemEntries(env, lineItems) {
-  const entryPromises = lineItems.map(async (item) => {
+  const createdEntries = [];
+  for (const item of lineItems) {
     const entry = await env.createEntry("lineItem", {
       fields: {
         date: { "en-US": item.date },
@@ -51,12 +53,12 @@ async function createLineItemEntries(env, lineItems) {
       },
     });
     await entry.publish();
-    return entry.sys.id;
-  });
-  return Promise.all(entryPromises);
+    createdEntries.push({ sys: { type: "Link", linkType: "Entry", id: entry.sys.id } });
+  }
+  return createdEntries;
 }
 
-// --- Create or update the invoice ---
+// --- Create or update invoice entry ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
 
@@ -69,9 +71,8 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // Set invoice fields
   entry.fields["syndicateName"] = { "en-US": "RVE Cloud Ocean" };
-  entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
+  entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber.toLowerCase()}` };
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
   entry.fields["contact"] = { "en-US": "contact@rve.ca" };
   entry.fields["invoiceNumber"] = { "en-US": invoiceData.invoiceNumber };
@@ -85,9 +86,9 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
   entry.fields["lateFeeRate"] = { "en-US": 0 };
 
-  // Create line item entries and link them
-  const lineItemIds = await createLineItemEntries(env, invoiceData.lineItems);
-  entry.fields["lineItems"] = { "en-US": lineItemIds.map(id => ({ sys: { type: "Link", linkType: "Entry", id } })) };
+  // Create line item entries and attach to invoice
+  const lineItemLinks = await createLineItemEntries(env, invoiceData.lineItems);
+  entry.fields["lineItems"] = { "en-US": lineItemLinks };
 
   const updatedEntry = await entry.update();
   await updatedEntry.publish();
@@ -105,41 +106,47 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
 
-    // Prepare line items
+    // Build line items from RVE readings
     const lineItems = consumptionData.flatMap(station =>
-      station.readings.map(read => {
-        const readingDate = new Date(read.date); // actual reading date
-        const startTime = new Date(Date.UTC(readingDate.getUTCFullYear(), readingDate.getUTCMonth(), readingDate.getUTCDate(), 0, 0, 0));
-        const endTime = new Date(Date.UTC(readingDate.getUTCFullYear(), readingDate.getUTCMonth(), readingDate.getUTCDate(), 23, 59, 59));
+      station.readings
+        .filter(read => read.time_stamp || read.date)
+        .map(read => {
+          const ts = read.time_stamp || read.date;
+          const readingDate = new Date(ts);
+          if (isNaN(readingDate.getTime())) return null;
 
-        const energyConsumed = read.value;
-        const unitPrice = parseFloat(process.env.RATE_PER_KWH || 0.15);
-        const amount = parseFloat((energyConsumed * unitPrice).toFixed(2));
+          const startTime = new Date(Date.UTC(readingDate.getUTCFullYear(), readingDate.getUTCMonth(), readingDate.getUTCDate(), 0, 0, 0));
+          const endTime = new Date(Date.UTC(readingDate.getUTCFullYear(), readingDate.getUTCMonth(), readingDate.getUTCDate(), 23, 59, 59));
 
-        return {
-          date: readingDate.toISOString(),
-          startTime: startTime.toISOString(),
-          endTime: endTime.toISOString(),
-          energyConsumed: energyConsumed.toFixed(2),
-          unitPrice: unitPrice.toFixed(2),
-          amount: amount.toFixed(2),
-        };
-      })
+          const energyConsumed = parseFloat(read.value || 0);
+          const unitPrice = parseFloat(process.env.RATE_PER_KWH || 0.15);
+          const amount = parseFloat((energyConsumed * unitPrice).toFixed(2));
+
+          return {
+            date: readingDate.toISOString(),
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            energyConsumed: energyConsumed.toFixed(2),
+            unitPrice: unitPrice.toFixed(2),
+            amount: amount.toFixed(2),
+          };
+        })
+        .filter(Boolean)
     );
 
     // Prepare invoice data
     const invoiceData = {
       invoiceNumber: "fac-2024-001",
-      invoiceDate: new Date().toISOString().split("T")[0],
+      invoiceDate: new Date().toISOString(),
       chargerSerialNumber: "CHG-001",
       billingPeriodStart: startDate,
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
-      paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       lineItems,
     };
 
-    console.log("[INFO] Writing invoice to Contentful...");
+    console.log(`[INFO] Writing invoice ${invoiceData.invoiceNumber} to Contentful...`);
     await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
 
     console.log("[INFO] Done ✅");
