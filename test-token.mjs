@@ -19,7 +19,7 @@ const client = axios.create({
 async function fetchReads() {
   try {
     const res = await client.get(
-      `/v1/modules/${moduleUuid}/measuring-points/${pointUuid}/reads`,
+      `modules/${moduleUuid}/measuring-points/${pointUuid}/reads`,
       {
         params: {
           start: "2024-10-16",
