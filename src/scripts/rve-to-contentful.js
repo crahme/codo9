@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 dotenv.config;
-import { createClient } from 'contentful-management';
+import pkg from 'contentful-management';
+const { createClient } = pkg;
+import fetch from 'node-fetch';
 
 // Initialize Contentful client
 const client = contentful.createClient({
