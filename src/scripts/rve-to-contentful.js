@@ -26,16 +26,23 @@ function toRichText(text) {
         nodeType: "paragraph",
         data: {},
         content: [
-          {
-            nodeType: "text",
-            value: text,
-            marks: [],
-            data: {}
-          }
+          { nodeType: "text", value: text, marks: [], data: {} }
         ]
       }
     ]
   };
+}
+
+// --- Format a Date object as MM/DD/YYYY HH:MM:SS ---
+function formatDateTime(date) {
+  const pad = n => n.toString().padStart(2, "0");
+  const MM = pad(date.getUTCMonth() + 1);
+  const DD = pad(date.getUTCDate());
+  const YYYY = date.getUTCFullYear();
+  const HH = pad(date.getUTCHours());
+  const mm = pad(date.getUTCMinutes());
+  const ss = pad(date.getUTCSeconds());
+  return `${MM}/${DD}/${YYYY} ${HH}:${mm}:${ss}`;
 }
 
 // --- Create line item entries dynamically ---
@@ -111,13 +118,12 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
-    const totals = service.calculateTotals(consumptionData);
 
-    // Prepare line items per day with UTC times 00:00:00 -> 23:59:59
+    // Prepare line items per day with formatted times
     const lineItems = consumptionData.map(station => ({
       date: new Date().toISOString().split("T")[0],
-      startTime: new Date(`${startDate}T00:00:00Z`).toISOString(),
-      endTime: new Date(`${endDate}T23:59:59Z`).toISOString(),
+      startTime: formatDateTime(new Date(`${startDate}T00:00:00Z`)),
+      endTime: formatDateTime(new Date(`${endDate}T23:59:59Z`)),
       energyConsumed: station.consumption.toFixed(2),
       unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
       amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
