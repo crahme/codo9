@@ -18,48 +18,31 @@ async function getEnvironment() {
   return env;
 }
 
-// --- Convert string to RichText object ---
-function toRichText(text) {
-  return {
-    nodeType: "document",
-    data: {},
-    content: [
-      {
-        nodeType: "paragraph",
-        data: {},
-        content: [{ nodeType: "text", value: text, marks: [], data: {} }],
-      },
-    ],
-  };
-}
-
-// --- Create line item entries in Contentful ---
+// --- Create line item entries ---
 async function createLineItemEntries(env, lineItems) {
   const createdEntries = [];
-
   for (const item of lineItems) {
     const entry = await env.createEntry("lineItem", {
       fields: {
-        date: { "en-US": item.date },
-        startTime: { "en-US": item.startTime },
-        endTime: { "en-US": item.endTime },
+        date: { "en-US": new Date(item.date) },
+        startTime: { "en-US": new Date(item.startTime) },
+        endTime: { "en-US": new Date(item.endTime) },
         energyConsumed: { "en-US": item.energyConsumed },
         unitPrice: { "en-US": item.unitPrice },
         amount: { "en-US": item.amount },
-      },
+      }
     });
     await entry.publish();
     createdEntries.push({ sys: { type: "Link", linkType: "Entry", id: entry.sys.id } });
   }
-
   return createdEntries;
 }
 
 // --- Create or update invoice ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
-  let entry;
 
+  let entry;
   try {
     entry = await env.getEntry(invoiceId);
     console.log(`[INFO] Updating invoice ${invoiceId}`);
@@ -68,22 +51,22 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // Create line item entries
+  // Create line item entries in Contentful
   const lineItemLinks = await createLineItemEntries(env, invoiceData.lineItems);
 
+  // Update invoice fields
   entry.fields["syndicateName"] = { "en-US": "RVE Cloud Ocean" };
-  entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
+  entry.fields["slug"] = { "en-US": `/${invoiceId}` };
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
   entry.fields["contact"] = { "en-US": "contact@rve.ca" };
   entry.fields["invoiceNumber"] = { "en-US": invoiceData.invoiceNumber };
-  entry.fields["invoiceDate"] = { "en-US": invoiceData.invoiceDate };
+  entry.fields["invoiceDate"] = { "en-US": new Date(invoiceData.invoiceDate) };
   entry.fields["clientName"] = { "en-US": "John Doe" };
   entry.fields["clientEmail"] = { "en-US": "john.doe@example.com" };
   entry.fields["chargerSerialNumber"] = { "en-US": invoiceData.chargerSerialNumber };
-  entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
-  entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
-  entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText || "") };
-  entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
+  entry.fields["billingPeriodStart"] = { "en-US": new Date(invoiceData.billingPeriodStart) };
+  entry.fields["billingPeriodEnd"] = { "en-US": new Date(invoiceData.billingPeriodEnd) };
+  entry.fields["paymentDueDate"] = { "en-US": new Date(invoiceData.paymentDueDate) };
   entry.fields["lateFeeRate"] = { "en-US": 0 };
   entry.fields["lineItems"] = { "en-US": lineItemLinks };
 
@@ -94,36 +77,54 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
 // --- Generate PDF ---
 function generateInvoicePDF(invoiceData) {
-  const pdfPath = `./invoice_${invoiceData.invoiceNumber}.pdf`;
   const doc = new PDFDocument({ margin: 30 });
-  doc.pipe(fs.createWriteStream(pdfPath));
+  const fileName = `./invoice_${invoiceData.invoiceNumber}.pdf`;
+  doc.pipe(fs.createWriteStream(fileName));
 
-  doc.fontSize(16).text(`Invoice: ${invoiceData.invoiceNumber}`, { underline: true });
+  doc.fontSize(20).text(`Invoice: ${invoiceData.invoiceNumber}`, { align: "center" });
   doc.moveDown();
-  doc.fontSize(12)
-    .text(`Syndicate Name: RVE Cloud Ocean`)
-    .text(`Address: 123 EV Way, Montreal, QC`)
-    .text(`Contact: contact@rve.ca`)
-    .text(`Client Name: John Doe`)
-    .text(`Email: john.doe@example.com`)
-    .text(`Invoice Date: ${invoiceData.invoiceDate}`)
-    .text(`Charger Serial Number: ${invoiceData.chargerSerialNumber}`)
-    .text(`Billing Period: ${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`)
-    .text(`Payment Due Date: ${invoiceData.paymentDueDate}`)
-    .text(`Late Fee Rate: 0`)
-    .text(`Environmental Impact: ${invoiceData.environmentalImpactText}`)
-    .moveDown();
 
-  doc.text("Line Items:", { underline: true });
-  invoiceData.lineItems.forEach((item, idx) => {
-    doc.text(
-      `${idx + 1}. Date: ${item.date} | Start: ${item.startTime} | End: ${item.endTime} | ` +
-      `Energy: ${item.energyConsumed} kWh | Unit Price: $${item.unitPrice} | Amount: $${item.amount}`
-    );
+  doc.fontSize(12).text(`Syndicate Name: RVE Cloud Ocean`);
+  doc.text(`Address: 123 EV Way, Montreal, QC`);
+  doc.text(`Contact: contact@rve.ca`);
+  doc.text(`Client Name: John Doe`);
+  doc.text(`Email: john.doe@example.com`);
+  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
+  doc.text(`Charger Serial Number: ${invoiceData.chargerSerialNumber}`);
+  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`);
+  doc.text(`Payment Due Date: ${invoiceData.paymentDueDate}`);
+  doc.text(`Late Fee Rate: 0`);
+  doc.moveDown();
+
+  doc.fontSize(14).text("Consumption Details:");
+  doc.moveDown();
+
+  const tableTop = doc.y;
+  const itemSpacing = 20;
+
+  // Table headers
+  doc.fontSize(12);
+  doc.text("Date", 30, tableTop);
+  doc.text("Start Time", 100, tableTop);
+  doc.text("End Time", 200, tableTop);
+  doc.text("Energy (kWh)", 300, tableTop);
+  doc.text("Unit Price ($)", 400, tableTop);
+  doc.text("Amount ($)", 500, tableTop);
+
+  let i = 0;
+  invoiceData.lineItems.forEach(item => {
+    const y = tableTop + itemSpacing * (i + 1);
+    doc.text(new Date(item.date).toLocaleDateString(), 30, y);
+    doc.text(new Date(item.startTime).toLocaleString(), 100, y);
+    doc.text(new Date(item.endTime).toLocaleString(), 200, y);
+    doc.text(item.energyConsumed.toFixed(2), 300, y);
+    doc.text(item.unitPrice.toFixed(2), 400, y);
+    doc.text(item.amount.toFixed(2), 500, y);
+    i++;
   });
 
   doc.end();
-  console.log(`[INFO] PDF generated at ${pdfPath}`);
+  console.log(`[INFO] PDF generated at ${fileName}`);
 }
 
 // --- Main runner ---
@@ -137,46 +138,28 @@ function generateInvoicePDF(invoiceData) {
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
 
-    // Prepare line items dynamically
-    const lineItems = consumptionData.flatMap(station =>
-      (station.readings || [])
-        .map(read => {
-          if (!read.time_stamp) return null;
+    // Prepare line items from RVE data
+    const lineItems = consumptionData.map(station => {
+      const energy = parseFloat(station.consumption);
+      const unitPrice = parseFloat(process.env.RATE_PER_KWH || 0.15);
+      return {
+        date: startDate, // You can replace with actual reading date if available
+        startTime: `${startDate}T00:00:00Z`,
+        endTime: `${startDate}T23:59:59Z`,
+        energyConsumed: energy,
+        unitPrice: unitPrice,
+        amount: energy * unitPrice
+      };
+    });
 
-          const readingDate = new Date(read.time_stamp);
-          if (isNaN(readingDate.getTime())) return null;
-
-          const startTime = new Date(Date.UTC(readingDate.getUTCFullYear(), readingDate.getUTCMonth(), readingDate.getUTCDate(), 0, 0, 0));
-          const endTime = new Date(Date.UTC(readingDate.getUTCFullYear(), readingDate.getUTCMonth(), readingDate.getUTCDate(), 23, 59, 59));
-
-          const energyConsumed = parseFloat(read.value || 0);
-          const unitPrice = parseFloat(process.env.RATE_PER_KWH || 0.15);
-          const amount = parseFloat((energyConsumed * unitPrice).toFixed(2));
-
-          return {
-            date: readingDate.toISOString(),
-            startTime: startTime.toISOString(),
-            endTime: endTime.toISOString(),
-            energyConsumed: energyConsumed.toFixed(2),
-            unitPrice: unitPrice.toFixed(2),
-            amount: amount.toFixed(2),
-          };
-        })
-        .filter(Boolean)
-    );
-
-    if (lineItems.length === 0) console.warn("[WARN] No line items generated. Check RVE data.");
-
-    // Prepare invoice data
     const invoiceData = {
       invoiceNumber: "fac-2024-001",
       invoiceDate: new Date().toISOString().split("T")[0],
       chargerSerialNumber: "CHG-001",
       billingPeriodStart: startDate,
       billingPeriodEnd: endDate,
-      environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      lineItems,
+      lineItems
     };
 
     console.log("[INFO] Writing invoice to Contentful...");
