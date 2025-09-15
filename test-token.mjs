@@ -9,7 +9,7 @@ const pointUuid = "71ef9476-3855-4a3f-8fc5-333cfbf9e898";
 const client = axios.create({
   baseURL: process.env.CLOUD_OCEAN_BASE_URL,
   headers: {
-    "Access-Token": ` ${process.env.API_Key}`, // raw token from .env
+    "Access-Token": `Bearer ${process.env.API_Key}`, // raw token from .env
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
@@ -18,7 +18,7 @@ const client = axios.create({
 async function fetchReads() {
   try {
     const res = await client.get(
-      `/v1/modules/${moduleUuid}/measuring-points/${pointUuid}/reads`,
+      `${this.baseURL}/v1/modules/${moduleUuid}/measuring-points/${pointUuid}/reads`,
       {
         params: {
           start: "2024-10-16",
