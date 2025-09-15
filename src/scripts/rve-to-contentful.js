@@ -12,11 +12,10 @@ const client = contentful.createClient({
 
 async function getEnvironment() {
   const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-  const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
-  return env;
+  return await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
 }
 
-// --- Helper to convert string to Contentful RichText ---
+// --- Helper to convert string to RichText ---
 function toRichText(text) {
   return {
     nodeType: "document",
@@ -26,32 +25,33 @@ function toRichText(text) {
         nodeType: "paragraph",
         data: {},
         content: [
-          {
-            nodeType: "text",
-            value: text,
-            marks: [],
-            data: {},
-          },
-        ],
-      },
-    ],
+          { nodeType: "text", value: text, marks: [], data: {} }
+        ]
+      }
+    ]
   };
 }
 
-// --- Create line item entries in Contentful ---
-async function createLineItemEntries(env, lineItems) {
+// --- Create line item entries from RVE readings ---
+async function createLineItemEntries(env, readings) {
   const entries = [];
 
-  for (const item of lineItems) {
+  for (const r of readings) {
+    const date = new Date(r.time_stamp);
+    if (isNaN(date)) continue;
+
+    const startTime = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0));
+    const endTime = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59));
+
     const entry = await env.createEntry("lineItem", {
       fields: {
-        date: { "en-US": new Date(item.date).toISOString() },
-        startTime: { "en-US": new Date(item.startTime).toISOString() },
-        endTime: { "en-US": new Date(item.endTime).toISOString() },
-        energyConsumed: { "en-US": String(item.energyConsumed) },
-        unitPrice: { "en-US": String(item.unitPrice) },
-        amount: { "en-US": String(item.amount) },
-      },
+        date: { "en-US": date.toISOString() },
+        startTime: { "en-US": startTime.toISOString() },
+        endTime: { "en-US": endTime.toISOString() },
+        energyConsumed: { "en-US": String(r.value.toFixed(2)) },
+        unitPrice: { "en-US": String(process.env.RATE_PER_KWH || 0.15) },
+        amount: { "en-US": String((r.value * (process.env.RATE_PER_KWH || 0.15)).toFixed(2)) },
+      }
     });
 
     await entry.publish();
@@ -74,10 +74,8 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // Create line item entries
   const lineItemLinks = await createLineItemEntries(env, invoiceData.lineItems);
 
-  // Set invoice fields
   entry.fields["syndicateName"] = { "en-US": "RVE Cloud Ocean" };
   entry.fields["slug"] = { "en-US": `/fac-2024-001` };
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
@@ -109,28 +107,12 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
 
-    // Flatten readings into line items
+    // Flatten readings from all stations into line items
     const lineItems = consumptionData.flatMap(station =>
-      station.readings
-        .map(read => {
-          if (!read.time_stamp) return null;
-
-          const readDate = new Date(read.time_stamp);
-          if (isNaN(readDate)) return null;
-
-          const startTime = new Date(Date.UTC(readDate.getUTCFullYear(), readDate.getUTCMonth(), readDate.getUTCDate(), 0, 0, 0));
-          const endTime = new Date(Date.UTC(readDate.getUTCFullYear(), readDate.getUTCMonth(), readDate.getUTCDate(), 23, 59, 59));
-
-          return {
-            date: readDate,
-            startTime,
-            endTime,
-            energyConsumed: read.value.toFixed(2),
-            unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-            amount: (read.value * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
-          };
-        })
-        .filter(Boolean)
+      station.readings.map(read => ({
+        time_stamp: read.time_stamp,
+        value: read.value
+      }))
     );
 
     const invoiceData = {
@@ -140,7 +122,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       billingPeriodStart: startDate,
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
-      paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 days
+      paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       lineItems,
     };
 
