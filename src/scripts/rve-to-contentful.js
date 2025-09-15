@@ -1,140 +1,162 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import pkg from 'contentful-management';
-const { createClient } = pkg;
+
 import fs from 'fs';
-import PDFDocument from 'pdfkit';
+import path from 'path';
+import { createClient } from 'contentful-management';
 import { CloudOceanService } from '../services/CloudOceanService.js';
+import PDFDocument from 'pdfkit';
 
-dotenv.config();
+const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
+const ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT || 'master';
+const CONTENTFUL_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
+const INVOICE_ENTRY_ID = process.env.CONTENTFUL_INVOICE_ENTRY_ID || 'RVE CLOUD OCEAN';
+const PDF_OUTPUT_DIR = './pdfs';
 
+// Initialize Contentful client
+const client = createClient({ accessToken: CONTENTFUL_TOKEN });
 
-const INVOICE_ENTRY_ID = 'fac-2024-001'; // your invoice entry
-const UNIT_PRICE = 0.15; // example unit price
-const service= new CloudOceanService();
-const client = createClient({ accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN });
+async function fetchConsumptionData(startDate, endDate) {
+  if (!startDate || !endDate) {
+    throw new Error('Start date and end date must be defined');
+  }
 
-async function fetchConsumptionData() {
-  console.log('[INFO] Fetching consumption data from RVE API...');
-  const data = await service.getConsumptionData();
-  console.table(data.map(d => ({
-    Name: d.name,
-    Location: d.location,
-    Consumption_kWh: d.consumption
-  })));
-  return data;
+  const stations = await CloudOceanService.getStations(); // fetch station list
+  const allReadings = [];
+
+  for (const station of stations) {
+    try {
+      const readings = await CloudOceanService.fetchConsumptionData(
+        station.id,
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
+
+      const processed = readings.map(r => ({
+        stationName: station.name,
+        date: new Date(r.timestamp),
+        energyConsumed: Number(r.kWh),
+        unitPrice: Number(r.unitPrice || 0.15),
+        amount: Number(r.kWh * (r.unitPrice || 0.15))
+      }));
+
+      allReadings.push(...processed);
+      console.info(`[INFO] Fetched ${processed.length} readings for ${station.name}`);
+    } catch (err) {
+      console.warn(`[WARN] Failed for ${station.name}: ${err.message}`);
+    }
+  }
+
+  if (!allReadings.length) {
+    throw new Error('No consumption data fetched.');
+  }
+
+  return allReadings;
 }
 
-async function createLineItemEntries(env, consumptionData, billingPeriodStart) {
-  const lineItemEntries = [];
+async function createLineItemEntries(environment, lineItems) {
+  const createdEntries = [];
 
-  for (const station of consumptionData) {
-    const readingDate = station.readingDate
-      ? new Date(station.readingDate)
-      : new Date(billingPeriodStart);
-
-    if (isNaN(readingDate)) {
-      console.warn('[WARN] Invalid date for reading, skipping:', station);
+  for (const item of lineItems) {
+    // Ensure date exists
+    if (!item.date || isNaN(item.date.getTime())) {
+      console.warn('[WARN] Invalid date for reading:', item);
       continue;
     }
 
-    const energyConsumed = Number(station.consumption);
-    const amount = Number((energyConsumed * UNIT_PRICE).toFixed(2));
-
-    const entry = await env.createEntry('lineItem', {
+    const entry = await environment.createEntry('lineItem', {
       fields: {
-        date: { 'en-US': readingDate.toISOString() },
-        startTime: { 'en-US': readingDate.toISOString() },
-        endTime: { 'en-US': readingDate.toISOString() },
-        energyConsumed: { 'en-US': energyConsumed },
-        unitPrice: { 'en-US': UNIT_PRICE },
-        amount: { 'en-US': amount }
+        stationName: { 'en-US': item.stationName },
+        date: { 'en-US': item.date.toISOString() },
+        energyConsumed: { 'en-US': item.energyConsumed },
+        unitPrice: { 'en-US': item.unitPrice },
+        amount: { 'en-US': item.amount }
       }
     });
 
     await entry.publish();
-    lineItemEntries.push({ sys: { type: 'Link', linkType: 'Entry', id: entry.sys.id } });
+    createdEntries.push(entry);
   }
 
-  return lineItemEntries;
+  return createdEntries;
 }
 
-function generatePDF(invoiceData, lineItems) {
-  const doc = new PDFDocument({ margin: 30 });
-  const pdfPath = `./invoice_${invoiceData.invoiceNumber}.pdf`;
-  doc.pipe(fs.createWriteStream(pdfPath));
+async function createOrUpdateInvoice(lineItems) {
+  const space = await client.getSpace(SPACE_ID);
+  const environment = await space.getEnvironment(ENVIRONMENT);
 
-  doc.fontSize(18).text(`Invoice: ${invoiceData.invoiceNumber}`, { align: 'center' });
-  doc.moveDown();
-  doc.fontSize(12).text(`Syndicate: ${invoiceData.syndicateName}`);
-  doc.text(`Client: ${invoiceData.clientName}`);
-  doc.text(`Email: ${invoiceData.clientEmail}`);
-  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`);
-  doc.moveDown();
+  let invoice;
+  try {
+    invoice = await environment.getEntry(INVOICE_ENTRY_ID);
+  } catch {
+    // create new invoice if not exists
+    invoice = await environment.createEntryWithId('invoice', INVOICE_ENTRY_ID, {
+      fields: {
+        title: { 'en-US': 'RVE CLOUD OCEAN' },
+        lineItems: { 'en-US': [] }
+      }
+    });
+  }
 
-  doc.text('Line Items:', { underline: true });
-  doc.moveDown(0.5);
+  // Clear existing line items
+  invoice.fields.lineItems = { 'en-US': [] };
+  await invoice.update();
 
-  const tableTop = doc.y;
-  const itemSpacing = 20;
+  // Create new line items and link to invoice
+  const createdEntries = await createLineItemEntries(environment, lineItems);
 
-  // Table header
-  doc.text('Date', 50, tableTop);
-  doc.text('Energy (kWh)', 150, tableTop);
-  doc.text('Unit Price ($)', 250, tableTop);
-  doc.text('Amount ($)', 350, tableTop);
+  invoice.fields.lineItems['en-US'] = createdEntries.map(entry => ({
+    sys: { type: 'Link', linkType: 'Entry', id: entry.sys.id }
+  }));
 
-  let y = tableTop + itemSpacing;
-
-  lineItems.forEach(item => {
-    doc.text(new Date(item.fields.date['en-US']).toLocaleDateString(), 50, y);
-    doc.text(item.fields.energyConsumed['en-US'], 150, y);
-    doc.text(item.fields.unitPrice['en-US'], 250, y);
-    doc.text(item.fields.amount['en-US'], 350, y);
-    y += itemSpacing;
-  });
-
-  doc.end();
-  console.log(`[INFO] PDF generated at ${pdfPath}`);
-}
-
-async function updateInvoice(consumptionData) {
-  const env = await client.getSpace(SPACE_ID).then(space => space.getEnvironment(ENVIRONMENT));
-
-  const invoiceEntry = await env.getEntry(INVOICE_ENTRY_ID);
-
-  // Clean previous line items if any
-  invoiceEntry.fields.lineItems = { 'en-US': [] };
-
-  const billingPeriodStart = invoiceEntry.fields.billingPeriodStart['en-US'];
-  const lineItems = await createLineItemEntries(env, consumptionData, billingPeriodStart);
-
-  invoiceEntry.fields.lineItems['en-US'] = lineItems;
-
-  await invoiceEntry.update();
-  // Refresh entry to avoid version mismatch
-  const updatedInvoice = await env.getEntry(invoiceEntry.sys.id);
+  // Update and publish invoice safely
+  const updatedInvoice = await invoice.update();
   await updatedInvoice.publish();
 
-  console.log(`[INFO] Invoice ${invoiceEntry.fields.invoiceNumber['en-US']} updated and published.`);
-  return { invoiceEntry: updatedInvoice, lineItems };
+  console.info(`[INFO] Invoice ${INVOICE_ENTRY_ID} updated with ${createdEntries.length} line items`);
+
+  return updatedInvoice;
 }
 
+function generatePDF(invoice, lineItems) {
+  if (!fs.existsSync(PDF_OUTPUT_DIR)) fs.mkdirSync(PDF_OUTPUT_DIR);
+
+  const pdfPath = path.join(PDF_OUTPUT_DIR, `${INVOICE_ENTRY_ID}.pdf`);
+  const doc = new PDFDocument({ margin: 50 });
+  doc.pipe(fs.createWriteStream(pdfPath));
+
+  doc.fontSize(20).text('Invoice: RVE CLOUD OCEAN', { align: 'center' });
+  doc.moveDown();
+
+  doc.fontSize(12);
+  lineItems.forEach(item => {
+    doc.text(
+      `${item.stationName} | Date: ${item.date.toDateString()} | kWh: ${item.energyConsumed.toFixed(
+        2
+      )} | Unit Price: ${item.unitPrice.toFixed(2)} | Amount: ${item.amount.toFixed(2)}`
+    );
+  });
+
+  const totalAmount = lineItems.reduce((sum, i) => sum + i.amount, 0);
+  doc.moveDown();
+  doc.fontSize(14).text(`Total Amount: ${totalAmount.toFixed(2)}`, { align: 'right' });
+
+  doc.end();
+  console.info(`[INFO] PDF generated at ${pdfPath}`);
+  return pdfPath;
+}
+
+// Main execution
 async function main() {
   try {
-    const consumptionData = await fetchConsumptionData();
+    const startDate = new Date(process.env.START_DATE);
+    const endDate = new Date(process.env.END_DATE);
 
-    const { invoiceEntry, lineItems } = await updateInvoice(consumptionData);
+    const lineItems = await fetchConsumptionData(startDate, endDate);
+    const invoice = await createOrUpdateInvoice(lineItems);
+    generatePDF(invoice, lineItems);
 
-    generatePDF({
-      invoiceNumber: invoiceEntry.fields.invoiceNumber['en-US'],
-      syndicateName: invoiceEntry.fields.syndicateName['en-US'],
-      clientName: invoiceEntry.fields.clientName['en-US'],
-      clientEmail: invoiceEntry.fields.clientEmail['en-US'],
-      billingPeriodStart: invoiceEntry.fields.billingPeriodStart['en-US'],
-      billingPeriodEnd: invoiceEntry.fields.billingPeriodEnd['en-US']
-    }, lineItems);
-
+    console.info('[INFO] RVE data synced to Contentful successfully');
   } catch (err) {
     console.error('❌ Error:', err);
   }
