@@ -30,7 +30,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   }
 
   // Set invoice fields
-  entry.fields["syndicateName"] = { "en-US": "RVE Cloud Ocean" };
+  entry.fields["syndicateName"] = { "en-US": "RVE CLOUD ODEAN" };
   entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
   entry.fields["contact"] = { "en-US": "contact@rve.ca" };
