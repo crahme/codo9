@@ -12,8 +12,7 @@ const client = contentful.createClient({
 
 async function getEnvironment() {
   const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-  const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
-  return env;
+  return await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
 }
 
 // --- Convert plain text to Contentful Rich Text ---
@@ -38,9 +37,9 @@ function toRichText(text) {
   };
 }
 
-// --- Create line item entries ---
-async function createLineItemEntries(env, lineItems) {
-  const createdEntries = [];
+// --- Create line item entries and return links ---
+async function createLineItemLinks(env, lineItems) {
+  const links = [];
   for (const item of lineItems) {
     const entry = await env.createEntry("lineItem", {
       fields: {
@@ -53,12 +52,12 @@ async function createLineItemEntries(env, lineItems) {
       },
     });
     await entry.publish();
-    createdEntries.push({ sys: { type: "Link", linkType: "Entry", id: entry.sys.id } });
+    links.push({ sys: { type: "Link", linkType: "Entry", id: entry.sys.id } });
   }
-  return createdEntries;
+  return links;
 }
 
-// --- Create or update invoice entry ---
+// --- Create or update invoice ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
 
@@ -86,9 +85,8 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
   entry.fields["lateFeeRate"] = { "en-US": 0 };
 
-  // Create line item entries and attach to invoice
-  const lineItemLinks = await createLineItemEntries(env, invoiceData.lineItems);
-  entry.fields["lineItems"] = { "en-US": lineItemLinks };
+  // Attach line items (already created entries)
+  entry.fields["lineItems"] = { "en-US": invoiceData.lineItems };
 
   const updatedEntry = await entry.update();
   await updatedEntry.publish();
@@ -107,7 +105,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     const consumptionData = await service.getConsumptionData(startDate, endDate);
 
     // Build line items from RVE readings
-    const lineItems = consumptionData.flatMap(station =>
+    const rawLineItems = consumptionData.flatMap(station =>
       station.readings
         .filter(read => read.time_stamp || read.date)
         .map(read => {
@@ -134,7 +132,11 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         .filter(Boolean)
     );
 
-    // Prepare invoice data
+    // --- Create line items in Contentful and get links ---
+    const env = await getEnvironment();
+    const lineItemLinks = await createLineItemLinks(env, rawLineItems);
+
+    // Prepare invoice data including the line items links
     const invoiceData = {
       invoiceNumber: "fac-2024-001",
       invoiceDate: new Date().toISOString(),
@@ -143,7 +145,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      lineItems,
+      lineItems: lineItemLinks, // Defined directly here
     };
 
     console.log(`[INFO] Writing invoice ${invoiceData.invoiceNumber} to Contentful...`);
