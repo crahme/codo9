@@ -10,7 +10,7 @@ const pointUuid = "71ef9476-3855-4a3f-8fc5-333cfbf9e898";
 const client = axios.create({
   baseURL: process.env.CLOUD_OCEAN_BASE_URL,
   headers: {
-    "Authorization": `Bearer ${process.env.API_Key}`, // raw token from .env
+    "Access-Token": ` ${process.env.API_Key}`, // raw token from .env
     "Content-Type": "application/json",
     "Accept": "application/json"
   },
