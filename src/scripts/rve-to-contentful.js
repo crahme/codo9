@@ -12,7 +12,7 @@ dotenv.config();
 const INVOICE_ENTRY_ID = 'fac-2024-001'; // your invoice entry
 const UNIT_PRICE = 0.15; // example unit price
 
-const client = createClient({ accessToken: CONTENTFUL_TOKEN });
+const client = createClient({ accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN });
 
 async function fetchConsumptionData() {
   console.log('[INFO] Fetching consumption data from RVE API...');
