@@ -75,7 +75,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
     // Prepare invoice data
     const invoiceData = {
-      invoiceNumber: "INV-20241016-1125", // you can generate dynamically
+      invoiceNumber: "fac-2024-001", // you can generate dynamically
       invoiceDate: new Date().toISOString().split("T")[0],
       chargerSerialNumber: "CHG-001", // you can map per station if needed
       billingPeriodStart: startDate,
