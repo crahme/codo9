@@ -16,7 +16,7 @@ const client = createClient({ accessToken: process.env.CONTENTFUL_MANAGEMENT_TOK
 
 async function fetchConsumptionData() {
   console.log('[INFO] Fetching consumption data from RVE API...');
-  const data = await CloudOceanService.getConsumptionData();
+  const data = await CloudOceanService.fetchConsumptionData();
   console.table(data.map(d => ({
     Name: d.name,
     Location: d.location,
