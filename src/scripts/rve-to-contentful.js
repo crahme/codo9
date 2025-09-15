@@ -3,9 +3,7 @@ dotenv.config();
 
 import fs from 'fs';
 import path from 'path';
-import pkg from 'contentful-management';
-const { createClient } = pkg;
-
+import { createClient } from 'contentful-management';
 import { CloudOceanService } from '../services/CloudOceanService.js';
 import PDFDocument from 'pdfkit';
 
@@ -15,74 +13,81 @@ const CONTENTFUL_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
 const INVOICE_ENTRY_ID = process.env.CONTENTFUL_INVOICE_ENTRY_ID || 'RVE CLOUD OCEAN';
 const PDF_OUTPUT_DIR = './pdfs';
 
-// Initialize Contentful client
 const client = createClient({ accessToken: CONTENTFUL_TOKEN });
 
+// Fetch raw consumption data from RVE
 async function fetchConsumptionData(startDate, endDate) {
-  if (!startDate || !endDate) {
-    throw new Error('Start date and end date must be defined');
-  }
+  if (!startDate || !endDate) throw new Error('Start and end dates must be defined');
 
-  const stations = await CloudOceanService.getStations(); // fetch station list
-  const allReadings = [];
+  const readings = await CloudOceanService.fetchConsumptionData(
+    startDate.toISOString(),
+    endDate.toISOString()
+  );
 
-  for (const station of stations) {
+  if (!readings || !readings.length) throw new Error('No consumption data fetched.');
+
+  const lineItems = [];
+  for (const r of readings) {
     try {
-      const readings = await CloudOceanService.fetchConsumptionData(
-        station.id,
-        startDate.toISOString(),
-        endDate.toISOString()
-      );
+      if (!r.timestamp) {
+        console.warn(`[WARN] Skipping record with missing timestamp:`, r);
+        continue;
+      }
 
-      const processed = readings.map(r => ({
-        stationName: station.name,
-        date: new Date(r.timestamp),
-        energyConsumed: Number(r.kWh),
-        unitPrice: Number(r.unitPrice || 0.15),
-        amount: Number(r.kWh * (r.unitPrice || 0.15))
-      }));
+      const date = new Date(r.timestamp);
+      if (isNaN(date.getTime())) {
+        console.warn(`[WARN] Skipping record with invalid date:`, r.timestamp);
+        continue;
+      }
 
-      allReadings.push(...processed);
-      console.info(`[INFO] Fetched ${processed.length} readings for ${station.name}`);
+      const energy = Number(r.kWh);
+      const price = Number(r.unitPrice || 0.15);
+
+      if (isNaN(energy) || energy <= 0) {
+        console.warn(`[WARN] Skipping record with invalid energy value:`, r.kWh);
+        continue;
+      }
+
+      lineItems.push({
+        date,
+        energyConsumed: energy,
+        unitPrice: price,
+        amount: Number(energy * price)
+      });
     } catch (err) {
-      console.warn(`[WARN] Failed for ${station.name}: ${err.message}`);
+      console.warn(`[WARN] Skipping malformed record:`, r, err.message);
     }
   }
 
-  if (!allReadings.length) {
-    throw new Error('No consumption data fetched.');
-  }
-
-  return allReadings;
+  return lineItems;
 }
 
+// Create line item entries in Contentful
 async function createLineItemEntries(environment, lineItems) {
   const createdEntries = [];
 
   for (const item of lineItems) {
-    // Ensure date exists
-    if (!item.date || isNaN(item.date.getTime())) {
-      console.warn('[WARN] Invalid date for reading:', item);
-      continue;
+    try {
+      const entry = await environment.createEntry('lineItem', {
+        fields: {
+          date: { 'en-US': item.date.toISOString() },
+          energyConsumed: { 'en-US': item.energyConsumed },
+          unitPrice: { 'en-US': item.unitPrice },
+          amount: { 'en-US': item.amount }
+        }
+      });
+
+      await entry.publish();
+      createdEntries.push(entry);
+    } catch (err) {
+      console.warn(`[WARN] Failed to create line item entry, skipping.`, item, err.message);
     }
-
-    const entry = await environment.createEntry('lineItem', {
-      fields: {
-        stationName: { 'en-US': item.stationName },
-        date: { 'en-US': item.date.toISOString() },
-        energyConsumed: { 'en-US': item.energyConsumed },
-        unitPrice: { 'en-US': item.unitPrice },
-        amount: { 'en-US': item.amount }
-      }
-    });
-
-    await entry.publish();
-    createdEntries.push(entry);
   }
 
   return createdEntries;
 }
 
+// Overwrite or create invoice
 async function createOrUpdateInvoice(lineItems) {
   const space = await client.getSpace(SPACE_ID);
   const environment = await space.getEnvironment(ENVIRONMENT);
@@ -91,35 +96,28 @@ async function createOrUpdateInvoice(lineItems) {
   try {
     invoice = await environment.getEntry(INVOICE_ENTRY_ID);
   } catch {
-    // create new invoice if not exists
     invoice = await environment.createEntryWithId('invoice', INVOICE_ENTRY_ID, {
-      fields: {
-        title: { 'en-US': 'RVE CLOUD OCEAN' },
-        lineItems: { 'en-US': [] }
-      }
+      fields: { title: { 'en-US': 'RVE CLOUD OCEAN' }, lineItems: { 'en-US': [] } }
     });
   }
 
-  // Clear existing line items
+  // clear existing lineItems
   invoice.fields.lineItems = { 'en-US': [] };
   await invoice.update();
 
-  // Create new line items and link to invoice
   const createdEntries = await createLineItemEntries(environment, lineItems);
 
   invoice.fields.lineItems['en-US'] = createdEntries.map(entry => ({
     sys: { type: 'Link', linkType: 'Entry', id: entry.sys.id }
   }));
 
-  // Update and publish invoice safely
   const updatedInvoice = await invoice.update();
   await updatedInvoice.publish();
-
-  console.info(`[INFO] Invoice ${INVOICE_ENTRY_ID} updated with ${createdEntries.length} line items`);
 
   return updatedInvoice;
 }
 
+// Generate PDF
 function generatePDF(invoice, lineItems) {
   if (!fs.existsSync(PDF_OUTPUT_DIR)) fs.mkdirSync(PDF_OUTPUT_DIR);
 
@@ -130,10 +128,9 @@ function generatePDF(invoice, lineItems) {
   doc.fontSize(20).text('Invoice: RVE CLOUD OCEAN', { align: 'center' });
   doc.moveDown();
 
-  doc.fontSize(12);
   lineItems.forEach(item => {
     doc.text(
-      `${item.stationName} | Date: ${item.date.toDateString()} | kWh: ${item.energyConsumed.toFixed(
+      `Date: ${item.date.toDateString()} | kWh: ${item.energyConsumed.toFixed(
         2
       )} | Unit Price: ${item.unitPrice.toFixed(2)} | Amount: ${item.amount.toFixed(2)}`
     );
@@ -155,6 +152,11 @@ async function main() {
     const endDate = new Date(process.env.END_DATE);
 
     const lineItems = await fetchConsumptionData(startDate, endDate);
+    if (!lineItems.length) {
+      console.warn('[WARN] No valid line items found, aborting invoice update.');
+      return;
+    }
+
     const invoice = await createOrUpdateInvoice(lineItems);
     generatePDF(invoice, lineItems);
 
