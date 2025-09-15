@@ -25,12 +25,12 @@ async function createLineItemEntries(env, lineItems) {
   for (const item of lineItems) {
     const entry = await env.createEntry("lineItem", {
       fields: {
-        date: { "en-US": item.date },
-        startTime: { "en-US": item.startTime },
-        endTime: { "en-US": item.endTime },
-        energyConsumed: { "en-US": item.energyConsumed },
-        unitPrice: { "en-US": item.unitPrice },
-        amount: { "en-US": item.amount },
+        date: { "en-US": item.date.toISOString() },
+        startTime: { "en-US": item.startTime.toISOString() },
+        endTime: { "en-US": item.endTime.toISOString() },
+        energyConsumed: { "en-US": item.energyConsumed.toString() },
+        unitPrice: { "en-US": item.unitPrice.toString() },
+        amount: { "en-US": item.amount.toString() },
       }
     });
     const publishedEntry = await entry.publish();
@@ -62,14 +62,14 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
   entry.fields["contact"] = { "en-US": "contact@rve.ca" };
   entry.fields["invoiceNumber"] = { "en-US": invoiceData.invoiceNumber };
-  entry.fields["invoiceDate"] = { "en-US": invoiceData.invoiceDate };
+  entry.fields["invoiceDate"] = { "en-US": invoiceData.invoiceDate.toISOString() };
   entry.fields["clientName"] = { "en-US": "John Doe" };
   entry.fields["clientEmail"] = { "en-US": "john.doe@example.com" };
   entry.fields["chargerSerialNumber"] = { "en-US": invoiceData.chargerSerialNumber };
-  entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
-  entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
-  entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
-  entry.fields["lateFeeRate"] = { "en-US": 0 };
+  entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart.toISOString() };
+  entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd.toISOString() };
+  entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate.toISOString() };
+  entry.fields["lateFeeRate"] = { "en-US": "0" };
   entry.fields["lineItems"] = { "en-US": lineItemLinks };
 
   const updatedEntry = await entry.update();
@@ -134,13 +134,14 @@ function generateInvoicePDF(invoiceData, filePath) {
     const lineItems = consumptionData.flatMap(station =>
       station.readings.map(read => {
         const readingDate = new Date(read.time_stamp);
+        if (isNaN(readingDate)) throw new Error(`Invalid date: ${read.time_stamp}`);
         return {
           date: readingDate,
-          startTime: new Date(readingDate.getTime()),
+          startTime: new Date(readingDate.getTime()), // 00:00:00 UTC
           endTime: new Date(readingDate.getTime() + (23 * 3600 + 59 * 60 + 59) * 1000),
-          energyConsumed: parseFloat(read.value),
+          energyConsumed: read.value,  // will convert to string in Contentful
           unitPrice: parseFloat(process.env.RATE_PER_KWH || 0.15),
-          amount: parseFloat(read.value) * parseFloat(process.env.RATE_PER_KWH || 0.15)
+          amount: read.value * parseFloat(process.env.RATE_PER_KWH || 0.15)
         };
       })
     );
