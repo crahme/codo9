@@ -151,7 +151,7 @@ function generateInvoicePDF(invoiceData) {
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       lineItems: consumptionData.map(station => ({
-        date: station.firstReading.time_stamp,
+        date: invoiceData,
         startTime: `${station.firstReading.time_stamp}T00:00:00Z`,
         endTime: `${station.lastReading.time_stamp}T23:59:59Z`,
         energyConsumed: station.consumption.toFixed(2),
