@@ -11,12 +11,12 @@ dotenv.config();
 
 const INVOICE_ENTRY_ID = 'fac-2024-001'; // your invoice entry
 const UNIT_PRICE = 0.15; // example unit price
-
+const service= new CloudOceanService();
 const client = createClient({ accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN });
 
 async function fetchConsumptionData() {
   console.log('[INFO] Fetching consumption data from RVE API...');
-  const data = await CloudOceanService.fetchConsumptionData();
+  const data = await service.getConsumptionData();
   console.table(data.map(d => ({
     Name: d.name,
     Location: d.location,
