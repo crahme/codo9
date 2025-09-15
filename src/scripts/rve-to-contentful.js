@@ -151,8 +151,6 @@ function generatePDF(invoiceData) {
       item.date,
       item.startTime,
       item.endTime,
-      item.stationName,
-      item.location,
       item.energyConsumed,
       item.unitPrice,
       item.amount
