@@ -4,8 +4,6 @@ dotenv.config();
 
 import { CloudOceanService } from "../services/CloudOceanService.js";
 import contentful from "contentful-management";
-import fs from "fs";
-import PDFDocument from "pdfkit";
 
 // --- Contentful setup ---
 const client = contentful.createClient({
@@ -18,7 +16,7 @@ async function getEnvironment() {
   return env;
 }
 
-// --- Convert plain text to RichText ---
+// --- Convert plain text to Contentful RichText ---
 function toRichText(text) {
   return {
     nodeType: "document",
@@ -32,12 +30,32 @@ function toRichText(text) {
             nodeType: "text",
             value: text,
             marks: [],
-            data: {},
-          },
-        ],
-      },
-    ],
+            data: {}
+          }
+        ]
+      }
+    ]
   };
+}
+
+// --- Create line item entries dynamically ---
+async function createLineItemEntries(env, lineItems) {
+  const createdEntries = [];
+  for (const item of lineItems) {
+    const entry = await env.createEntry("lineItem", {
+      fields: {
+        date: { "en-US": item.date },
+        startTime: { "en-US": item.startTime },
+        endTime: { "en-US": item.endTime },
+        energyConsumed: { "en-US": item.energyConsumed },
+        unitPrice: { "en-US": item.unitPrice },
+        amount: { "en-US": item.amount },
+      }
+    });
+    await entry.publish();
+    createdEntries.push(entry.sys.id);
+  }
+  return createdEntries;
 }
 
 // --- Create or update invoice entry ---
@@ -53,7 +71,10 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // Invoice fields
+  // Create line item entries
+  const lineItemEntryIds = await createLineItemEntries(env, invoiceData.lineItems);
+
+  // Set invoice fields
   entry.fields["syndicateName"] = { "en-US": "RVE Cloud Ocean" };
   entry.fields["slug"] = { "en-US": `/fac-2024-001` };
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
@@ -68,77 +89,16 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText || "") };
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
 
-  // Line items (linking existing line item entries)
+  // Link line items
   entry.fields["lineItems"] = {
-    "en-US": invoiceData.lineItems.map(item => ({
-      sys: {
-        type: "Link",
-        linkType: "Entry",
-        id: item.entryId, // Pre-created line item entry in Contentful
-      }
+    "en-US": lineItemEntryIds.map(id => ({
+      sys: { type: "Link", linkType: "Entry", id }
     }))
   };
 
   const updatedEntry = await entry.update();
   await updatedEntry.publish();
   console.log(`[INFO] Invoice ${invoiceId} published successfully`);
-}
-
-// --- Generate daily line items for Contentful ---
-function generateDailyLineItems(consumptionData, startDate, endDate) {
-  const dailyItems = [];
-
-  // Create date array for billing period
-  let current = new Date(startDate);
-  const end = new Date(endDate);
-
-  while (current <= end) {
-    const dateStr = current.toISOString().split("T")[0]; // YYYY-MM-DD
-
-    for (const station of consumptionData) {
-      const energy = station.consumption / ((new Date(endDate) - new Date(startDate)) / (1000*60*60*24) + 1);
-      dailyItems.push({
-        date: dateStr,
-        startTime: `${dateStr}T00:00:00Z`,
-        endTime: `${dateStr}T23:59:59Z`,
-        energyConsumed: energy.toFixed(2),
-        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        amount: (energy * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
-        entryId: station.entryId // Must be set if linking existing line items
-      });
-    }
-
-    current.setUTCDate(current.getUTCDate() + 1);
-  }
-
-  return dailyItems;
-}
-
-// --- Generate PDF of invoice ---
-function generateInvoicePDF(invoiceData, consumptionData) {
-  const doc = new PDFDocument();
-  const fileName = `invoice_${invoiceData.invoiceNumber}.pdf`;
-  doc.pipe(fs.createWriteStream(fileName));
-
-  doc.fontSize(16).text("Invoice", { align: "center" });
-  doc.moveDown();
-  doc.fontSize(12).text(`Invoice Number: ${invoiceData.invoiceNumber}`);
-  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
-  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`);
-  doc.text(`Charger Serial: ${invoiceData.chargerSerialNumber}`);
-  doc.text(`Client: ${invoiceData.clientName} <${invoiceData.clientEmail}>`);
-  doc.moveDown();
-
-  doc.text("Consumption Details:");
-  const tableTop = doc.y + 20;
-  doc.text("Date       Start UTC      End UTC      Energy(kWh)   Unit Price($)   Amount($)", { underline: true });
-
-  for (const item of invoiceData.lineItems) {
-    doc.text(`${item.date}   ${item.startTime.split("T")[1]}   ${item.endTime.split("T")[1]}   ${item.energyConsumed}        ${item.unitPrice}          ${item.amount}`);
-  }
-
-  doc.end();
-  console.log(`[INFO] PDF generated: ${fileName}`);
 }
 
 // --- Main runner ---
@@ -151,10 +111,19 @@ function generateInvoicePDF(invoiceData, consumptionData) {
 
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
+    const totals = service.calculateTotals(consumptionData);
 
-    // You must pre-create Contentful line item entries and assign entryId for linking
-    const lineItems = generateDailyLineItems(consumptionData, startDate, endDate);
+    // Prepare line items per day with UTC times 00:00:00 -> 23:59:59
+    const lineItems = consumptionData.map(station => ({
+      date: new Date().toISOString().split("T")[0],
+      startTime: new Date(`${startDate}T00:00:00Z`).toISOString(),
+      endTime: new Date(`${endDate}T23:59:59Z`).toISOString(),
+      energyConsumed: station.consumption.toFixed(2),
+      unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
+      amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
+    }));
 
+    // Prepare invoice data
     const invoiceData = {
       invoiceNumber: "fac-2024-001",
       invoiceDate: new Date().toISOString().split("T")[0],
@@ -163,20 +132,15 @@ function generateInvoicePDF(invoiceData, consumptionData) {
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      clientName: "John Doe",
-      clientEmail: "john.doe@example.com",
       lineItems
     };
 
     console.log("[INFO] Writing invoice to Contentful...");
     await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
 
-    console.log("[INFO] Generating PDF...");
-    generateInvoicePDF(invoiceData, consumptionData);
-
     console.log("[INFO] Done ✅");
 
   } catch (err) {
-    console.error("❌ Error:", err);
+    console.error("❌ Error:", err.message);
   }
 })();
