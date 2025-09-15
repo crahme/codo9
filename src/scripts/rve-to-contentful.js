@@ -4,6 +4,8 @@ dotenv.config();
 
 import { CloudOceanService } from "../services/CloudOceanService.js";
 import contentful from "contentful-management";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // --- Contentful setup ---
 const client = contentful.createClient({
@@ -30,7 +32,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   }
 
   // Set invoice fields
-  entry.fields["syndicateName"] = { "en-US": "RVE CLOUD ODEAN" };
+  entry.fields["syndicateName"] = { "en-US": "RVE CLOUD OCEAN" };
   entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
   entry.fields["contact"] = { "en-US": "contact@rve.ca" };
@@ -44,17 +46,19 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["environmentalImpactText"] = { "en-US": invoiceData.environmentalImpactText || "" };
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
 
-  // Set line items
-  entry.fields["lineItems"] = { "en-US": invoiceData.lineItems.map(item => ({
-    fields: {
-      date: { "en-US": item.date },
-      startTime: { "en-US": item.startTime },
-      endTime: { "en-US": item.endTime },
-      energyConsumed: { "en-US": item.energyConsumed },
-      unitPrice: { "en-US": item.unitPrice },
-      amount: { "en-US": item.amount },
-    }
-  }))};
+  // Set line items (array of line item content type)
+  entry.fields["lineItems"] = {
+    "en-US": invoiceData.lineItems.map(item => ({
+      fields: {
+        date: { "en-US": item.date },
+        startTime: { "en-US": item.startTime },
+        endTime: { "en-US": item.endTime },
+        energyConsumed: { "en-US": item.energyConsumed },
+        unitPrice: { "en-US": item.unitPrice },
+        amount: { "en-US": item.amount },
+      }
+    }))
+  };
 
   const updatedEntry = await entry.update();
   await updatedEntry.publish();
@@ -66,18 +70,18 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const service = new CloudOceanService();
 
   try {
-    // Fetch consumption data from RVE API
     const startDate = "2024-10-16";
     const endDate = "2024-11-25";
-    const consumptionData = await service.getConsumptionData(startDate, endDate);
 
+    console.log("[INFO] Fetching consumption data from RVE API...");
+    const consumptionData = await service.getConsumptionData(startDate, endDate);
     const totals = service.calculateTotals(consumptionData);
 
     // Prepare invoice data
     const invoiceData = {
-      invoiceNumber: "fac-2024-001", // you can generate dynamically
+      invoiceNumber: "fAC-2024-001", // fixed invoice number
       invoiceDate: new Date().toISOString().split("T")[0],
-      chargerSerialNumber: "CHG-001", // you can map per station if needed
+      chargerSerialNumber: "CHG-001", // can map dynamically if needed
       billingPeriodStart: startDate,
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
@@ -88,12 +92,14 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         endTime: new Date(`${endDate}T23:59:59Z`).toISOString(),
         energyConsumed: station.consumption.toFixed(2),
         unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2)
+        amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
       }))
     };
 
-    // Create or update Contentful invoice entry
+    console.log("[INFO] Writing invoice to Contentful...");
     await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
+
+    console.log("[INFO] Done ✅");
 
   } catch (err) {
     console.error("❌ Error:", err.message);
