@@ -4,6 +4,8 @@ dotenv.config();
 
 import { CloudOceanService } from "../services/CloudOceanService.js";
 import contentful from "contentful-management";
+import fs from "fs";
+import PDFDocument from "pdfkit";
 
 // --- Contentful setup ---
 const client = contentful.createClient({
@@ -15,7 +17,7 @@ async function getEnvironment() {
   return await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
 }
 
-// --- Convert plain text to Contentful Rich Text ---
+// Convert string to Contentful RichText
 function toRichText(text) {
   return {
     nodeType: "document",
@@ -29,17 +31,17 @@ function toRichText(text) {
             nodeType: "text",
             value: text,
             marks: [],
-            data: {},
-          },
-        ],
-      },
-    ],
+            data: {}
+          }
+        ]
+      }
+    ]
   };
 }
 
-// --- Create line item entries and return links ---
-async function createLineItemLinks(env, lineItems) {
-  const links = [];
+// --- Create Line Item Entries ---
+async function createLineItemEntries(env, lineItems) {
+  const entries = [];
   for (const item of lineItems) {
     const entry = await env.createEntry("lineItem", {
       fields: {
@@ -52,12 +54,18 @@ async function createLineItemLinks(env, lineItems) {
       },
     });
     await entry.publish();
-    links.push({ sys: { type: "Link", linkType: "Entry", id: entry.sys.id } });
+    entries.push({
+      sys: {
+        type: "Link",
+        linkType: "Entry",
+        id: entry.sys.id
+      }
+    });
   }
-  return links;
+  return entries;
 }
 
-// --- Create or update invoice ---
+// --- Create or Update Invoice ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
 
@@ -70,8 +78,12 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
+  // Create line item entries first
+  const lineItemLinks = await createLineItemEntries(env, invoiceData.lineItems);
+
+  // Set invoice fields
   entry.fields["syndicateName"] = { "en-US": "RVE Cloud Ocean" };
-  entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber.toLowerCase()}` };
+  entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
   entry.fields["contact"] = { "en-US": "contact@rve.ca" };
   entry.fields["invoiceNumber"] = { "en-US": invoiceData.invoiceNumber };
@@ -83,17 +95,52 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
   entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText || "") };
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
-  entry.fields["lateFeeRate"] = { "en-US": 0 };
-
-  // Attach line items (already created entries)
-  entry.fields["lineItems"] = { "en-US": invoiceData.lineItems };
+  entry.fields["lineItems"] = { "en-US": lineItemLinks };
 
   const updatedEntry = await entry.update();
   await updatedEntry.publish();
   console.log(`[INFO] Invoice ${invoiceId} published successfully`);
+
+  return invoiceData;
 }
 
-// --- Main runner ---
+// --- Generate PDF ---
+function generateInvoicePDF(invoiceData) {
+  const doc = new PDFDocument({ margin: 30 });
+  const pdfPath = `./${invoiceData.invoiceNumber}.pdf`;
+  doc.pipe(fs.createWriteStream(pdfPath));
+
+  doc.fontSize(20).text("Invoice", { align: "center" });
+  doc.moveDown();
+
+  // Invoice info
+  doc.fontSize(12).text(`Invoice Number: ${invoiceData.invoiceNumber}`);
+  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
+  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} - ${invoiceData.billingPeriodEnd}`);
+  doc.text(`Charger Serial: ${invoiceData.chargerSerialNumber}`);
+  doc.text(`Client: ${invoiceData.clientName} <${invoiceData.clientEmail}>`);
+  doc.text(`Address: ${invoiceData.address}`);
+  doc.text(`Contact: ${invoiceData.contact}`);
+  doc.moveDown();
+
+  // Table header
+  doc.text("Line Items:", { underline: true });
+  doc.moveDown(0.5);
+
+  // Draw table
+  invoiceData.lineItems.forEach((item, index) => {
+    doc.text(
+      `${index + 1}. Date: ${item.date} | Start: ${item.startTime} | End: ${item.endTime} | Energy: ${item.energyConsumed} kWh | Unit Price: $${item.unitPrice} | Amount: $${item.amount}`
+    );
+  });
+
+  doc.moveDown();
+  doc.text(`Environmental Impact: ${invoiceData.environmentalImpactText}`);
+  doc.end();
+  console.log(`[INFO] PDF generated at ${pdfPath}`);
+}
+
+// --- Main Runner ---
 (async () => {
   const service = new CloudOceanService();
 
@@ -104,13 +151,12 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
 
-    // Build line items from RVE readings
-    const rawLineItems = consumptionData.flatMap(station =>
+    // Prepare invoice line items from RVE readings
+    const lineItems = consumptionData.flatMap(station =>
       station.readings
-        .filter(read => read.time_stamp || read.date)
+        .filter(r => r.time_stamp)
         .map(read => {
-          const ts = read.time_stamp || read.date;
-          const readingDate = new Date(ts);
+          const readingDate = new Date(read.time_stamp);
           if (isNaN(readingDate.getTime())) return null;
 
           const startTime = new Date(Date.UTC(readingDate.getUTCFullYear(), readingDate.getUTCMonth(), readingDate.getUTCDate(), 0, 0, 0));
@@ -132,11 +178,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         .filter(Boolean)
     );
 
-    // --- Create line items in Contentful and get links ---
-    const env = await getEnvironment();
-    const lineItemLinks = await createLineItemLinks(env, rawLineItems);
-
-    // Prepare invoice data including the line items links
+    // Prepare invoice data
     const invoiceData = {
       invoiceNumber: "fac-2024-001",
       invoiceDate: new Date().toISOString(),
@@ -145,11 +187,14 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      lineItems: lineItemLinks, // Defined directly here
+      lineItems
     };
 
     console.log(`[INFO] Writing invoice ${invoiceData.invoiceNumber} to Contentful...`);
     await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
+
+    // Generate PDF
+    generateInvoicePDF(invoiceData);
 
     console.log("[INFO] Done ✅");
 
