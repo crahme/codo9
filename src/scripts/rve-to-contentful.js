@@ -1,14 +1,14 @@
 import dotenv from 'dotenv';
-import { createClient } from 'contentful-management';
+dotenv.config();
+import pkg from 'contentful-management';
+const { createClient } = pkg;
 import fs from 'fs';
 import PDFDocument from 'pdfkit';
 import { CloudOceanService } from '../services/CloudOceanService.js';
 
 dotenv.config();
 
-const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
-const ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT || 'master';
-const CONTENTFUL_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
+
 const INVOICE_ENTRY_ID = 'fac-2024-001'; // your invoice entry
 const UNIT_PRICE = 0.15; // example unit price
 
