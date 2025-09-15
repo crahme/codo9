@@ -1,195 +1,107 @@
 // src/scripts/rve-to-contentful.js
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
 
-import pkg from 'contentful-management';
-const { createClient } = pkg;
-import{CloudOceanService} from '../services/CloudOceanService.js';
-import fs from 'fs';
-import path from 'path';
-import PDFDocument from 'pdfkit';
+import { CloudOceanService } from "../services/CloudOceanService.js";
+import contentful from "contentful-management";
+import path from "path";
+import { fileURLToPath } from "url";
 
-/**
- * Safely parse a date string into ISO format for Contentful
- */
-function parseSafeDate(dateStr) {
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return null;
-    return d.toISOString();
-  } catch {
-    return null;
-  }
-}
+// --- Contentful setup ---
+const client = contentful.createClient({
+  accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+});
 
-/**
- * Format date as MM/DD/YYYY
- */
-function formatDateMMDDYYYY(date) {
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-}
-
-/**
- * Generate a proper invoice PDF with header + line items
- */
-function generateInvoicePDF(invoiceTitle, lineItems, metadata) {
-  const doc = new PDFDocument({ margin: 40 });
-  const filePath = path.join(process.cwd(), `${invoiceTitle.replace(/\s+/g, '_')}.pdf`);
-  doc.pipe(fs.createWriteStream(filePath));
-
-  // === Header ===
-  doc.fontSize(22).text(invoiceTitle, { align: 'center' }).moveDown();
-
-  doc.fontSize(12);
-  doc.text(`Invoice Number: ${metadata.invoiceNumber}`);
-  doc.text(`Client Name: ${metadata.clientName}`);
-  doc.text(`Billing Period Start: ${metadata.startDate}`);
-  doc.text(`Billing Period End: ${metadata.endDate}`);
-  doc.moveDown();
-
-  // === Line Items Table Header ===
-  doc.fontSize(14).text('Line Items', { underline: true }).moveDown(0.5);
-
-  doc.fontSize(12).text('Date', 50, doc.y, { continued: true });
-  doc.text('Start Time', 150, doc.y, { continued: true });
-  doc.text('End Time', 250, doc.y, { continued: true });
-  doc.text('Unit Price', 350, doc.y, { continued: true });
-  doc.text('Total', 450, doc.y);
-
-  doc.moveDown(0.5).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-
-  // === Table Rows ===
-  let grandTotal = 0;
-  lineItems.forEach((item) => {
-    const date = item.fields.date['en-US']?.split('T')[0] || '';
-    const startTime = item.fields.startTime?.['en-US'] || '';
-    const endTime = item.fields.endTime?.['en-US'] || '';
-    const unitPrice = item.fields.unitPrice?.['en-US'] ?? 0;
-    const total = item.fields.total?.['en-US'] ?? 0;
-
-    grandTotal += total;
-
-    doc.text(date, 50, doc.y, { continued: true });
-    doc.text(startTime, 150, doc.y, { continued: true });
-    doc.text(endTime, 250, doc.y, { continued: true });
-    doc.text(unitPrice.toFixed(2), 350, doc.y, { continued: true });
-    doc.text(total.toFixed(2), 450, doc.y);
-  });
-
-  // === Summary Row ===
-  doc.moveDown(1).fontSize(12).text(`Grand Total: ${grandTotal.toFixed(2)}`, 400);
-
-  doc.end();
-  console.log(`[INFO] PDF generated: ${filePath}`);
-}
-
-/**
- * Fetch consumption data from RVE and map into Contentful line items
- */
-async function fetchConsumptionData(cloudOcean, startDate, endDate) {
-  console.log('[INFO] Fetching consumption data from RVE API...');
-
-  let data = [];
-  try {
-    data = await cloudOcean.getConsumptionData(startDate, endDate);
-  } catch (err) {
-    console.error('❌ Failed to fetch consumption data:', err.message);
-    return [];
-  }
-
-  const lineItems = data
-    .map((record) => {
-      const safeDate = parseSafeDate(record.date);
-      if (!safeDate) {
-        console.warn('⚠️ Skipping record with invalid date:', record);
-        return null;
-      }
-
-      return {
-        fields: {
-          date: { 'en-US': safeDate },
-          startTime: { 'en-US': record.startTime || '' },
-          endTime: { 'en-US': record.endTime || '' },
-          unitPrice: { 'en-US': Number(record.unitPrice) || 0 },
-          total: { 'en-US': Number(record.total) || 0 },
-        },
-      };
-    })
-    .filter(Boolean);
-
-  console.log(`[INFO] Prepared ${lineItems.length} line items.`);
-  return lineItems;
-}
-
-/**
- * Update (overwrite) invoice entry in Contentful
- */
-async function updateInvoiceInContentful(invoiceTitle, lineItems) {
-  console.log('[INFO] Updating invoice in Contentful...');
-
-  const client = createClient({ accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN });
+async function getEnvironment() {
   const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-  const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT);
-
-  const entries = await env.getEntries({
-    content_type: 'invoice',
-    'fields.title': invoiceTitle,
-  });
-
-  if (!entries.items.length) {
-    throw new Error(`Invoice entry "${invoiceTitle}" not found.`);
-  }
-
-  const entry = entries.items[0];
-  entry.fields.lineItems = { 'en-US': lineItems };
-
-  const updatedEntry = await entry.update();
-  console.log('[INFO] Entry updated. Publishing...');
-
-  await updatedEntry.publish();
-  console.log('[INFO] Invoice published with new line items.');
-  return updatedEntry;
+  const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
+  return env;
 }
 
-/**
- * Main
- */
-async function main() {
-  const invoiceTitle = 'RVE CLOUD OCEAN';
+// --- Function to create/update invoice entry ---
+async function createOrUpdateInvoice(invoiceId, invoiceData) {
+  const env = await getEnvironment();
 
-  // Fixed billing period
-  const startDate = new Date('2024-10-16T00:00:00Z');
-  const endDate = new Date('2024-11-25T23:59:59Z');
-
-  console.log(`[INFO] Using fixed date range: ${startDate.toISOString()} → ${endDate.toISOString()}`);
-
-  const cloudOcean = new CloudOceanService(
-    process.env.RVE_API_BASE_URL,
-    process.env.RVE_API_KEY
-  );
-
-  const lineItems = await fetchConsumptionData(cloudOcean, startDate, endDate);
-  if (!lineItems.length) {
-    console.warn('⚠️ No line items to update. Exiting.');
-    return;
+  let entry;
+  try {
+    entry = await env.getEntry(invoiceId);
+    console.log(`[INFO] Updating invoice ${invoiceId}`);
+  } catch {
+    entry = await env.createEntryWithId("invoice", invoiceId, { fields: {} });
+    console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  const updatedInvoice = await updateInvoiceInContentful(invoiceTitle, lineItems);
+  // Set invoice fields
+  entry.fields["syndicateName"] = { "en-US": "RVE Cloud Ocean" };
+  entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
+  entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
+  entry.fields["contact"] = { "en-US": "contact@rve.ca" };
+  entry.fields["invoiceNumber"] = { "en-US": invoiceData.invoiceNumber };
+  entry.fields["invoiceDate"] = { "en-US": invoiceData.invoiceDate };
+  entry.fields["clientName"] = { "en-US": "John Doe" };
+  entry.fields["clientEmail"] = { "en-US": "john.doe@example.com" };
+  entry.fields["chargerSerialNumber"] = { "en-US": invoiceData.chargerSerialNumber };
+  entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
+  entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
+  entry.fields["environmentalImpactText"] = { "en-US": invoiceData.environmentalImpactText || "" };
+  entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
 
-  // Prepare metadata for PDF
-  const metadata = {
-    invoiceNumber: updatedInvoice.sys.id,
-    clientName: process.env.CLIENT_NAME || 'Unknown Client',
-    startDate: formatDateMMDDYYYY(startDate),
-    endDate: formatDateMMDDYYYY(endDate),
+  // Set line items (array of line item content type)
+  entry.fields["lineItems"] = {
+    "en-US": invoiceData.lineItems.map(item => ({
+      fields: {
+        date: { "en-US": item.date },
+        startTime: { "en-US": item.startTime },
+        endTime: { "en-US": item.endTime },
+        energyConsumed: { "en-US": item.energyConsumed },
+        unitPrice: { "en-US": item.unitPrice },
+        amount: { "en-US": item.amount },
+      }
+    }))
   };
 
-  generateInvoicePDF(invoiceTitle, lineItems, metadata);
+  const updatedEntry = await entry.update();
+  await updatedEntry.publish();
+  console.log(`[INFO] Invoice ${invoiceId} published successfully`);
 }
 
-main().catch((err) => {
-  console.error('❌ Error:', err);
-  process.exit(1);
-});
+// --- Main runner ---
+(async () => {
+  const service = new CloudOceanService();
+
+  try {
+    const startDate = "2024-10-16";
+    const endDate = "2024-11-25";
+
+    console.log("[INFO] Fetching consumption data from RVE API...");
+    const consumptionData = await service.getConsumptionData(startDate, endDate);
+    const totals = service.calculateTotals(consumptionData);
+
+    // Prepare invoice data
+    const invoiceData = {
+      invoiceNumber: "FAC-2024-001", // fixed invoice number
+      invoiceDate: new Date().toISOString().split("T")[0],
+      chargerSerialNumber: "CHG-001", // can map dynamically if needed
+      billingPeriodStart: startDate,
+      billingPeriodEnd: endDate,
+      environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
+      paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], // +30 days
+      lineItems: consumptionData.map(station => ({
+        date: new Date().toISOString().split("T")[0],
+        startTime: new Date(`${startDate}T00:00:00Z`).toISOString(),
+        endTime: new Date(`${endDate}T23:59:59Z`).toISOString(),
+        energyConsumed: station.consumption.toFixed(2),
+        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
+        amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
+      }))
+    };
+
+    console.log("[INFO] Writing invoice to Contentful...");
+    await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
+
+    console.log("[INFO] Done ✅");
+
+  } catch (err) {
+    console.error("❌ Error:", err.message);
+  }
+})();
