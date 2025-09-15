@@ -82,7 +82,7 @@ class CloudOceanAPI {
         this.headers = { ...API_HEADERS };
         logger.debug('API Configuration:', {
             baseUrl: this.baseUrl,
-            hasApiKey: !!this.apiKey,
+            hasApiKey: this.apiKey,
             headers: Object.keys(this.headers)
         });
     }
