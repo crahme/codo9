@@ -106,7 +106,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
     // Prepare invoice data
     const invoiceData = {
-      invoiceNumber: "FAC-2024-001",
+      invoiceNumber:"fac-2024-001",
       invoiceDate: new Date().toISOString().split("T")[0],
       chargerSerialNumber: "CHG-001",
       billingPeriodStart: startDate,
