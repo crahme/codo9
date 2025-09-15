@@ -133,7 +133,7 @@ function generateInvoicePDF(invoiceData, filePath) {
     // Prepare line items from RVE readings
     const lineItems = consumptionData.flatMap(station =>
       station.readings.map(read => {
-        const readingDate = new Date(read.time_stamp);
+        const readingDate = read.date ? new Date(read.date) : new Date();
         if (isNaN(readingDate)) throw new Error(`Invalid date: ${read.time_stamp}`);
         return {
           date: readingDate,
