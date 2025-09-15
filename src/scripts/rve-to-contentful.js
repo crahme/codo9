@@ -3,7 +3,9 @@ dotenv.config();
 
 import fs from 'fs';
 import path from 'path';
-import { createClient } from 'contentful-management';
+import pkg from 'contentful-management';
+const { createClient } = pkg;
+
 import { CloudOceanService } from '../services/CloudOceanService.js';
 import PDFDocument from 'pdfkit';
 
