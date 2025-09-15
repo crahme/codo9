@@ -1,5 +1,6 @@
 import axios from "axios";
-import 'dotenv/config';
+import dotenv from "dotenv";
+dotenv.config();
 
 // Module and measuring point UUIDs
 const moduleUuid = "c667ff46-9730-425e-ad48-1e950691b3f9";
