@@ -1,5 +1,6 @@
-require('dotenv').config();
-const contentful = require('contentful-management');
+import dotenv from 'dotenv';
+dotenv.config;
+import { createClient } from 'contentful-management';
 
 // Initialize Contentful client
 const client = contentful.createClient({
