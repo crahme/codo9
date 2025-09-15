@@ -4,9 +4,9 @@ dotenv.config();
 
 import { CloudOceanService } from "../services/CloudOceanService.js";
 import contentful from "contentful-management";
+import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
-import PdfPrinter from "pdfmake";
 
 // --- Contentful setup ---
 const client = contentful.createClient({
@@ -19,13 +19,7 @@ async function getEnvironment() {
   return env;
 }
 
-// --- Utility: format datetime as MM/DD/YYYY HH:MM:SS ---
-function formatDateTime(date) {
-  const pad = (n) => n.toString().padStart(2, "0");
-  return `${pad(date.getUTCMonth() + 1)}/${pad(date.getUTCDate())}/${date.getUTCFullYear()} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`;
-}
-
-// --- Utility: convert string to Contentful RichText ---
+// --- Utility to convert plain text to RichText ---
 function toRichText(text) {
   return {
     nodeType: "document",
@@ -39,38 +33,26 @@ function toRichText(text) {
             nodeType: "text",
             value: text,
             marks: [],
-            data: {}
-          }
-        ]
-      }
-    ]
+            data: {},
+          },
+        ],
+      },
+    ],
   };
 }
 
-// --- Create Contentful LineItem entries ---
-async function createLineItemEntries(env, lineItems) {
-  const lineItemEntries = [];
-  for (const item of lineItems) {
-    const entry = await env.createEntry("lineItem", {
-      fields: {
-        date: { "en-US": item.date },
-        startTime: { "en-US": item.startTime },
-        endTime: { "en-US": item.endTime },
-        energyConsumed: { "en-US": item.energyConsumed },
-        unitPrice: { "en-US": item.unitPrice },
-        amount: { "en-US": item.amount },
-      },
-    });
-    await entry.publish();
-    lineItemEntries.push({ sys: { type: "Link", linkType: "Entry", id: entry.sys.id } });
-  }
-  return lineItemEntries;
+// --- Format date to MM/DD/YYYY HH:MM:SS ---
+function formatDateTime(date) {
+  const d = new Date(date);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 // --- Create or update invoice entry ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
   let entry;
+
   try {
     entry = await env.getEntry(invoiceId);
     console.log(`[INFO] Updating invoice ${invoiceId}`);
@@ -79,26 +61,34 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // Generate line item entries in Contentful
-  const lineItemEntries = await createLineItemEntries(env, invoiceData.lineItems);
-
   // Set invoice fields
-  entry.fields = {
-    syndicateName: { "en-US": "RVE Cloud Ocean" },
-    slug: { "en-US": `/${invoiceData.invoiceNumber.toLowerCase()}` },
-    address: { "en-US": "123 EV Way, Montreal, QC" },
-    contact: { "en-US": "contact@rve.ca" },
-    invoiceNumber: { "en-US": invoiceData.invoiceNumber.toLowerCase() },
-    invoiceDate: { "en-US": invoiceData.invoiceDate },
-    clientName: { "en-US": "John Doe" },
-    clientEmail: { "en-US": "john.doe@example.com" },
-    chargerSerialNumber: { "en-US": invoiceData.chargerSerialNumber },
-    billingPeriodStart: { "en-US": invoiceData.billingPeriodStart },
-    billingPeriodEnd: { "en-US": invoiceData.billingPeriodEnd },
-    environmentalImpactText: { "en-US": toRichText(invoiceData.environmentalImpactText || "") },
-    paymentDueDate: { "en-US": invoiceData.paymentDueDate },
-    lateFeeRate: { "en-US": 0 },
-    lineItems: { "en-US": lineItemEntries },
+  entry.fields["syndicateName"] = { "en-US": "RVE Cloud Ocean" };
+  entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
+  entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
+  entry.fields["contact"] = { "en-US": "contact@rve.ca" };
+  entry.fields["invoiceNumber"] = { "en-US": invoiceData.invoiceNumber };
+  entry.fields["invoiceDate"] = { "en-US": invoiceData.invoiceDate };
+  entry.fields["clientName"] = { "en-US": "John Doe" };
+  entry.fields["clientEmail"] = { "en-US": "john.doe@example.com" };
+  entry.fields["chargerSerialNumber"] = { "en-US": invoiceData.chargerSerialNumber };
+  entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
+  entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
+  entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText || "") };
+  entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
+  entry.fields["lateFeeRate"] = { "en-US": 0 };
+
+  // --- Store line items directly ---
+  entry.fields["lineItems"] = {
+    "en-US": invoiceData.lineItems.map(item => ({
+      date: formatDateTime(item.date),
+      startTime: formatDateTime(item.startTime),
+      endTime: formatDateTime(item.endTime),
+      energyConsumed: item.energyConsumed,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+      stationName: item.stationName,
+      location: item.location,
+    }))
   };
 
   const updatedEntry = await entry.update();
@@ -106,80 +96,36 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   console.log(`[INFO] Invoice ${invoiceId} published successfully`);
 }
 
-// --- Generate line items for each day of the billing period ---
-function generateLineItems(consumptionData, startDate, endDate) {
-  const lineItems = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+// --- Generate PDF ---
+function generateInvoicePDF(invoiceData) {
+  const doc = new PDFDocument();
+  const pdfPath = path.join(process.cwd(), `${invoiceData.invoiceNumber}.pdf`);
+  doc.pipe(fs.createWriteStream(pdfPath));
 
-  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-    const dateStr = d.toISOString().split("T")[0]; // YYYY-MM-DD
-    consumptionData.forEach(station => {
-      lineItems.push({
-        date: dateStr,
-        startTime: formatDateTime(new Date(`${dateStr}T00:00:00Z`)),
-        endTime: formatDateTime(new Date(`${dateStr}T23:59:59Z`)),
-        energyConsumed: station.consumption.toFixed(2),
-        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
-        stationName: station.name,
-        location: station.location
-      });
-    });
-  }
+  doc.fontSize(18).text("Invoice", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text(`Invoice Number: ${invoiceData.invoiceNumber}`);
+  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
+  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} - ${invoiceData.billingPeriodEnd}`);
+  doc.text(`Charger Serial Number: ${invoiceData.chargerSerialNumber}`);
+  doc.text(`Client Name: John Doe`);
+  doc.text(`Client Email: john.doe@example.com`);
+  doc.text(`Environmental Impact: ${invoiceData.environmentalImpactText}`);
+  doc.moveDown();
 
-  return lineItems;
-}
+  // Table header
+  doc.fontSize(12).text("Consumption Details:");
+  doc.moveDown();
+  doc.text("Date | Start Time | End Time | Station | Location | Energy(kWh) | Unit Price | Amount");
+  doc.moveDown();
 
-// --- Generate PDF invoice ---
-function generatePDF(invoiceData) {
-  const fonts = {
-    Roboto: {
-      normal: "node_modules/pdfmake/fonts/Roboto-Regular.ttf",
-      bold: "node_modules/pdfmake/fonts/Roboto-Medium.ttf",
-      italics: "node_modules/pdfmake/fonts/Roboto-Italic.ttf",
-      bolditalics: "node_modules/pdfmake/fonts/Roboto-MediumItalic.ttf"
-    }
-  };
-  const printer = new PdfPrinter(fonts);
-
-  const tableBody = [
-    ["Date", "Start Time", "End Time", "Station", "Location", "Energy (kWh)", "Unit Price ($)", "Amount ($)"]
-  ];
   invoiceData.lineItems.forEach(item => {
-    tableBody.push([
-      item.date,
-      item.startTime,
-      item.endTime,
-      item.energyConsumed,
-      item.unitPrice,
-      item.amount
-    ]);
+    doc.text(
+      `${formatDateTime(item.date)} | ${formatDateTime(item.startTime)} | ${formatDateTime(item.endTime)} | ${item.stationName} | ${item.location} | ${item.energyConsumed} | ${item.unitPrice} | ${item.amount}`
+    );
   });
 
-  const docDefinition = {
-    content: [
-      { text: `Invoice: ${invoiceData.invoiceNumber}`, style: "header" },
-      { text: `Billing Period: ${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}` },
-      { text: "\n" },
-      {
-        table: {
-          headerRows: 1,
-          widths: ["auto", "auto", "auto", "*", "*", "auto", "auto", "auto"],
-          body: tableBody
-        }
-      }
-    ],
-    styles: {
-      header: { fontSize: 18, bold: true }
-    }
-  };
-
-  const pdfDoc = printer.createPdfKitDocument(docDefinition);
-  const pdfPath = path.join(process.cwd(), `${invoiceData.invoiceNumber}.pdf`);
-  pdfDoc.pipe(fs.createWriteStream(pdfPath));
-  pdfDoc.end();
-
+  doc.end();
   console.log(`[INFO] PDF generated at ${pdfPath}`);
 }
 
@@ -193,6 +139,7 @@ function generatePDF(invoiceData) {
 
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
+    const totals = service.calculateTotals(consumptionData);
 
     // Prepare invoice data
     const invoiceData = {
@@ -203,14 +150,23 @@ function generatePDF(invoiceData) {
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      lineItems: generateLineItems(consumptionData, startDate, endDate)
+      lineItems: consumptionData.map(station => ({
+        date: station.firstReading.time_stamp,
+        startTime: `${station.firstReading.time_stamp}T00:00:00Z`,
+        endTime: `${station.lastReading.time_stamp}T23:59:59Z`,
+        energyConsumed: station.consumption.toFixed(2),
+        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
+        amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
+        stationName: station.name,
+        location: station.location,
+      })),
     };
 
     console.log("[INFO] Writing invoice to Contentful...");
     await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
 
     console.log("[INFO] Generating PDF...");
-    generatePDF(invoiceData);
+    generateInvoicePDF(invoiceData);
 
     console.log("[INFO] Done ✅");
 
