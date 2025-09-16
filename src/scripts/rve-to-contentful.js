@@ -25,11 +25,9 @@ function toRichText(text) {
       {
         nodeType: "paragraph",
         data: {},
-        content: [
-          { nodeType: "text", value: text, marks: [], data: {} }
-        ]
-      }
-    ]
+        content: [{ nodeType: "text", value: text, marks: [], data: {} }],
+      },
+    ],
   };
 }
 
@@ -43,7 +41,7 @@ async function createLineItem(env, itemData) {
       energyConsumed: { "en-US": itemData.energyConsumed },
       unitPrice: { "en-US": itemData.unitPrice },
       amount: { "en-US": itemData.amount },
-    }
+    },
   });
   await entry.publish();
   return entry.sys.id;
@@ -62,9 +60,20 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // --- Create/publish line items first ---
+  // --- Deduplicate line items by measuring point UUID ---
+  const uniqueStations = [];
+  const seen = new Set();
+  for (const station of invoiceData.lineItems) {
+    const key = `${station.startTime}_${station.endTime}_${station.energyConsumed}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueStations.push(station);
+    }
+  }
+
+  // --- Create/publish line items ---
   const lineItemIds = [];
-  for (const item of invoiceData.lineItems) {
+  for (const item of uniqueStations) {
     const id = await createLineItem(env, item);
     lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
   }
@@ -84,7 +93,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText) };
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
 
-  // --- Link line items ---
+  // --- Link unique line items ---
   entry.fields["lineItems"] = { "en-US": lineItemIds };
 
   const updatedEntry = await entry.update();
@@ -104,7 +113,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     const consumptionData = await service.getConsumptionData(startDate, endDate);
     const totals = service.calculateTotals(consumptionData);
 
-    // Prepare invoice data
+    // --- Prepare invoice data ---
     const invoiceData = {
       invoiceNumber: "fac-2024-001",
       invoiceDate: new Date().toISOString().split("T")[0],
