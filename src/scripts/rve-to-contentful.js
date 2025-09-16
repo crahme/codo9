@@ -4,6 +4,8 @@ dotenv.config();
 
 import { CloudOceanService } from "../services/CloudOceanService.js";
 import contentful from "contentful-management";
+import fs from "fs";
+import PDFDocument from "pdfkit";
 
 // --- Contentful setup ---
 const client = contentful.createClient({
@@ -47,6 +49,61 @@ async function createLineItem(env, itemData) {
   return entry.sys.id;
 }
 
+// --- Generate PDF invoice ---
+function generateInvoicePDF(invoiceData) {
+  const outputDir = "./invoices";
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+
+  const filePath = `${outputDir}/${invoiceData.invoiceNumber}.pdf`;
+  const doc = new PDFDocument({ margin: 50 });
+  const stream = fs.createWriteStream(filePath);
+  doc.pipe(stream);
+
+  // --- Header
+  doc.fontSize(20).text("INVOICE", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text(`Invoice Number: ${invoiceData.invoiceNumber}`);
+  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
+  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} → ${invoiceData.billingPeriodEnd}`);
+  doc.text(`Payment Due: ${invoiceData.paymentDueDate}`);
+  doc.moveDown();
+
+  // --- Client Info
+  doc.fontSize(14).text("Bill To:", { underline: true });
+  doc.fontSize(12).text(invoiceData.clientName);
+  doc.text(invoiceData.clientEmail);
+  doc.moveDown();
+
+  // --- Table Header
+  doc.fontSize(12).text("Date", 50, doc.y, { continued: true });
+  doc.text("Energy (kWh)", 150, doc.y, { continued: true });
+  doc.text("Unit Price", 250, doc.y, { continued: true });
+  doc.text("Amount", 350, doc.y);
+  doc.moveDown();
+
+  // --- Line Items
+  let total = 0;
+  invoiceData.lineItems.forEach(item => {
+    total += parseFloat(item.amount);
+    doc.text(item.date, 50, doc.y, { continued: true });
+    doc.text(item.energyConsumed, 150, doc.y, { continued: true });
+    doc.text(`$${item.unitPrice}`, 250, doc.y, { continued: true });
+    doc.text(`$${item.amount}`, 350, doc.y);
+  });
+
+  // --- TOTAL Row
+  doc.moveDown();
+  doc.fontSize(12).text("TOTAL", 250, doc.y, { continued: true });
+  doc.text(`$${total.toFixed(2)}`, 350, doc.y);
+
+  // --- Environmental Impact
+  doc.moveDown().fontSize(10).text(invoiceData.environmentalImpactText, { align: "left" });
+
+  doc.end();
+
+  return filePath;
+}
+
 // --- Create or update invoice entry ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
@@ -60,7 +117,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // --- Deduplicate line items by measuring point UUID ---
+  // --- Deduplicate line items ---
   const uniqueStations = [];
   const seen = new Set();
   for (const station of invoiceData.lineItems) {
@@ -85,15 +142,13 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["contact"] = { "en-US": "contact@rve.ca" };
   entry.fields["invoiceNumber"] = { "en-US": invoiceData.invoiceNumber };
   entry.fields["invoiceDate"] = { "en-US": invoiceData.invoiceDate };
-  entry.fields["clientName"] = { "en-US": "John Doe" };
-  entry.fields["clientEmail"] = { "en-US": "john.doe@example.com" };
+  entry.fields["clientName"] = { "en-US": invoiceData.clientName };
+  entry.fields["clientEmail"] = { "en-US": invoiceData.clientEmail };
   entry.fields["chargerSerialNumber"] = { "en-US": invoiceData.chargerSerialNumber };
   entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
   entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
   entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText) };
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
-
-  // --- Link unique line items ---
   entry.fields["lineItems"] = { "en-US": lineItemIds };
 
   const updatedEntry = await entry.update();
@@ -111,7 +166,6 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
-    const totals = service.calculateTotals(consumptionData);
 
     // --- Prepare invoice data ---
     const invoiceData = {
@@ -122,6 +176,8 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      clientName: "John Doe",
+      clientEmail: "john.doe@example.com",
       lineItems: consumptionData.map(station => ({
         date: new Date().toISOString().split("T")[0],
         startTime: new Date(`${startDate}T00:00:00Z`).toISOString(),
@@ -134,6 +190,10 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
     console.log("[INFO] Writing invoice to Contentful...");
     await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
+
+    console.log("[INFO] Generating PDF invoice...");
+    const pdfPath = generateInvoicePDF(invoiceData);
+    console.log(`[INFO] PDF generated: ${pdfPath}`);
 
     console.log("[INFO] Done ✅");
 
