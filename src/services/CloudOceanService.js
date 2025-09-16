@@ -262,7 +262,7 @@ export class CloudOceanService {
         logger.info(`Fetching CDRs for ${point.name} (${point.location})`);
 
         const url = new URL(
-          `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdrs`
+          `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`
         );
         url.searchParams.set("start", startDate);
         url.searchParams.set("end", endDate);
