@@ -141,7 +141,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       chargerSerialNumber: "CHG-001",
       billingPeriodStart: startDate,
       billingPeriodEnd: endDate,
-      environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
+      //environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       lineItems,
     };
