@@ -60,7 +60,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // --- Deduplicate line items ---
+  // --- Deduplicate line items by measuring point UUID ---
   const uniqueStations = [];
   const seen = new Set();
   for (const station of invoiceData.lineItems) {
@@ -70,20 +70,6 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       uniqueStations.push(station);
     }
   }
-
-  // --- Calculate totals ---
-  const totalKwh = uniqueStations.reduce((sum, item) => sum + parseFloat(item.energyConsumed), 0).toFixed(2);
-  const totalAmount = uniqueStations.reduce((sum, item) => sum + parseFloat(item.amount), 0).toFixed(2);
-
-  // --- Add TOTAL line item ---
-  uniqueStations.push({
-    date: "TOTAL",
-    startTime: "",
-    endTime: "",
-    energyConsumed: totalKwh,
-    unitPrice: "",
-    amount: totalAmount,
-  });
 
   // --- Create/publish line items ---
   const lineItemIds = [];
@@ -107,7 +93,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText) };
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
 
-  // --- Link unique + TOTAL line items ---
+  // --- Link unique line items ---
   entry.fields["lineItems"] = { "en-US": lineItemIds };
 
   const updatedEntry = await entry.update();
@@ -125,21 +111,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
-
-    // --- Prepare line items ---
-    const lineItems = consumptionData.map(station => {
-      const energy = station.consumption;
-      const unitPrice = parseFloat(process.env.RATE_PER_KWH || 0.15);
-      const amount = energy * unitPrice;
-      return {
-        date: new Date().toISOString().split("T")[0],
-        startTime: new Date(`${startDate}T00:00:00Z`).toISOString(),
-        endTime: new Date(`${endDate}T23:59:59Z`).toISOString(),
-        energyConsumed: energy.toFixed(2),
-        unitPrice: unitPrice.toFixed(2),
-        amount: amount.toFixed(2),
-      };
-    });
+    const totals = service.calculateTotals(consumptionData);
 
     // --- Prepare invoice data ---
     const invoiceData = {
@@ -150,7 +122,14 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       billingPeriodEnd: endDate,
       environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
       paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      lineItems,
+      lineItems: consumptionData.map(station => ({
+        date: new Date().toISOString().split("T")[0],
+        startTime: new Date(`${startDate}T00:00:00Z`).toISOString(),
+        endTime: new Date(`${endDate}T23:59:59Z`).toISOString(),
+        energyConsumed: station.consumption.toFixed(2),
+        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
+        amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
+      }))
     };
 
     console.log("[INFO] Writing invoice to Contentful...");
