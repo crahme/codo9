@@ -215,10 +215,10 @@ class CloudOceanService {
           throw new Error(`HTTP ${res.status}: ${errText}`);
         }
 
-        const cdrs = await res.json();
+        const cdr = await res.json();
 
         // 👇 Debug dump of first CDR to inspect schema
-        if (cdrs && cdrs.length > 0) {
+        if (cdr && cdr.length > 0) {
           console.log("🔍 First CDR sample for", mp.name, ":", JSON.stringify(cdrs[0], null, 2));
         }
 
