@@ -1,7 +1,8 @@
 // src/services/CloudOceanService.js
 import dotenv from "dotenv";
 import path from "path";
-import { end } from "pdfkit";
+import pkg from 'pdfkit';
+const { end } = pkg;
 import { fileURLToPath } from "url";
 
 dotenv.config();
