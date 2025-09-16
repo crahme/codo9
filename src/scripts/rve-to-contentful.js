@@ -90,7 +90,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["chargerSerialNumber"] = { "en-US": invoiceData.chargerSerialNumber };
   entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
   entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
-  entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText) };
+  //entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText) };
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
 
   // --- Link unique line items ---
