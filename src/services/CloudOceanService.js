@@ -241,7 +241,7 @@ export class CloudOceanService {
    * Grouped by charger or SMP device.
    */
   async getConsumptionData(startDate, endDate, limit = 100, offset = 0) {
-    const url = new URL(`modules/${this.moduleId}/cdr`);
+    const url = new URL(`/modules/${this.moduleId}/cdr`);
     url.searchParams.set("start", startDate);
     url.searchParams.set("end", endDate);
     url.searchParams.set("limit", limit.toString());
