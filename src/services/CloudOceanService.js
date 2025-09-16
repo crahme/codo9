@@ -187,11 +187,26 @@ export class CloudOceanService {
     this.baseUrl = "https://api.develop.rve.ca/v1";
     this.moduleId = "c667ff46-9730-425e-ad48-1e950691b3f9";
     this.headers = {
-      "Access-Token": `${process.env.API_Key}`, // use your actual env var
+      "Access-Token": `${process.env.API_Key}`,
       "Content-Type": "application/json",
     };
     this.maxRetries = 3;
     this.baseDelay = 4000;
+
+    // measuring points (chargers / SMP devices)
+    this.measuringPoints = [
+      { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
+      { uuid: "fd7e69ef-cd01-4b9a-8958-2aa5051428d4", name: "EV Charger Station 02", location: "Building A - Level 2" },
+      { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
+      { uuid: "88f4f9b6-ce65-48c4-86e6-1969a64ad44c", name: "EV Charger Station 04", location: "Building B - Ground Floor" },
+      { uuid: "df428bf7-dd2d-479c-b270-f8ac5c1398dc", name: "EV Charger Station 05", location: "Building C - East Wing" },
+      { uuid: "7744dcfc-a059-4257-ac96-6650feef9c87", name: "EV Charger Station 06", location: "Building C - West Wing" },
+      { uuid: "b1445e6d-3573-403a-9f8e-e82f70556f7c", name: "EV Charger Station 07", location: "Building D - Main Entrance" },
+      { uuid: "ef296fba-4fcc-4dcb-8eda-e6d1772cd819", name: "EV Charger Station 08", location: "Building D - Loading Dock" },
+      { uuid: "50206eae-41b8-4a84-abe4-434c7f79ae0a", name: "EV Charger Station 09", location: "Outdoor Lot - Section A" },
+      { uuid: "de2d9680-f132-4529-b9a9-721265456a86", name: "EV Charger Station 10", location: "Outdoor Lot - Section B" },
+      { uuid: "bd36337c-8139-495e-b026-f987b79225b8", name: "EV Charger Station 11", location: "Visitor Parking - Main Gate" },
+    ];
   }
 
   async sleep(ms) {
@@ -237,57 +252,71 @@ export class CloudOceanService {
   }
 
   /**
-   * Fetch CDR data (charging sessions) between dates
-   * Grouped by charger or SMP device.
+   * Fetch CDR data per measuring point (charger / SMP device).
    */
   async getConsumptionData(startDate, endDate, limit = 100, offset = 0) {
-    const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/cdr`);
-    url.searchParams.set("start", startDate);
-    url.searchParams.set("end", endDate);
-    url.searchParams.set("limit", limit.toString());
-    url.searchParams.set("offset", offset.toString());
+    const results = [];
 
-    const data = await this.fetchWithExponentialBackoff(url.toString(), {
-      method: "GET",
-      headers: this.headers,
-    });
+    for (const point of this.measuringPoints) {
+      try {
+        logger.info(`Fetching CDRs for ${point.name} (${point.location})`);
 
-    if (!Array.isArray(data) || data.length === 0) {
-      throw new Error("No CDR data returned.");
-    }
+        const url = new URL(
+          `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdrs`
+        );
+        url.searchParams.set("start", startDate);
+        url.searchParams.set("end", endDate);
+        url.searchParams.set("limit", limit.toString());
+        url.searchParams.set("offset", offset.toString());
 
-    // Group sessions by device (charger_id or smp_device_id)
-    const byDevice = {};
-    for (const cdr of data) {
-      const deviceId = cdr.charger_id || cdr.smp_device_id || "Unknown";
-      if (!byDevice[deviceId]) {
-        byDevice[deviceId] = {
-          deviceId,
-          sessions: [],
-          totalConsumption: 0,
-        };
+        const cdrs = await this.fetchWithExponentialBackoff(url.toString(), {
+          method: "GET",
+          headers: this.headers,
+        });
+
+        if (Array.isArray(cdrs) && cdrs.length > 0) {
+          const totalConsumption = cdrs.reduce(
+            (sum, c) => sum + (Number(c.energy_kwh) || 0),
+            0
+          );
+
+          results.push({
+            uuid: point.uuid,
+            name: point.name,
+            location: point.location,
+            totalConsumption,
+            sessions: cdrs.map(c => ({
+              sessionId: c.session_id,
+              start: c.start_time,
+              end: c.end_time,
+              energy: Number(c.energy_kwh) || 0,
+            })),
+          });
+
+          logger.info(
+            `${point.name}: ${totalConsumption.toFixed(2)} kWh (${cdrs.length} sessions)`
+          );
+        } else {
+          logger.warn(`${point.name}: no sessions in range`);
+        }
+      } catch (err) {
+        logger.error(`Failed for ${point.name}: ${err.message}`);
       }
-
-      const energy = Number(cdr.energy_kwh || 0);
-      byDevice[deviceId].totalConsumption += energy;
-
-      byDevice[deviceId].sessions.push({
-        sessionId: cdr.session_id,
-        start: cdr.start_time,
-        end: cdr.end_time,
-        energy,
-      });
     }
 
-    const result = Object.values(byDevice);
+    if (results.length === 0) {
+      throw new Error("No CDR data fetched for any measuring points.");
+    }
 
-    logger.info(`Fetched ${result.length} devices from CDRs`);
-    return result;
+    logger.info(
+      `Fetched data for ${results.length}/${this.measuringPoints.length} measuring points`
+    );
+    return results;
   }
 
-  calculateTotals(cdrData) {
-    const totalConsumption = cdrData.reduce(
-      (sum, d) => sum + d.totalConsumption,
+  calculateTotals(consumptionData) {
+    const totalConsumption = consumptionData.reduce(
+      (sum, s) => sum + s.totalConsumption,
       0
     );
     return {
@@ -297,7 +326,7 @@ export class CloudOceanService {
   }
 }
 
-// 🏃 Runner: executes when file is run directly
+// 🏃 Runner
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const service = new CloudOceanService();
@@ -309,10 +338,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 
       const data = await service.getConsumptionData("2024-10-16", "2024-11-25");
 
-      console.log("\n📊 Consumption Data (per device):");
-      for (const device of data) {
+      console.log("\n📊 CDR Data (per measuring point):");
+      for (const mp of data) {
         console.log(
-          `Device ${device.deviceId}: ${device.totalConsumption.toFixed(2)} kWh in ${device.sessions.length} sessions`
+          `${mp.name} (${mp.location}): ${mp.totalConsumption.toFixed(2)} kWh in ${mp.sessions.length} sessions`
         );
       }
 
@@ -327,3 +356,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
     }
   })();
 }
+
