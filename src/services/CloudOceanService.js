@@ -110,7 +110,7 @@ export class CloudOceanService {
 
           const consumption = Math.max(
             0,
-            sortedCDR[sortedReads.length - 1].cumulative_kwh - sortedReads[0].cumulative_kwh
+            sortedCDR[sortedCDR.length - 1].cumulative_kwh - sortedCDR[0].cumulative_kwh
           );
 
           consumptionData.push({
