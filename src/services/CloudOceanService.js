@@ -1,8 +1,6 @@
 // src/services/CloudOceanService.js
 import dotenv from "dotenv";
 import path from "path";
-import pkg from 'pdfkit';
-const { end } = pkg;
 import { fileURLToPath } from "url";
 
 dotenv.config();
@@ -91,7 +89,7 @@ export class CloudOceanService {
         logger.info(`Fetching data for ${point.name} (${point.location})`);
 
         const url = new URL(
-          `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`
+          `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`
         );
         url.searchParams.set("start", startDate);
         url.searchParams.set("end", endDate);
@@ -104,21 +102,18 @@ export class CloudOceanService {
         });
 
         if (Array.isArray(data) && data.length > 0) {
-          const sortedCDR = data.sort(
+          const sortedReads = data.sort(
             (a, b) => new Date(a.time_stamp) - new Date(b.time_stamp)
           );
 
           const consumption = Math.max(
             0,
-            sortedCDR[sortedCDR.length - 1].cumulative_kwh - sortedCDR[0].cumulative_kwh
+            sortedReads[sortedReads.length - 1].cumulative_kwh - sortedReads[0].cumulative_kwh
           );
 
           consumptionData.push({
             uuid: point.uuid,
             name: point.name,
-            date:date,
-            start_time:start_time,
-            end_time:end_time,
             location: point.location,
             consumption,
             readings: sortedReads.map(r => ({ timestamp: r.time_stamp, value: r.cumulative_kwh })),
