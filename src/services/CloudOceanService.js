@@ -89,7 +89,7 @@ export class CloudOceanService {
         logger.info(`Fetching data for ${point.name} (${point.location})`);
 
         const url = new URL(
-          `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`
+          `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`
         );
         url.searchParams.set("start", startDate);
         url.searchParams.set("end", endDate);
