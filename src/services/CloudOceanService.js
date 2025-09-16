@@ -177,8 +177,8 @@ dotenv.config();
 
 class CloudOceanService {
   constructor() {
-    this.apiKey = process.env.RVE_API_KEY;
-    this.baseUrl = process.env.RVE_API_URL;
+    this.apiKey = process.env.API_Ke;
+    this.baseUrl = process.env.CLOUD_OCEAN_BASE_URL;
     this.measuringPoints = [
       { id: "station-01", name: "EV Charger Station 01", location: "Building A - Level 1" },
       { id: "station-02", name: "EV Charger Station 02", location: "Building A - Level 2" },
@@ -204,9 +204,9 @@ class CloudOceanService {
       try {
         console.info(`[INFO] Fetching CDRs for ${mp.name} (${mp.location})`);
 
-        const url = `${this.baseUrl}/cdrs?measuringPointId=${mp.id}&start=${startDate}&end=${endDate}`;
+        const url = `${this.baseUrl}/cdr?measuringPointId=${mp.id}&start=${startDate}&end=${endDate}`;
         const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${this.apiKey}` },
+          headers: { "Access-Token": ` ${this.apiKey}` },
         });
 
         if (!res.ok) {
