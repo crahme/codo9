@@ -35,58 +35,65 @@ function generateInvoicePDF(point, outputDir = "./invoices") {
   doc.fontSize(12)
     .text(`Reads Consumption (kWh): ${point.readsConsumption.toFixed(1)}`)
     .text(`CDR Consumption (kWh): ${point.cdrConsumption.toFixed(1)}`)
-    .moveDown(2);
+    .moveDown();
 
-  // --- CDR SESSIONS TABLE ---
-  doc.fontSize(14).text("CDR Sessions (Grouped by Day)", { underline: true }).moveDown();
-
+  // --- GROUP CDRs BY DATE ---
   const grouped = {};
   for (const session of point.cdrSessions || []) {
     if (!grouped[session.date]) grouped[session.date] = [];
     grouped[session.date].push(session);
   }
 
+  // --- TABLE HEADER ---
+  doc.fontSize(14).text("CDR Sessions", { underline: true }).moveDown(0.5);
+
+  const rowHeight = 20;
+  let y = doc.y;
+  let grandTotal = 0;
+
   for (const [date, sessions] of Object.entries(grouped)) {
-    doc.fontSize(12).text(`Date: ${date}`).moveDown(0.5);
+    const dayTotal = sessions.reduce((sum, s) => sum + s.energy, 0);
+    grandTotal += dayTotal;
 
-    // --- Table Header ---
-    doc.fontSize(10).text("Start Time", 80, doc.y, { continued: true })
-      .text("End Time", 220, doc.y, { continued: true })
-      .text("Energy (kWh)", 360, doc.y);
-    doc.moveDown(0.5);
+    // Date label
+    doc.fontSize(12).text(`Date: ${date}`, 50, y);
+    y += rowHeight;
 
-    // Draw header line
-    const headerY = doc.y;
-    doc.moveTo(70, headerY).lineTo(500, headerY).stroke();
-    doc.moveDown(0.5);
+    // Column headers
+    doc.fontSize(10)
+      .text("Start Time", 100, y)
+      .text("End Time", 250, y)
+      .text("Energy (kWh)", 400, y);
+    y += rowHeight;
 
-    let dayTotal = 0;
+    doc.moveTo(50, y - 5).lineTo(550, y - 5).stroke();
 
-    // --- Session rows ---
+    // Session rows
     for (const session of sessions) {
       doc.fontSize(10)
-        .text(session.startTime, 80, doc.y, { continued: true })
-        .text(session.endTime, 220, doc.y, { continued: true })
-        .text(session.energy.toFixed(1), 360, doc.y);
-      doc.moveDown(0.5);
+        .text(session.startTime, 100, y)
+        .text(session.endTime, 250, y)
+        .text(session.energy.toFixed(1), 400, y);
+      y += rowHeight;
 
-      dayTotal += session.energy;
-
-      // Handle page break
-      if (doc.y > doc.page.height - 100) {
+      if (y > doc.page.height - 50) {
         doc.addPage();
+        y = 50;
       }
     }
 
-    // Subtotal row
-    doc.moveDown(0.5);
-    doc.fontSize(10).text(`Subtotal: ${dayTotal.toFixed(1)} kWh`, 360);
-    doc.moveDown(1);
+    // Subtotal
+    doc.fontSize(10).text(`Subtotal: ${dayTotal.toFixed(1)} kWh`, 400, y);
+    y += rowHeight * 2;
+
+    if (y > doc.page.height - 50) {
+      doc.addPage();
+      y = 50;
+    }
   }
 
   // --- GRAND TOTAL ---
-  const grandTotal = point.cdrSessions.reduce((sum, s) => sum + s.energy, 0);
-  doc.moveDown(1);
+  doc.moveDown();
   doc.fontSize(12).text(`GRAND TOTAL: ${grandTotal.toFixed(1)} kWh`, { align: "right" });
 
   doc.end();
