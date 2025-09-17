@@ -71,31 +71,23 @@ export class CloudOceanService {
       if (!Array.isArray(data) || data.length === 0) break;
 
       allData = allData.concat(data);
-      if (data.length < limit) break; // no more pages
+      if (data.length < limit) break;
       offset += limit;
     }
     return allData;
   }
 
-  // Robust function to detect the largest numeric value recursively
-  findLargestNumeric(obj) {
-    let max = -Infinity;
-
-    function traverse(o) {
+  // Flatten all numeric values recursively
+  flattenNumbers(obj) {
+    const numbers = [];
+    const traverse = o => {
       if (o == null) return;
-      if (typeof o === "number") {
-        if (o > max) max = o;
-      } else if (Array.isArray(o)) {
-        o.forEach(traverse);
-      } else if (typeof o === "object") {
-        for (const key of Object.keys(o)) {
-          traverse(o[key]);
-        }
-      }
-    }
-
+      if (typeof o === "number") numbers.push(o);
+      else if (Array.isArray(o)) o.forEach(traverse);
+      else if (typeof o === "object") Object.values(o).forEach(traverse);
+    };
     traverse(obj);
-    return max === -Infinity ? 0 : max;
+    return numbers;
   }
 
   async getReads(point, startDate, endDate, limit = 50) {
@@ -106,12 +98,13 @@ export class CloudOceanService {
 
     const allReads = await this.getAllPages(fullUrl.toString(), limit);
 
-    // Detect largest cumulative value across all readings
-    const largestCumulative = this.findLargestNumeric(allReads);
+    // Calculate cumulative from all numeric values
+    const allValues = this.flattenNumbers(allReads);
+    const cumulative = allValues.reduce((sum, val) => sum + val, 0);
 
     return {
       date: endDate,
-      cumulative_kwh: largestCumulative,
+      cumulative_kwh: cumulative,
     };
   }
 
@@ -123,29 +116,18 @@ export class CloudOceanService {
 
     const allData = await this.getAllPages(fullUrl.toString(), limit);
 
-    // Flatten possible nested CDR arrays
-    const sessions = [];
-    allData.forEach(item => {
-      if (Array.isArray(item)) sessions.push(...item);
-      else if (typeof item === "object") sessions.push(item);
-    });
-
-    if (!sessions.length) {
-      return this.fillMissingDays(startDate, endDate).map(date => ({
-        date,
-        daily_kwh: 0,
-      }));
+    if (!allData.length) {
+      return this.fillMissingDays(startDate, endDate).map(date => ({ date, daily_kwh: 0 }));
     }
 
-    // Find energy field per session
     const dailyMap = {};
-    for (const s of sessions) {
-      const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
-      if (!date) continue;
+    allData.forEach(session => {
+      const date = session.start_time?.split("T")[0] || session.date?.split("T")[0];
+      if (!date) return;
 
-      const energy = this.findLargestNumeric(s);
+      const energy = this.flattenNumbers(session).reduce((sum, v) => sum + v, 0);
       dailyMap[date] = (dailyMap[date] || 0) + energy;
-    }
+    });
 
     const allDates = this.fillMissingDays(startDate, endDate);
     return allDates.map(date => ({
@@ -230,7 +212,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
         Name: d.name,
         Reads_kWh: d.readsConsumption.toFixed(2),
         CDR_kWh: d.cdrConsumption.toFixed(2),
-        Total_kWh: d.total.toFixed(2),
+        Total_KWh: d.total.toFixed(2),
       })));
 
       console.log(`Reads Total: ${data.totals.totalReads.toFixed(2)} kWh`);
