@@ -14,7 +14,9 @@ const client = contentful.createClient({
 
 async function getEnvironment() {
   const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-  const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
+  const env = await space.getEnvironment(
+    process.env.CONTENTFUL_ENVIRONMENT || "master"
+  );
   return env;
 }
 
@@ -49,7 +51,7 @@ async function createLineItem(env, itemData) {
   return entry.sys.id;
 }
 
-// --- Generate PDF invoice ---
+// --- Generate PDF invoice per station ---
 function generateInvoicePDF(invoiceData) {
   const outputDir = "./invoices";
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
@@ -64,7 +66,9 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown();
   doc.fontSize(12).text(`Invoice Number: ${invoiceData.invoiceNumber}`);
   doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
-  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} → ${invoiceData.billingPeriodEnd}`);
+  doc.text(
+    `Billing Period: ${invoiceData.billingPeriodStart} → ${invoiceData.billingPeriodEnd}`
+  );
   doc.text(`Payment Due: ${invoiceData.paymentDueDate}`);
   doc.moveDown();
 
@@ -72,6 +76,11 @@ function generateInvoicePDF(invoiceData) {
   doc.fontSize(14).text("Bill To:", { underline: true });
   doc.fontSize(12).text(invoiceData.clientName);
   doc.text(invoiceData.clientEmail);
+  doc.moveDown();
+
+  // --- Charger Info
+  doc.fontSize(12).text(`Charger: ${invoiceData.stationName}`);
+  doc.text(`Serial: ${invoiceData.chargerSerialNumber}`);
   doc.moveDown();
 
   // --- Table Header
@@ -83,7 +92,7 @@ function generateInvoicePDF(invoiceData) {
 
   // --- Line Items
   let total = 0;
-  invoiceData.lineItems.forEach(item => {
+  invoiceData.lineItems.forEach((item) => {
     total += parseFloat(item.amount);
     doc.text(item.date, 50, doc.y, { continued: true });
     doc.text(item.energyConsumed, 150, doc.y, { continued: true });
@@ -97,7 +106,9 @@ function generateInvoicePDF(invoiceData) {
   doc.text(`$${total.toFixed(2)}`, 350, doc.y);
 
   // --- Environmental Impact
-  doc.moveDown().fontSize(10).text(invoiceData.environmentalImpactText, { align: "left" });
+  doc.moveDown()
+    .fontSize(10)
+    .text(invoiceData.environmentalImpactText, { align: "left" });
 
   doc.end();
 
@@ -121,7 +132,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const uniqueStations = [];
   const seen = new Set();
   for (const station of invoiceData.lineItems) {
-    const key = `${station.startTime}_${station.endTime}_${station.energyConsumed}`;
+    const key = `${station.date}_${station.energyConsumed}_${station.amount}`;
     if (!seen.has(key)) {
       seen.add(key);
       uniqueStations.push(station);
@@ -144,10 +155,15 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["invoiceDate"] = { "en-US": invoiceData.invoiceDate };
   entry.fields["clientName"] = { "en-US": invoiceData.clientName };
   entry.fields["clientEmail"] = { "en-US": invoiceData.clientEmail };
-  entry.fields["chargerSerialNumber"] = { "en-US": invoiceData.chargerSerialNumber };
+  entry.fields["chargerSerialNumber"] = {
+    "en-US": invoiceData.chargerSerialNumber,
+  };
   entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
   entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
-  entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText) };
+  entry.fields["stationName"] = { "en-US": invoiceData.stationName };
+  entry.fields["environmentalImpactText"] = {
+    "en-US": toRichText(invoiceData.environmentalImpactText),
+  };
   entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
   entry.fields["lineItems"] = { "en-US": lineItemIds };
 
@@ -167,37 +183,45 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log("[INFO] Fetching consumption data from RVE API...");
     const consumptionData = await service.getConsumptionData(startDate, endDate);
 
-    // --- Prepare invoice data ---
-    const invoiceData = {
-      invoiceNumber: "fac-2024-001",
-      invoiceDate: new Date().toISOString().split("T")[0],
-      chargerSerialNumber: "CHG-001",
-      billingPeriodStart: startDate,
-      billingPeriodEnd: endDate,
-      environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
-      paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      clientName: "John Doe",
-      clientEmail: "john.doe@example.com",
-      lineItems: consumptionData.map(station => ({
-        date: new Date().toISOString().split("T")[0],
-        startTime: new Date(`${startDate}T00:00:00Z`).toISOString(),
-        endTime: new Date(`${endDate}T23:59:59Z`).toISOString(),
-        energyConsumed: station.consumption.toFixed(2),
-        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        amount: (station.consumption * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
-      }))
-    };
+    // For each station, create a separate invoice
+    for (const station of consumptionData) {
+      const invoiceData = {
+        invoiceNumber: `fac-${station.name.replace(/\s+/g, "_")}`,
+        invoiceDate: new Date().toISOString().split("T")[0],
+        stationName: station.name,
+        chargerSerialNumber: station.serial || "UNKNOWN",
+        billingPeriodStart: startDate,
+        billingPeriodEnd: endDate,
+        environmentalImpactText:
+          "CO2 emissions reduced thanks to EV usage.",
+        paymentDueDate: new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000
+        )
+          .toISOString()
+          .split("T")[0],
+        clientName: "John Doe",
+        clientEmail: "john.doe@example.com",
+        lineItems: station.cdrSessions.map((cdr) => ({
+          date: cdr.date,
+          startTime: cdr.startTime,
+          endTime: cdr.endTime,
+          energyConsumed: cdr.energy.toFixed(2),
+          unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
+          amount: (cdr.energy * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
+        })),
+      };
 
-    console.log("[INFO] Writing invoice to Contentful...");
-    await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
+      console.log(`[INFO] Writing invoice for ${station.name}...`);
+      await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
 
-    console.log("[INFO] Generating PDF invoice...");
-    const pdfPath = generateInvoicePDF(invoiceData);
-    console.log(`[INFO] PDF generated: ${pdfPath}`);
+      console.log(`[INFO] Generating PDF invoice for ${station.name}...`);
+      const pdfPath = generateInvoicePDF(invoiceData);
+      console.log(`[INFO] PDF generated: ${pdfPath}`);
+    }
 
     console.log("[INFO] Done ✅");
-
   } catch (err) {
     console.error("❌ Error:", err);
   }
 })();
+
