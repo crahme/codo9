@@ -70,10 +70,10 @@ export class CloudOceanService {
     if (!Array.isArray(data) || data.length === 0) return 0;
 
     const sortedReads = data.sort((a, b) => new Date(a.time_stamp) - new Date(b.time_stamp));
-    const lastRead = sortedReads[sortedReads.length - 1];
-    return lastRead && lastRead.cumulative_kwh ? Number(lastRead.cumulative_kwh) : 0;
+    return sortedReads[sortedReads.length - 1].cumulative_kwh || 0;
   }
 
+  // ✅ Updated getCdr with automatic field detection and warnings
   async getCdr(point, startDate, endDate, limit = 50, offset = 0) {
     const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`);
     url.searchParams.set("start", startDate);
@@ -86,16 +86,35 @@ export class CloudOceanService {
       headers: this.headers,
     });
 
-    // Extract sessions array safely
-    const sessions = Array.isArray(data)
-      ? data
-      : Array.isArray(data.cdr)
-      ? data.cdr
-      : Array.isArray(data.results)
-      ? data.results
-      : [];
+    // 🔹 Inspect raw response for debugging
+    console.log(`RAW CDR for ${point.name}:`, JSON.stringify(data, null, 2));
 
-    return sessions.reduce((sum, session) => sum + (Number(session.energy_kwh) || 0), 0);
+    // 🔹 Detect the sessions array dynamically
+    const sessions =
+      Array.isArray(data) ? data :
+      Array.isArray(data.cdr) ? data.cdr :
+      Array.isArray(data.results) ? data.results :
+      Array.isArray(data.cdrSessions) ? data.cdrSessions :
+      [];
+
+    // 🔹 Detect which field holds energy
+    const energyField = sessions.length > 0
+      ? ["energy_kwh", "kwh", "energy"].find(f => f in sessions[0])
+      : null;
+
+    if (!sessions.length || !energyField) {
+      console.warn(`[WARN] No CDR data found for ${point.name} or unknown energy field.`);
+      return 0;
+    }
+
+    // 🔹 Sum energy
+    const totalEnergy = sessions.reduce((sum, session) => sum + (Number(session[energyField]) || 0), 0);
+
+    if (totalEnergy === 0) {
+      console.warn(`[WARN] CDR total is 0 kWh for ${point.name}. Check time range or API data.`);
+    }
+
+    return totalEnergy;
   }
 
   async getConsumptionData(startDate, endDate, limit = 50, offset = 0) {
@@ -105,6 +124,7 @@ export class CloudOceanService {
       { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
     ];
 
+    // Parallel fetching reads + CDR per station
     const promises = measuringPoints.map(async (point) => {
       logger.info(`Fetching /reads and CDR for ${point.name} (${point.location})`);
 
@@ -113,16 +133,16 @@ export class CloudOceanService {
         this.getCdr(point, startDate, endDate, limit, offset),
       ]);
 
-      const readsSafe = Number(reads) || 0;
-      const cdrSafe = Number(cdr) || 0;
-      const total = readsSafe + cdrSafe;
+      const total = reads + cdr;
+
+      logger.info(`${point.name}: Reads ${reads.toFixed(2)} kWh, CDR ${cdr.toFixed(2)} kWh`);
 
       return {
         uuid: point.uuid,
         name: point.name,
         location: point.location,
-        readsConsumption: readsSafe,
-        cdrConsumption: cdrSafe,
+        readsConsumption: reads,
+        cdrConsumption: cdr,
         total,
       };
     });
@@ -134,6 +154,8 @@ export class CloudOceanService {
       totalCdr: results.reduce((sum, d) => sum + d.cdrConsumption, 0),
       grandTotal: results.reduce((sum, d) => sum + d.total, 0),
     };
+
+    logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
 
     return { devices: results, totals };
   }
