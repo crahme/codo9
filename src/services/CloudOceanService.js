@@ -24,7 +24,7 @@ export class CloudOceanService {
   }
 
   async sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async fetchWithExponentialBackoff(url, options, attempt = 1) {
@@ -55,7 +55,6 @@ export class CloudOceanService {
     }
   }
 
-  // Get daily cumulative reads
   async getReads(point, startDate, endDate, limit = 50, offset = 0) {
     const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`);
     url.searchParams.set("start", startDate);
@@ -68,22 +67,29 @@ export class CloudOceanService {
       headers: this.headers,
     });
 
-    if (!Array.isArray(data) || data.length === 0) return this.fillMissingDays(startDate, endDate).map(date => ({ date, cumulative_kwh: 0 }));
+    if (!Array.isArray(data) || data.length === 0) return [];
 
-    // Convert to daily cumulative readings
-    const dailyMap = {};
-    for (const r of data) {
-      const date = r.time_stamp.split("T")[0];
-      dailyMap[date] = Number(r.cumulative_kwh || 0);
-    }
-
-    return this.fillMissingDays(startDate, endDate).map(date => ({
-      date,
-      cumulative_kwh: dailyMap[date] || 0,
-    }));
+    return data
+      .sort((a, b) => new Date(a.time_stamp) - new Date(b.time_stamp))
+      .map(r => ({
+        date: r.time_stamp.split("T")[0],
+        cumulative_kwh: Number(r.cumulative_kwh || 0),
+      }));
   }
 
-  // Get daily CDR consumption
+  // 🔹 Recursive search for numeric energy value in an object
+  findEnergyValue(obj) {
+    if (typeof obj !== "object" || obj === null) return null;
+    for (const key in obj) {
+      if (typeof obj[key] === "number" && obj[key] >= 0) return obj[key];
+      if (typeof obj[key] === "object") {
+        const val = this.findEnergyValue(obj[key]);
+        if (val !== null) return val;
+      }
+    }
+    return null;
+  }
+
   async getCdr(point, startDate, endDate, limit = 50, offset = 0) {
     const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`);
     url.searchParams.set("start", startDate);
@@ -104,29 +110,32 @@ export class CloudOceanService {
       [];
 
     if (!sessions.length) {
-      return this.fillMissingDays(startDate, endDate).map(date => ({ date, daily_kwh: 0 }));
+      logger.warn(`[WARN] No CDR sessions found for ${point.name}.`);
+      return this.fillMissingDays(startDate, endDate).map(date => ({
+        date,
+        daily_kwh: 0,
+      }));
     }
 
-    const energyField = ["energy_kwh", "kwh", "energy"].find(f => f in sessions[0]);
-    if (!energyField) {
-      logger.warn(`[WARN] Unknown energy field in CDR sessions for ${point.name}`);
-      return this.fillMissingDays(startDate, endDate).map(date => ({ date, daily_kwh: 0 }));
-    }
-
+    // Group sessions by date
     const dailyMap = {};
     for (const s of sessions) {
       const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
       if (!date) continue;
-      dailyMap[date] = (dailyMap[date] || 0) + Number(s[energyField] || 0);
+
+      const energy = this.findEnergyValue(s);
+      if (energy !== null) {
+        dailyMap[date] = (dailyMap[date] || 0) + energy;
+      }
     }
 
-    return this.fillMissingDays(startDate, endDate).map(date => ({
+    const allDates = this.fillMissingDays(startDate, endDate);
+    return allDates.map(date => ({
       date,
       daily_kwh: dailyMap[date] || 0,
     }));
   }
 
-  // Fill missing days between start and end
   fillMissingDays(startDate, endDate) {
     const dates = [];
     let current = new Date(startDate);
@@ -138,7 +147,6 @@ export class CloudOceanService {
     return dates;
   }
 
-  // Get full consumption data including daily reads + daily CDR
   async getConsumptionData(startDate, endDate, limit = 50, offset = 0) {
     const measuringPoints = [
       { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
@@ -149,30 +157,22 @@ export class CloudOceanService {
     const promises = measuringPoints.map(async point => {
       logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
 
-      const [readsArray, cdrArray] = await Promise.all([
+      const [reads, cdrArray] = await Promise.all([
         this.getReads(point, startDate, endDate, limit, offset),
         this.getCdr(point, startDate, endDate, limit, offset),
       ]);
 
-      const totalReads = readsArray.length ? readsArray[readsArray.length - 1].cumulative_kwh : 0;
+      const totalReads = reads.length ? reads[reads.length - 1].cumulative_kwh : 0;
       const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
-
-      // Combine daily reads + daily CDR
-      const dailyCombined = readsArray.map((r, idx) => ({
-        date: r.date,
-        reads_kwh: r.cumulative_kwh,
-        cdr_kwh: cdrArray[idx]?.daily_kwh || 0,
-        total_kwh: r.cumulative_kwh + (cdrArray[idx]?.daily_kwh || 0),
-      }));
 
       return {
         uuid: point.uuid,
         name: point.name,
         location: point.location,
         readsConsumption: totalReads,
+        cdrDaily: cdrArray,
         cdrConsumption: totalCdr,
         total: totalReads + totalCdr,
-        daily: dailyCombined,
       };
     });
 
@@ -199,16 +199,18 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 
       const data = await service.getConsumptionData(startDate, endDate);
 
-      console.log("\n⚡ Daily Energy per Station:");
-      data.devices.forEach(device => {
-        console.log(`\n${device.name} (${device.location}):`);
-        console.table(device.daily.map(d => ({
-          Date: d.date,
-          "Reads kWh": d.reads_kwh.toFixed(2),
-          "CDR kWh": d.cdr_kwh.toFixed(2),
-          "Total kWh": d.total_kwh.toFixed(2),
-        })));
-      });
+      console.log("⚡ Daily Energy per Station:\n");
+      for (const d of data.devices) {
+        console.log(`${d.name} (${d.location}):`);
+        console.table(
+          d.cdrDaily.map((cdr, i) => ({
+            Date: cdr.date,
+            "Reads kWh": (i === 0 ? d.readsConsumption : 0).toFixed(2),
+            "CDR kWh": cdr.daily_kwh.toFixed(2),
+            "Total kWh": (i === 0 ? d.readsConsumption : 0 + cdr.daily_kwh).toFixed(2),
+          }))
+        );
+      }
 
       console.log("\n⚡ Totals:");
       console.table(
