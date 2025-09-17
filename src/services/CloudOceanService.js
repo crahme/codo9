@@ -91,63 +91,46 @@ export class CloudOceanService {
     return 0;
   }
 
-  // ✅ Rewritten getConsumptionData
+  // ✅ Optimized getConsumptionData without fallback, parallel fetch
   async getConsumptionData(startDate, endDate, limit = 50, offset = 0) {
     const measuringPoints = [
       { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
       { uuid: "fd7e69ef-cd01-4b9a-8958-2aa5051428d4", name: "EV Charger Station 02", location: "Building A - Level 2" },
       { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
-      // … add more stations if needed
     ];
 
-    const results = [];
-    const totalStations = measuringPoints.length;
+    // Fetch reads and CDR in parallel for all stations
+    const promises = measuringPoints.map(async (point) => {
+      logger.info(`Fetching /reads and CDR for ${point.name} (${point.location})`);
 
-    for (const point of measuringPoints) {
-      try {
-        logger.info(`Fetching /reads for ${point.name} (${point.location})`);
+      const [reads, cdr] = await Promise.all([
+        this.getReads(point, startDate, endDate, limit, offset),
+        this.getCdr(point, startDate, endDate, limit, offset),
+      ]);
 
-        // Fetch cumulative reads
-        const cumulativeTotal = await this.getReads(point, startDate, endDate, limit, offset);
+      const total = reads + cdr;
 
-        // Fetch total CDR energy
-        const cdrTotal = await this.getCdr(point, startDate, endDate, limit, offset);
+      logger.info(`${point.name}: Reads ${reads.toFixed(2)} kWh, CDR ${cdr.toFixed(2)} kWh`);
 
-        results.push({
-          uuid: point.uuid,
-          name: point.name,
-          location: point.location,
-          readsConsumption: cumulativeTotal,
-          cdrConsumption: cdrTotal,
-          total: cumulativeTotal + cdrTotal,
-        });
+      return {
+        uuid: point.uuid,
+        name: point.name,
+        location: point.location,
+        readsConsumption: reads,
+        cdrConsumption: cdr,
+        total,
+      };
+    });
 
-        logger.info(`${point.name}: Reads ${cumulativeTotal.toFixed(2)} kWh, CDR ${cdrTotal.toFixed(2)} kWh`);
-      } catch (err) {
-        logger.error(`Failed for ${point.name}: ${err.message}`);
-        results.push({
-          uuid: point.uuid,
-          name: point.name,
-          location: point.location,
-          readsConsumption: 0,
-          cdrConsumption: 0,
-          total: 0,
-        });
-      }
-    }
+    const results = await Promise.all(promises);
 
-    if (results.length === 0) {
-      throw new Error("No data fetched for any station.");
-    }
-
-    // Totals
     const totals = {
       totalReads: results.reduce((sum, d) => sum + d.readsConsumption, 0),
       totalCdr: results.reduce((sum, d) => sum + d.cdrConsumption, 0),
       grandTotal: results.reduce((sum, d) => sum + d.total, 0),
     };
 
-    logger.info(`Fetched data for ${results.length}/${totalStations} stations`);
+    logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
 
     return { devices: results, totals };
   }
@@ -165,7 +148,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 
       const data = await service.getConsumptionData(startDate, endDate);
 
-      // ✅ Safe mapping over data.devices
       console.table(
         data.devices.map(d => ({
           Name: d.name,
