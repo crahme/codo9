@@ -73,7 +73,7 @@ export class CloudOceanService {
     return Math.max(0, sortedReads[sortedReads.length - 1].cumulative_kwh - sortedReads[0].cumulative_kwh);
   }
 
-  async getCdr(point, startDate, endDate, limit = 100, offset = 0) {
+  async getCdr(point, startDate, endDate, limit = 50, offset = 0) {
     const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`);
     url.searchParams.set("start", startDate);
     url.searchParams.set("end", endDate);
