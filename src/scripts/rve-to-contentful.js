@@ -33,7 +33,7 @@ function generateInvoicePDF(point, outputDir = "./invoices") {
   // --- TOTALS ---
   doc.fontSize(14).text("Summary", { underline: true }).moveDown(0.5);
   doc.fontSize(12)
-    .text(`Reads Consumption (kWh): ${point.consumption.toFixed(1)}`)
+    .text(`Reads Consumption (kWh): ${point.readsConsumption.toFixed(1)}`)
     .text(`CDR Consumption (kWh): ${point.cdrConsumption.toFixed(1)}`)
     .moveDown();
 
@@ -107,16 +107,16 @@ function generateInvoicePDF(point, outputDir = "./invoices") {
     const endDate = "2024-11-25";
 
     console.log(`[INFO] Fetching consumption data from ${startDate} → ${endDate}...`);
-    const stations = await service.getConsumptionData(startDate, endDate);
+    const { devices } = await service.getConsumptionData(startDate, endDate);
 
-    if (!stations || stations.length === 0) {
-      console.warn("⚠️ No stations returned by CloudOceanService.");
+    if (!devices || devices.length === 0) {
+      console.warn("⚠️ No measuring points returned by CloudOceanService.");
       return;
     }
 
-    console.log(`[INFO] Generating invoices for ${stations.length} station(s)...`);
+    console.log(`[INFO] Generating invoices for ${devices.length} station(s)...`);
 
-    for (const point of stations) {
+    for (const point of devices) {
       console.log(`[INFO] Generating invoice for station: ${point.name}`);
       generateInvoicePDF(point, "./invoices");
     }
