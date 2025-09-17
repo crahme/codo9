@@ -70,7 +70,7 @@ export class CloudOceanService {
     if (!Array.isArray(data) || data.length === 0) return 0;
 
     const sortedReads = data.sort((a, b) => new Date(a.time_stamp) - new Date(b.time_stamp));
-    return Math.max(0, sortedReads[sortedReads.length - 1].cumulative_kwh - sortedReads[0].cumulative_kwh);
+    return sortedReads[sortedReads.length - 1].cumulative_kwh;
   }
 
   async getCdr(point, startDate, endDate, limit = 50, offset = 0) {
