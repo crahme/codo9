@@ -1,227 +1,198 @@
-// src/scripts/rve-to-contentful.js
+// src/services/CloudOceanService.js
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
 dotenv.config();
 
-import { CloudOceanService } from "../services/CloudOceanService.js";
-import contentful from "contentful-management";
-import fs from "fs";
-import PDFDocument from "pdfkit";
+const logger = {
+  info: (...args) => console.log("[INFO]", ...args),
+  warn: (...args) => console.warn("[WARN]", ...args),
+  error: (...args) => console.error("[ERROR]", ...args),
+};
 
-// --- Contentful setup ---
-const client = contentful.createClient({
-  accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
-});
-
-async function getEnvironment() {
-  const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-  const env = await space.getEnvironment(
-    process.env.CONTENTFUL_ENVIRONMENT || "master"
-  );
-  return env;
-}
-
-// --- Convert string to Rich Text ---
-function toRichText(text) {
-  return {
-    nodeType: "document",
-    data: {},
-    content: [
-      {
-        nodeType: "paragraph",
-        data: {},
-        content: [{ nodeType: "text", value: text, marks: [], data: {} }],
-      },
-    ],
-  };
-}
-
-// --- Create a line item entry and publish it ---
-async function createLineItem(env, itemData) {
-  const entry = await env.createEntry("lineItem", {
-    fields: {
-      date: { "en-US": itemData.date },
-      startTime: { "en-US": itemData.startTime },
-      endTime: { "en-US": itemData.endTime },
-      energyConsumed: { "en-US": itemData.energyConsumed },
-      unitPrice: { "en-US": itemData.unitPrice },
-      amount: { "en-US": itemData.amount },
-    },
-  });
-  await entry.publish();
-  return entry.sys.id;
-}
-
-// --- Generate PDF invoice per station ---
-function generateInvoicePDF(invoiceData) {
-  const outputDir = "./invoices";
-  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
-
-  const filePath = `${outputDir}/${invoiceData.invoiceNumber}.pdf`;
-  const doc = new PDFDocument({ margin: 50 });
-  const stream = fs.createWriteStream(filePath);
-  doc.pipe(stream);
-
-  // --- Header
-  doc.fontSize(20).text("INVOICE", { align: "center" });
-  doc.moveDown();
-  doc.fontSize(12).text(`Invoice Number: ${invoiceData.invoiceNumber}`);
-  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
-  doc.text(
-    `Billing Period: ${invoiceData.billingPeriodStart} → ${invoiceData.billingPeriodEnd}`
-  );
-  doc.text(`Payment Due: ${invoiceData.paymentDueDate}`);
-  doc.moveDown();
-
-  // --- Client Info
-  doc.fontSize(14).text("Bill To:", { underline: true });
-  doc.fontSize(12).text(invoiceData.clientName);
-  doc.text(invoiceData.clientEmail);
-  doc.moveDown();
-
-  // --- Charger Info
-  doc.fontSize(12).text(`Charger: ${invoiceData.stationName}`);
-  doc.text(`Serial: ${invoiceData.chargerSerialNumber}`);
-  doc.moveDown();
-
-  // --- Table Header
-  doc.fontSize(12).text("Date", 50, doc.y, { continued: true });
-  doc.text("Energy (kWh)", 150, doc.y, { continued: true });
-  doc.text("Unit Price", 250, doc.y, { continued: true });
-  doc.text("Amount", 350, doc.y);
-  doc.moveDown();
-
-  // --- Line Items
-  let total = 0;
-  invoiceData.lineItems.forEach((item) => {
-    total += parseFloat(item.amount);
-    doc.text(item.date, 50, doc.y, { continued: true });
-    doc.text(item.energyConsumed, 150, doc.y, { continued: true });
-    doc.text(`$${item.unitPrice}`, 250, doc.y, { continued: true });
-    doc.text(`$${item.amount}`, 350, doc.y);
-  });
-
-  // --- TOTAL Row
-  doc.moveDown();
-  doc.fontSize(12).text("TOTAL", 250, doc.y, { continued: true });
-  doc.text(`$${total.toFixed(2)}`, 350, doc.y);
-
-  // --- Environmental Impact
-  doc.moveDown()
-    .fontSize(10)
-    .text(invoiceData.environmentalImpactText, { align: "left" });
-
-  doc.end();
-
-  return filePath;
-}
-
-// --- Create or update invoice entry ---
-async function createOrUpdateInvoice(invoiceId, invoiceData) {
-  const env = await getEnvironment();
-
-  let entry;
-  try {
-    entry = await env.getEntry(invoiceId);
-    console.log(`[INFO] Updating invoice ${invoiceId}`);
-  } catch {
-    entry = await env.createEntryWithId("invoice", invoiceId, { fields: {} });
-    console.log(`[INFO] Creating invoice ${invoiceId}`);
+export class CloudOceanService {
+  constructor() {
+    this.baseUrl = "https://api.develop.rve.ca/v1";
+    this.moduleId = "c667ff46-9730-425e-ad48-1e950691b3f9";
+    this.headers = {
+      "Access-Token": process.env.API_Key,
+      "Content-Type": "application/json",
+    };
+    this.maxRetries = 3;
+    this.baseDelay = 4000;
   }
 
-  // --- Deduplicate line items ---
-  const uniqueStations = [];
-  const seen = new Set();
-  for (const station of invoiceData.lineItems) {
-    const key = `${station.date}_${station.energyConsumed}_${station.amount}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      uniqueStations.push(station);
+  async sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async fetchWithExponentialBackoff(url, options, attempt = 1) {
+    try {
+      const response = await fetch(url, options);
+      const data = await response.json();
+
+      if (!response.ok) {
+        logger.warn(`Request failed (${response.status}): ${JSON.stringify(data)}`);
+        if (response.status === 503 && attempt < this.maxRetries) {
+          const delay = this.baseDelay * Math.pow(2, attempt - 1);
+          logger.info(`Retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
+          await this.sleep(delay);
+          return this.fetchWithExponentialBackoff(url, options, attempt + 1);
+        }
+        throw new Error(`HTTP ${response.status}: ${data.detail || response.statusText}`);
+      }
+
+      return data;
+    } catch (error) {
+      if (error.name === "TypeError" && attempt < this.maxRetries) {
+        const delay = this.baseDelay * Math.pow(2, attempt - 1);
+        logger.info(`Network error, retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
+        await this.sleep(delay);
+        return this.fetchWithExponentialBackoff(url, options, attempt + 1);
+      }
+      throw error;
     }
   }
 
-  // --- Create/publish line items ---
-  const lineItemIds = [];
-  for (const item of uniqueStations) {
-    const id = await createLineItem(env, item);
-    lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
+  async getAllPages(url, limit = 50) {
+    let offset = 0;
+    let allData = [];
+    while (true) {
+      const pageUrl = new URL(url);
+      pageUrl.searchParams.set("limit", limit.toString());
+      pageUrl.searchParams.set("offset", offset.toString());
+
+      const data = await this.fetchWithExponentialBackoff(pageUrl.toString(), {
+        method: "GET",
+        headers: this.headers,
+      });
+
+      if (!Array.isArray(data) || data.length === 0) break;
+
+      allData = allData.concat(data);
+      if (data.length < limit) break; // no more pages
+      offset += limit;
+    }
+    return allData;
   }
 
-  // --- Set invoice fields ---
-  entry.fields["syndicateName"] = { "en-US": "RVE CLOUD OCEAN" };
-  entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
-  entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
-  entry.fields["contact"] = { "en-US": "contact@rve.ca" };
-  entry.fields["invoiceNumber"] = { "en-US": invoiceData.invoiceNumber };
-  entry.fields["invoiceDate"] = { "en-US": invoiceData.invoiceDate };
-  entry.fields["clientName"] = { "en-US": invoiceData.clientName };
-  entry.fields["clientEmail"] = { "en-US": invoiceData.clientEmail };
-  entry.fields["chargerSerialNumber"] = {
-    "en-US": invoiceData.chargerSerialNumber,
-  };
-  entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
-  entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
-  entry.fields["stationName"] = { "en-US": invoiceData.stationName };
-  entry.fields["environmentalImpactText"] = {
-    "en-US": toRichText(invoiceData.environmentalImpactText),
-  };
-  entry.fields["paymentDueDate"] = { "en-US": invoiceData.paymentDueDate };
-  entry.fields["lineItems"] = { "en-US": lineItemIds };
+  // --- READS ---
+  async getReads(point, startDate, endDate, limit = 50) {
+    const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`;
+    const fullUrl = new URL(url);
+    fullUrl.searchParams.set("start", startDate);
+    fullUrl.searchParams.set("end", endDate);
 
-  const updatedEntry = await entry.update();
-  await updatedEntry.publish();
-  console.log(`[INFO] Invoice ${invoiceId} published successfully`);
-}
+    const allReads = await this.getAllPages(fullUrl.toString(), limit);
 
-// --- Main runner ---
-(async () => {
-  const service = new CloudOceanService();
+    if (!allReads.length) {
+      logger.warn(`No reads found for ${point.name}`);
+      return 0;
+    }
 
-  try {
-    const startDate = "2024-10-16";
-    const endDate = "2024-11-25";
+    // detect the cumulative field by looking for the max numeric value
+    let maxValue = 0;
+    for (const r of allReads) {
+      for (const val of Object.values(r)) {
+        if (typeof val === "number" && val > maxValue) {
+          maxValue = val;
+        }
+      }
+    }
 
-    console.log("[INFO] Fetching consumption data from RVE API...");
-    const consumptionData = await service.getConsumptionData(startDate, endDate);
+    return maxValue;
+  }
 
-    // For each station, create a separate invoice
-    for (const station of consumptionData) {
-      const invoiceData = {
-        invoiceNumber: `fac-${station.name.replace(/\s+/g, "_")}`,
-        invoiceDate: new Date().toISOString().split("T")[0],
-        stationName: station.name,
-        chargerSerialNumber: station.serial || "UNKNOWN",
-        billingPeriodStart: startDate,
-        billingPeriodEnd: endDate,
-        environmentalImpactText:
-          "CO2 emissions reduced thanks to EV usage.",
-        paymentDueDate: new Date(
-          Date.now() + 30 * 24 * 60 * 60 * 1000
-        )
-          .toISOString()
-          .split("T")[0],
-        clientName: "John Doe",
-        clientEmail: "john.doe@example.com",
-        lineItems: station.cdrSessions.map((cdr) => ({
-          date: cdr.date,
-          startTime: cdr.startTime,
-          endTime: cdr.endTime,
-          energyConsumed: cdr.energy.toFixed(2),
-          unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-          amount: (cdr.energy * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
-        })),
+  // --- CDR ---
+  async getCdr(point, startDate, endDate, limit = 50) {
+    const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`;
+    const fullUrl = new URL(url);
+    fullUrl.searchParams.set("start", startDate);
+    fullUrl.searchParams.set("end", endDate);
+
+    const allData = await this.getAllPages(fullUrl.toString(), limit);
+
+    // Flatten to sessions
+    const sessions = [];
+    for (const item of allData) {
+      if (Array.isArray(item)) sessions.push(...item);
+      else if (typeof item === "object") sessions.push(item);
+    }
+
+    if (!sessions.length) {
+      logger.warn(`No CDRs found for ${point.name}`);
+      return [];
+    }
+
+    const cdrSessions = [];
+    for (const s of sessions) {
+      const start = s.start_time || s.startTime || s.date;
+      const end = s.end_time || s.endTime || s.date;
+      if (!start) continue;
+
+      let energy = 0;
+      for (const val of Object.values(s)) {
+        if (typeof val === "number" && val > energy) {
+          energy = val;
+        }
+      }
+
+      cdrSessions.push({
+        date: start.split("T")[0],
+        startTime: start,
+        endTime: end,
+        energy,
+      });
+    }
+
+    return cdrSessions;
+  }
+
+  // --- Main Consumption ---
+  async getConsumptionData(startDate, endDate, limit = 50) {
+    const measuringPoints = [
+      { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
+      { uuid: "fd7e69ef-cd01-4b9a-8958-2aa5051428d4", name: "EV Charger Station 02", location: "Building A - Level 2" },
+      { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
+    ];
+
+    const results = await Promise.all(measuringPoints.map(async point => {
+      logger.info(`Fetching data for ${point.name} (${point.location})`);
+
+      const readsConsumption = await this.getReads(point, startDate, endDate, limit);
+      const cdrSessions = await this.getCdr(point, startDate, endDate, limit);
+      const cdrConsumption = cdrSessions.reduce((sum, s) => sum + s.energy, 0);
+
+      return {
+        uuid: point.uuid,
+        name: point.name,
+        location: point.location,
+        consumption: readsConsumption,
+        cdrConsumption,
+        cdrSessions,
       };
+    }));
 
-      console.log(`[INFO] Writing invoice for ${station.name}...`);
-      await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
-
-      console.log(`[INFO] Generating PDF invoice for ${station.name}...`);
-      const pdfPath = generateInvoicePDF(invoiceData);
-      console.log(`[INFO] PDF generated: ${pdfPath}`);
-    }
-
-    console.log("[INFO] Done ✅");
-  } catch (err) {
-    console.error("❌ Error:", err);
+    return results;
   }
-})();
+}
 
+// 🏃 Runner (debug)
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  const service = new CloudOceanService();
+  (async () => {
+    try {
+      const startDate = "2024-10-16";
+      const endDate = "2024-11-25";
+
+      const data = await service.getConsumptionData(startDate, endDate);
+
+      console.log("\n⚡ Consumption Data:\n");
+      console.dir(data, { depth: null });
+    } catch (err) {
+      console.error("❌ Runner error:", err.message);
+    }
+  })();
+}
