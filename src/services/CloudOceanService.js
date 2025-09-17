@@ -24,7 +24,7 @@ export class CloudOceanService {
   }
 
   async sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async fetchWithExponentialBackoff(url, options, attempt = 1) {
@@ -55,6 +55,7 @@ export class CloudOceanService {
     }
   }
 
+  // Get daily cumulative reads
   async getReads(point, startDate, endDate, limit = 50, offset = 0) {
     const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`);
     url.searchParams.set("start", startDate);
@@ -67,13 +68,22 @@ export class CloudOceanService {
       headers: this.headers,
     });
 
-    if (!Array.isArray(data) || data.length === 0) return 0;
+    if (!Array.isArray(data) || data.length === 0) return this.fillMissingDays(startDate, endDate).map(date => ({ date, cumulative_kwh: 0 }));
 
-    const sortedReads = data.sort((a, b) => new Date(a.time_stamp) - new Date(b.time_stamp));
-    return sortedReads[sortedReads.length - 1].cumulative_kwh || 0;
+    // Convert to daily cumulative readings
+    const dailyMap = {};
+    for (const r of data) {
+      const date = r.time_stamp.split("T")[0];
+      dailyMap[date] = Number(r.cumulative_kwh || 0);
+    }
+
+    return this.fillMissingDays(startDate, endDate).map(date => ({
+      date,
+      cumulative_kwh: dailyMap[date] || 0,
+    }));
   }
 
-  // ✅ Updated getCdr with automatic field detection and warnings
+  // Get daily CDR consumption
   async getCdr(point, startDate, endDate, limit = 50, offset = 0) {
     const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`);
     url.searchParams.set("start", startDate);
@@ -86,10 +96,6 @@ export class CloudOceanService {
       headers: this.headers,
     });
 
-    // 🔹 Inspect raw response for debugging
-    console.log(`RAW CDR for ${point.name}:`, JSON.stringify(data, null, 2));
-
-    // 🔹 Detect the sessions array dynamically
     const sessions =
       Array.isArray(data) ? data :
       Array.isArray(data.cdr) ? data.cdr :
@@ -97,26 +103,42 @@ export class CloudOceanService {
       Array.isArray(data.cdrSessions) ? data.cdrSessions :
       [];
 
-    // 🔹 Detect which field holds energy
-    const energyField = sessions.length > 0
-      ? ["energy_kwh", "kwh", "energy"].find(f => f in sessions[0])
-      : null;
-
-    if (!sessions.length || !energyField) {
-      console.warn(`[WARN] No CDR data found for ${point.name} or unknown energy field.`);
-      return 0;
+    if (!sessions.length) {
+      return this.fillMissingDays(startDate, endDate).map(date => ({ date, daily_kwh: 0 }));
     }
 
-    // 🔹 Sum energy
-    const totalEnergy = sessions.reduce((sum, session) => sum + (Number(session[energyField]) || 0), 0);
-
-    if (totalEnergy === 0) {
-      console.warn(`[WARN] CDR total is 0 kWh for ${point.name}. Check time range or API data.`);
+    const energyField = ["energy_kwh", "kwh", "energy"].find(f => f in sessions[0]);
+    if (!energyField) {
+      logger.warn(`[WARN] Unknown energy field in CDR sessions for ${point.name}`);
+      return this.fillMissingDays(startDate, endDate).map(date => ({ date, daily_kwh: 0 }));
     }
 
-    return totalEnergy;
+    const dailyMap = {};
+    for (const s of sessions) {
+      const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
+      if (!date) continue;
+      dailyMap[date] = (dailyMap[date] || 0) + Number(s[energyField] || 0);
+    }
+
+    return this.fillMissingDays(startDate, endDate).map(date => ({
+      date,
+      daily_kwh: dailyMap[date] || 0,
+    }));
   }
 
+  // Fill missing days between start and end
+  fillMissingDays(startDate, endDate) {
+    const dates = [];
+    let current = new Date(startDate);
+    const end = new Date(endDate);
+    while (current <= end) {
+      dates.push(current.toISOString().split("T")[0]);
+      current.setDate(current.getDate() + 1);
+    }
+    return dates;
+  }
+
+  // Get full consumption data including daily reads + daily CDR
   async getConsumptionData(startDate, endDate, limit = 50, offset = 0) {
     const measuringPoints = [
       { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
@@ -124,26 +146,33 @@ export class CloudOceanService {
       { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
     ];
 
-    // Parallel fetching reads + CDR per station
-    const promises = measuringPoints.map(async (point) => {
-      logger.info(`Fetching /reads and CDR for ${point.name} (${point.location})`);
+    const promises = measuringPoints.map(async point => {
+      logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
 
-      const [reads, cdr] = await Promise.all([
+      const [readsArray, cdrArray] = await Promise.all([
         this.getReads(point, startDate, endDate, limit, offset),
         this.getCdr(point, startDate, endDate, limit, offset),
       ]);
 
-      const total = reads + cdr;
+      const totalReads = readsArray.length ? readsArray[readsArray.length - 1].cumulative_kwh : 0;
+      const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
 
-      logger.info(`${point.name}: Reads ${reads.toFixed(2)} kWh, CDR ${cdr.toFixed(2)} kWh`);
+      // Combine daily reads + daily CDR
+      const dailyCombined = readsArray.map((r, idx) => ({
+        date: r.date,
+        reads_kwh: r.cumulative_kwh,
+        cdr_kwh: cdrArray[idx]?.daily_kwh || 0,
+        total_kwh: r.cumulative_kwh + (cdrArray[idx]?.daily_kwh || 0),
+      }));
 
       return {
         uuid: point.uuid,
         name: point.name,
         location: point.location,
-        readsConsumption: reads,
-        cdrConsumption: cdr,
-        total,
+        readsConsumption: totalReads,
+        cdrConsumption: totalCdr,
+        total: totalReads + totalCdr,
+        daily: dailyCombined,
       };
     });
 
@@ -155,8 +184,6 @@ export class CloudOceanService {
       grandTotal: results.reduce((sum, d) => sum + d.total, 0),
     };
 
-    logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
-
     return { devices: results, totals };
   }
 }
@@ -165,7 +192,6 @@ export class CloudOceanService {
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const service = new CloudOceanService();
-
   (async () => {
     try {
       const startDate = "2024-10-16";
@@ -173,6 +199,18 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 
       const data = await service.getConsumptionData(startDate, endDate);
 
+      console.log("\n⚡ Daily Energy per Station:");
+      data.devices.forEach(device => {
+        console.log(`\n${device.name} (${device.location}):`);
+        console.table(device.daily.map(d => ({
+          Date: d.date,
+          "Reads kWh": d.reads_kwh.toFixed(2),
+          "CDR kWh": d.cdr_kwh.toFixed(2),
+          "Total kWh": d.total_kwh.toFixed(2),
+        })));
+      });
+
+      console.log("\n⚡ Totals:");
       console.table(
         data.devices.map(d => ({
           Name: d.name,
@@ -182,7 +220,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
         }))
       );
 
-      console.log("\n⚡ Totals:");
       console.log(`Reads Total: ${data.totals.totalReads.toFixed(2)} kWh`);
       console.log(`CDR Total: ${data.totals.totalCdr.toFixed(2)} kWh`);
       console.log(`Grand Total: ${data.totals.grandTotal.toFixed(2)} kWh`);
