@@ -73,7 +73,7 @@ export class CloudOceanService {
     return sortedReads[sortedReads.length - 1].cumulative_kwh || 0;
   }
 
-  // ✅ Fixed getCdr
+  // ✅ Debug-ready getCdr
   async getCdr(point, startDate, endDate, limit = 50, offset = 0) {
     const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`);
     url.searchParams.set("start", startDate);
@@ -86,21 +86,22 @@ export class CloudOceanService {
       headers: this.headers,
     });
 
-    // Inspect raw data in debug mode
-    if (!data) return 0;
-    // The actual sessions array might be directly data, or wrapped in "results" or "cdr"
+    // 🔹 Debug: log raw API response for inspection
+    console.log(`CDR raw data for ${point.name}:`, JSON.stringify(data, null, 2));
+
+    // Safely extract sessions array from different possible structures
     const sessions = Array.isArray(data)
       ? data
-      : Array.isArray(data.results)
-      ? data.results
       : Array.isArray(data.cdr)
       ? data.cdr
+      : Array.isArray(data.results)
+      ? data.results
       : [];
 
     return sessions.reduce((sum, session) => sum + (session.energy_kwh || 0), 0);
   }
 
-  // ✅ Optimized getConsumptionData without fallback
+  // ✅ Fully parallel getConsumptionData
   async getConsumptionData(startDate, endDate, limit = 50, offset = 0) {
     const measuringPoints = [
       { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
@@ -108,6 +109,7 @@ export class CloudOceanService {
       { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
     ];
 
+    // Parallel fetching reads + CDR per station
     const promises = measuringPoints.map(async (point) => {
       logger.info(`Fetching /reads and CDR for ${point.name} (${point.location})`);
 
