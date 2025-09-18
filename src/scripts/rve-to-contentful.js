@@ -32,7 +32,7 @@ function toRichText(text) {
   };
 }
 
-// --- Create line item entry ---
+// --- Create line item entry in Contentful ---
 async function createLineItem(env, itemData) {
   const entry = await env.createEntry("lineItem", {
     fields: {
@@ -46,7 +46,7 @@ async function createLineItem(env, itemData) {
   return entry.sys.id;
 }
 
-// --- Generate PDF invoice (daily aggregates per station) ---
+// --- Generate PDF invoice for ONE station ---
 function generateInvoicePDF(invoiceData) {
   const outputDir = "./invoices";
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
@@ -69,31 +69,36 @@ function generateInvoicePDF(invoiceData) {
   doc.fontSize(14).text("Bill To:", { underline: true });
   doc.fontSize(12).text(invoiceData.clientName).text(invoiceData.clientEmail).moveDown();
 
-  // Tables per station
-  invoiceData.lineItems.forEach(station => {
-    doc.fontSize(14).text(`Station: ${station.name} (${station.location})`, { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(12);
-    doc.text("Date", 50, doc.y, { continued: true });
-    doc.text("Energy (kWh)", 200, doc.y);
-    doc.moveDown(0.2);
+  // Station Info
+  doc.fontSize(14).text(`Station: ${invoiceData.stationName}`, { underline: true });
+  doc.fontSize(12).text(`Location: ${invoiceData.stationLocation}`).moveDown();
 
-    if (station.daily.length === 0) {
-      doc.text("No daily consumption data", 50, doc.y);
-    } else {
-      station.daily.forEach(d => {
-        doc.text(d.date, 50, doc.y, { continued: true });
-        doc.text(d.kWh.toFixed(2), 200, doc.y);
-      });
-    }
+  // Table header
+  doc.fontSize(12).text("Date", 50, doc.y, { continued: true });
+  doc.text("Energy (kWh)", 200, doc.y, { continued: true });
+  doc.text("Unit Price", 320, doc.y, { continued: true });
+  doc.text("Amount", 420, doc.y);
+  doc.moveDown();
 
-    doc.moveDown();
+  // Table rows
+  let total = 0;
+  invoiceData.daily.forEach(d => {
+    const amount = d.kWh * (process.env.RATE_PER_KWH || 0.15);
+    total += amount;
+
+    doc.text(d.date, 50, doc.y, { continued: true });
+    doc.text(d.kWh.toFixed(2), 200, doc.y, { continued: true });
+    doc.text(`$${(process.env.RATE_PER_KWH || 0.15).toFixed(2)}`, 320, doc.y, { continued: true });
+    doc.text(`$${amount.toFixed(2)}`, 420, doc.y);
   });
 
-  // Totals
-  doc.fontSize(12).text(`Total Reads: ${invoiceData.totals.totalReads.toFixed(2)} kWh`);
-  doc.text(`Total CDR: ${invoiceData.totals.totalCdr.toFixed(2)} kWh`);
-  doc.text(`Grand Total: ${invoiceData.totals.grandTotal.toFixed(2)} kWh`);
+  // Total row
+  doc.moveDown();
+  doc.fontSize(12).text("TOTAL", 320, doc.y, { continued: true });
+  doc.text(`$${total.toFixed(2)}`, 420, doc.y);
+
+  // Environmental impact
+  doc.moveDown().fontSize(10).text(invoiceData.environmentalImpactText, { align: "left" });
 
   doc.end();
   return filePath;
@@ -112,21 +117,19 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // Safely create daily aggregated line items
+  // Build line items (daily aggregates)
   const lineItemIds = [];
-  for (const station of invoiceData.lineItems) {
-    for (const d of station.daily) {
-      const id = await createLineItem(env, {
-        date: d.date,
-        energyConsumed: d.kWh.toFixed(2),
-        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        amount: (d.kWh * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
-      });
-      lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
-    }
+  for (const d of invoiceData.daily) {
+    const id = await createLineItem(env, {
+      date: d.date,
+      energyConsumed: d.kWh.toFixed(2),
+      unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
+      amount: (d.kWh * (process.env.RATE_PER_KWH || 0.15)).toFixed(2),
+    });
+    lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
   }
 
-  // Set invoice fields
+  // Assign fields
   entry.fields["syndicateName"] = { "en-US": "RVE CLOUD OCEAN" };
   entry.fields["slug"] = { "en-US": `/${invoiceData.invoiceNumber}` };
   entry.fields["address"] = { "en-US": "123 EV Way, Montreal, QC" };
@@ -136,6 +139,8 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   entry.fields["clientName"] = { "en-US": invoiceData.clientName };
   entry.fields["clientEmail"] = { "en-US": invoiceData.clientEmail };
   entry.fields["chargerSerialNumber"] = { "en-US": invoiceData.chargerSerialNumber };
+  entry.fields["stationName"] = { "en-US": invoiceData.stationName };
+  entry.fields["stationLocation"] = { "en-US": invoiceData.stationLocation };
   entry.fields["billingPeriodStart"] = { "en-US": invoiceData.billingPeriodStart };
   entry.fields["billingPeriodEnd"] = { "en-US": invoiceData.billingPeriodEnd };
   entry.fields["environmentalImpactText"] = { "en-US": toRichText(invoiceData.environmentalImpactText) };
@@ -156,43 +161,41 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     const endDate = "2024-11-25";
 
     console.log("[INFO] Fetching station consumption data...");
-    const { devices, totals } = await service.getConsumptionData(startDate, endDate);
+    const { devices } = await service.getConsumptionData(startDate, endDate);
 
     if (!devices || devices.length === 0) {
       console.error("[ERROR] No station data returned from CloudOceanService.");
       return;
     }
 
-    // Build daily aggregated line items
-    const invoiceData = {
-      invoiceNumber: "fac-2024-001",
-      invoiceDate: new Date().toISOString().split("T")[0],
-      chargerSerialNumber: "CHG-001",
-      billingPeriodStart: startDate,
-      billingPeriodEnd: endDate,
-      environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
-      paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      clientName: "John Doe",
-      clientEmail: "john.doe@example.com",
-      lineItems: devices.map(d => ({
-        name: d.name,
-        location: d.location,
-        daily: d.cdrDaily.map(c => ({
+    for (const station of devices) {
+      const invoiceData = {
+        invoiceNumber: `fac-${station.uuid}-${Date.now()}`,
+        invoiceDate: new Date().toISOString().split("T")[0],
+        chargerSerialNumber: "CHG-001",
+        billingPeriodStart: startDate,
+        billingPeriodEnd: endDate,
+        environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
+        paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        clientName: "John Doe",
+        clientEmail: "john.doe@example.com",
+        stationName: station.name,
+        stationLocation: station.location,
+        daily: station.cdrDaily.map(c => ({
           date: c.date,
           kWh: c.daily_kwh,
         })),
-      })),
-      totals,
-    };
+      };
 
-    console.log("[INFO] Writing invoice to Contentful...");
-    await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
+      console.log(`[INFO] Writing invoice for ${station.name} to Contentful...`);
+      await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
 
-    console.log("[INFO] Generating PDF invoice...");
-    const pdfPath = generateInvoicePDF(invoiceData);
-    console.log(`[INFO] PDF generated: ${pdfPath}`);
+      console.log(`[INFO] Generating PDF invoice for ${station.name}...`);
+      const pdfPath = generateInvoicePDF(invoiceData);
+      console.log(`[INFO] PDF generated: ${pdfPath}`);
+    }
 
-    console.log("[INFO] Done ✅");
+    console.log("[INFO] All invoices done ✅");
   } catch (err) {
     console.error("❌ Error:", err);
   }
