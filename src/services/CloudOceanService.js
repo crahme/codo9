@@ -77,27 +77,7 @@ export class CloudOceanService {
     return allData;
   }
 
-  // Robust function to detect the largest numeric value recursively
-  findLargestNumeric(obj) {
-    let max = -Infinity;
-
-    function traverse(o) {
-      if (o == null) return;
-      if (typeof o === "number") {
-        if (o > max) max = o;
-      } else if (Array.isArray(o)) {
-        o.forEach(traverse);
-      } else if (typeof o === "object") {
-        for (const key of Object.keys(o)) {
-          traverse(o[key]);
-        }
-      }
-    }
-
-    traverse(obj);
-    return max === -Infinity ? 0 : max;
-  }
-
+  // 🔹 Get daily register deltas (instead of just max)
   async getReads(point, startDate, endDate, limit = 50) {
     const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`;
     const fullUrl = new URL(url);
@@ -106,13 +86,39 @@ export class CloudOceanService {
 
     const allReads = await this.getAllPages(fullUrl.toString(), limit);
 
-    // Detect largest cumulative value across all readings
-    const largestCumulative = this.findLargestNumeric(allReads);
+    if (!Array.isArray(allReads) || allReads.length === 0) {
+      return { daily: this.fillMissingDays(startDate, endDate).map(date => ({ date, daily_kwh: 0 })), cumulative_kwh: 0 };
+    }
 
-    return {
-      date: endDate,
-      cumulative_kwh: largestCumulative,
-    };
+    // Sort by timestamp (assuming reads have a "time" or "date" field)
+    const sorted = allReads
+      .map(r => ({
+        date: r.time?.split("T")[0] || r.date?.split("T")[0],
+        value: this.findLargestNumeric(r),
+      }))
+      .filter(r => r.date && typeof r.value === "number")
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Compute daily deltas
+    const dailyMap = {};
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const curr = sorted[i];
+      const delta = curr.value - prev.value;
+      if (!isNaN(delta) && delta >= 0) {
+        dailyMap[curr.date] = delta;
+      }
+    }
+
+    const allDates = this.fillMissingDays(startDate, endDate);
+    const daily = allDates.map(date => ({
+      date,
+      daily_kwh: dailyMap[date] || 0,
+    }));
+
+    const cumulative_kwh = daily.reduce((sum, d) => sum + d.daily_kwh, 0);
+
+    return { daily, cumulative_kwh };
   }
 
   async getCdr(point, startDate, endDate, limit = 50) {
@@ -154,6 +160,27 @@ export class CloudOceanService {
     }));
   }
 
+  // Utility: detect largest numeric value in nested object
+  findLargestNumeric(obj) {
+    let max = -Infinity;
+
+    function traverse(o) {
+      if (o == null) return;
+      if (typeof o === "number") {
+        if (o > max) max = o;
+      } else if (Array.isArray(o)) {
+        o.forEach(traverse);
+      } else if (typeof o === "object") {
+        for (const key of Object.keys(o)) {
+          traverse(o[key]);
+        }
+      }
+    }
+
+    traverse(obj);
+    return max === -Infinity ? 0 : max;
+  }
+
   fillMissingDays(startDate, endDate) {
     const dates = [];
     let current = new Date(startDate);
@@ -175,16 +202,17 @@ export class CloudOceanService {
     const results = await Promise.all(measuringPoints.map(async point => {
       logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
 
-      const read = await this.getReads(point, startDate, endDate, limit);
+      const reads = await this.getReads(point, startDate, endDate, limit);
       const cdrArray = await this.getCdr(point, startDate, endDate, limit);
 
-      const totalReads = read.cumulative_kwh;
+      const totalReads = reads.cumulative_kwh;
       const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
 
       return {
         uuid: point.uuid,
         name: point.name,
         location: point.location,
+        readsDaily: reads.daily,
         readsConsumption: totalReads,
         cdrDaily: cdrArray,
         cdrConsumption: totalCdr,
@@ -217,11 +245,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
       console.log("\n⚡ Daily Energy per Station:\n");
       data.devices.forEach(d => {
         console.log(`${d.name} (${d.location}):`);
-        console.table(d.cdrDaily.map((row, i) => ({
+        console.table(d.readsDaily.map((row, i) => ({
           Date: row.date,
-          "Reads kWh": i === d.cdrDaily.length - 1 ? d.readsConsumption.toFixed(2) : '0.00',
-          "CDR kWh": row.daily_kwh.toFixed(2),
-          "Total kWh": (row.daily_kwh + (i === d.cdrDaily.length - 1 ? d.readsConsumption : 0)).toFixed(2),
+          "Reads kWh": row.daily_kwh.toFixed(2),
+          "CDR kWh": d.cdrDaily[i]?.daily_kwh.toFixed(2) || "0.00",
+          "Total kWh": (row.daily_kwh + (d.cdrDaily[i]?.daily_kwh || 0)).toFixed(2),
         })));
       });
 
