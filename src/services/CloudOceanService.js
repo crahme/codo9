@@ -2,6 +2,7 @@
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import fetch from "node-fetch";
 
 dotenv.config();
 
@@ -27,20 +28,28 @@ export class CloudOceanService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  // Safe fetch with exponential backoff + safe JSON
   async fetchWithExponentialBackoff(url, options, attempt = 1) {
     try {
       const response = await fetch(url, options);
-      const data = await response.json();
+      const text = await response.text();
+
+      let data = null;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        logger.warn(`Non-JSON response at ${url}: ${text.slice(0, 200)}...`);
+      }
 
       if (!response.ok) {
-        logger.warn(`Request failed (${response.status}): ${JSON.stringify(data)}`);
+        logger.warn(`Request failed (${response.status}) at ${url}`);
         if (response.status === 503 && attempt < this.maxRetries) {
           const delay = this.baseDelay * Math.pow(2, attempt - 1);
           logger.info(`Retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
           await this.sleep(delay);
           return this.fetchWithExponentialBackoff(url, options, attempt + 1);
         }
-        throw new Error(`HTTP ${response.status}: ${data.detail || response.statusText}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       return data;
@@ -77,23 +86,14 @@ export class CloudOceanService {
     return allData;
   }
 
-  // Robust function to detect the largest numeric value recursively
   findLargestNumeric(obj) {
     let max = -Infinity;
-
     function traverse(o) {
       if (o == null) return;
-      if (typeof o === "number") {
-        if (o > max) max = o;
-      } else if (Array.isArray(o)) {
-        o.forEach(traverse);
-      } else if (typeof o === "object") {
-        for (const key of Object.keys(o)) {
-          traverse(o[key]);
-        }
-      }
+      if (typeof o === "number") { if (o > max) max = o; }
+      else if (Array.isArray(o)) o.forEach(traverse);
+      else if (typeof o === "object") Object.values(o).forEach(traverse);
     }
-
     traverse(obj);
     return max === -Infinity ? 0 : max;
   }
@@ -105,14 +105,9 @@ export class CloudOceanService {
     fullUrl.searchParams.set("end", endDate);
 
     const allReads = await this.getAllPages(fullUrl.toString(), limit);
-
-    // Detect largest cumulative value across all readings
     const largestCumulative = this.findLargestNumeric(allReads);
 
-    return {
-      date: endDate,
-      cumulative_kwh: largestCumulative,
-    };
+    return { date: endDate, cumulative_kwh: largestCumulative };
   }
 
   async getCdr(point, startDate, endDate, limit = 50) {
@@ -123,9 +118,8 @@ export class CloudOceanService {
 
     const allData = await this.getAllPages(fullUrl.toString(), limit);
 
-    // Flatten possible nested CDR arrays
     const sessions = [];
-    allData.forEach(item => {
+    allData?.forEach(item => {
       if (Array.isArray(item)) sessions.push(...item);
       else if (typeof item === "object") sessions.push(item);
     });
@@ -137,18 +131,14 @@ export class CloudOceanService {
       }));
     }
 
-    // Find energy field per session
     const dailyMap = {};
     for (const s of sessions) {
       const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
       if (!date) continue;
-
-      const energy = this.findLargestNumeric(s);
-      dailyMap[date] = (dailyMap[date] || 0) + energy;
+      dailyMap[date] = (dailyMap[date] || 0) + this.findLargestNumeric(s);
     }
 
-    const allDates = this.fillMissingDays(startDate, endDate);
-    return allDates.map(date => ({
+    return this.fillMissingDays(startDate, endDate).map(date => ({
       date,
       daily_kwh: dailyMap[date] || 0,
     }));
@@ -172,34 +162,43 @@ export class CloudOceanService {
       { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
     ];
 
-    const results = await Promise.all(measuringPoints.map(async point => {
-      logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
+    const results = await Promise.all(
+      measuringPoints.map(async point => {
+        logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
 
-      const read = await this.getReads(point, startDate, endDate, limit);
-      const cdrArray = await this.getCdr(point, startDate, endDate, limit);
+        const read = await this.getReads(point, startDate, endDate, limit);
+        const cdrArray = await this.getCdr(point, startDate, endDate, limit);
 
-      const totalReads = read.cumulative_kwh;
-      const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
+        const totalReads = read?.cumulative_kwh || 0;
+        const totalCdr = cdrArray.reduce((sum, d) => sum + (d.daily_kwh || 0), 0);
 
-      return {
-        uuid: point.uuid,
-        name: point.name,
-        location: point.location,
-        readsConsumption: totalReads,
-        cdrDaily: cdrArray,
-        cdrConsumption: totalCdr,
-        total: totalReads + totalCdr,
-      };
-    }));
+        if (totalReads === 0 && totalCdr === 0) {
+          logger.warn(`Skipping ${point.name} — no consumption data`);
+          return null;
+        }
+
+        return {
+          uuid: point.uuid,
+          name: point.name,
+          location: point.location,
+          readsConsumption: totalReads,
+          cdrDaily: cdrArray,
+          cdrConsumption: totalCdr,
+          total: totalReads + totalCdr,
+        };
+      })
+    );
+
+    const devices = results.filter(Boolean);
 
     const totals = {
-      totalReads: results.reduce((sum, d) => sum + d.readsConsumption, 0),
-      totalCdr: results.reduce((sum, d) => sum + d.cdrConsumption, 0),
-      grandTotal: results.reduce((sum, d) => sum + d.total, 0),
+      totalReads: devices.reduce((sum, d) => sum + d.readsConsumption, 0),
+      totalCdr: devices.reduce((sum, d) => sum + d.cdrConsumption, 0),
+      grandTotal: devices.reduce((sum, d) => sum + d.total, 0),
     };
 
-    logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
-    return { devices: results, totals };
+    logger.info(`Fetched data for ${devices.length}/${measuringPoints.length} stations`);
+    return { devices, totals };
   }
 }
 
@@ -213,6 +212,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
       const endDate = "2024-11-25";
 
       const data = await service.getConsumptionData(startDate, endDate);
+
+      if (!data.devices.length) {
+        console.log("\n⚡ No stations with consumption data.\n");
+        return;
+      }
 
       console.log("\n⚡ Daily Energy per Station:\n");
       data.devices.forEach(d => {
