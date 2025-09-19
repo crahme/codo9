@@ -1,8 +1,7 @@
 // src/services/CloudOceanService.js
-import { fileURLToPath } from "url";
-import path from "path";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -31,41 +30,34 @@ export class CloudOceanService {
   async fetchWithExponentialBackoff(url, options, attempt = 1) {
     try {
       const response = await fetch(url, options);
-      const text = await response.text();
+      const data = await response.json();
 
       if (!response.ok) {
-        logger.warn(`HTTP ${response.status} at ${url}: ${text.slice(0, 200)}`);
+        logger.warn(`Request failed (${response.status}): ${JSON.stringify(data)}`);
         if (response.status === 503 && attempt < this.maxRetries) {
           const delay = this.baseDelay * Math.pow(2, attempt - 1);
           logger.info(`Retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
           await this.sleep(delay);
           return this.fetchWithExponentialBackoff(url, options, attempt + 1);
         }
-        return null;
+        throw new Error(`HTTP ${response.status}: ${data.detail || response.statusText}`);
       }
 
-      try {
-        return JSON.parse(text);
-      } catch {
-        logger.error(`Non-JSON response at ${url}: ${text.slice(0, 200)}...`);
-        return null;
-      }
-    } catch (err) {
-      if (attempt < this.maxRetries) {
+      return data;
+    } catch (error) {
+      if (error.name === "TypeError" && attempt < this.maxRetries) {
         const delay = this.baseDelay * Math.pow(2, attempt - 1);
         logger.info(`Network error, retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
         await this.sleep(delay);
         return this.fetchWithExponentialBackoff(url, options, attempt + 1);
       }
-      logger.error(`Fetch failed for ${url}: ${err.message}`);
-      return null;
+      throw error;
     }
   }
 
   async getAllPages(url, limit = 50) {
     let offset = 0;
     let allData = [];
-
     while (true) {
       const pageUrl = new URL(url);
       pageUrl.searchParams.set("limit", limit.toString());
@@ -76,24 +68,32 @@ export class CloudOceanService {
         headers: this.headers,
       });
 
-      if (!data || !Array.isArray(data) || data.length === 0) break;
+      if (!Array.isArray(data) || data.length === 0) break;
 
       allData = allData.concat(data);
-      if (data.length < limit) break;
+      if (data.length < limit) break; // no more pages
       offset += limit;
     }
-
     return allData;
   }
 
+  // Robust function to detect the largest numeric value recursively
   findLargestNumeric(obj) {
     let max = -Infinity;
+
     function traverse(o) {
       if (o == null) return;
-      if (typeof o === "number") max = Math.max(max, o);
-      else if (Array.isArray(o)) o.forEach(traverse);
-      else if (typeof o === "object") Object.values(o).forEach(traverse);
+      if (typeof o === "number") {
+        if (o > max) max = o;
+      } else if (Array.isArray(o)) {
+        o.forEach(traverse);
+      } else if (typeof o === "object") {
+        for (const key of Object.keys(o)) {
+          traverse(o[key]);
+        }
+      }
     }
+
     traverse(obj);
     return max === -Infinity ? 0 : max;
   }
@@ -105,6 +105,8 @@ export class CloudOceanService {
     fullUrl.searchParams.set("end", endDate);
 
     const allReads = await this.getAllPages(fullUrl.toString(), limit);
+
+    // Detect largest cumulative value across all readings
     const largestCumulative = this.findLargestNumeric(allReads);
 
     return {
@@ -120,14 +122,22 @@ export class CloudOceanService {
     fullUrl.searchParams.set("end", endDate);
 
     const allData = await this.getAllPages(fullUrl.toString(), limit);
+
+    // Flatten possible nested CDR arrays
     const sessions = [];
     allData.forEach(item => {
       if (Array.isArray(item)) sessions.push(...item);
       else if (typeof item === "object") sessions.push(item);
     });
 
-    if (!sessions.length) return [];
+    if (!sessions.length) {
+      return this.fillMissingDays(startDate, endDate).map(date => ({
+        date,
+        daily_kwh: 0,
+      }));
+    }
 
+    // Find energy field per session
     const dailyMap = {};
     for (const s of sessions) {
       const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
@@ -162,34 +172,25 @@ export class CloudOceanService {
       { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
     ];
 
-    const results = (
-      await Promise.all(
-        measuringPoints.map(async point => {
-          logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
+    const results = await Promise.all(measuringPoints.map(async point => {
+      logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
 
-          const read = await this.getReads(point, startDate, endDate, limit);
-          const cdrArray = await this.getCdr(point, startDate, endDate, limit);
+      const read = await this.getReads(point, startDate, endDate, limit);
+      const cdrArray = await this.getCdr(point, startDate, endDate, limit);
 
-          const totalReads = read.cumulative_kwh || 0;
-          const totalCdr = cdrArray.reduce((sum, d) => sum + (d.daily_kwh || 0), 0);
+      const totalReads = read.cumulative_kwh;
+      const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
 
-          if (totalReads === 0 && totalCdr === 0) {
-            logger.warn(`Skipping ${point.name} — no consumption data`);
-            return null;
-          }
-
-          return {
-            uuid: point.uuid,
-            name: point.name,
-            location: point.location,
-            readsConsumption: totalReads,
-            cdrDaily: cdrArray,
-            cdrConsumption: totalCdr,
-            total: totalReads + totalCdr,
-          };
-        })
-      )
-    ).filter(Boolean);
+      return {
+        uuid: point.uuid,
+        name: point.name,
+        location: point.location,
+        readsConsumption: totalReads,
+        cdrDaily: cdrArray,
+        cdrConsumption: totalCdr,
+        total: totalReads + totalCdr,
+      };
+    }));
 
     const totals = {
       totalReads: results.reduce((sum, d) => sum + d.readsConsumption, 0),
@@ -202,11 +203,11 @@ export class CloudOceanService {
   }
 }
 
-// 🏃 Runner that prints only stations with real consumption
+// 🏃 Runner
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  const service = new CloudOceanService();
   (async () => {
-    const service = new CloudOceanService();
     try {
       const startDate = "2024-10-16";
       const endDate = "2024-11-25";
@@ -215,8 +216,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 
       console.log("\n⚡ Daily Energy per Station:\n");
       data.devices.forEach(d => {
-        if (!d.cdrDaily || d.cdrDaily.every(r => r.daily_kwh === 0) && d.readsConsumption === 0) return;
-
         console.log(`${d.name} (${d.location}):`);
         console.table(d.cdrDaily.map((row, i) => ({
           Date: row.date,
