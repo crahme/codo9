@@ -1,6 +1,8 @@
 // src/services/CloudOceanService.js
-import fetch from "node-fetch";
+import { fileURLToPath } from "url";
+import path from "path";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
 
 dotenv.config();
 
@@ -26,7 +28,6 @@ export class CloudOceanService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Fetch with retry + safe JSON parsing
   async fetchWithExponentialBackoff(url, options, attempt = 1) {
     try {
       const response = await fetch(url, options);
@@ -40,14 +41,14 @@ export class CloudOceanService {
           await this.sleep(delay);
           return this.fetchWithExponentialBackoff(url, options, attempt + 1);
         }
-        return null; // gracefully skip
+        return null;
       }
 
       try {
         return JSON.parse(text);
       } catch {
         logger.error(`Non-JSON response at ${url}: ${text.slice(0, 200)}...`);
-        return null; // gracefully skip
+        return null;
       }
     } catch (err) {
       if (attempt < this.maxRetries) {
@@ -57,7 +58,7 @@ export class CloudOceanService {
         return this.fetchWithExponentialBackoff(url, options, attempt + 1);
       }
       logger.error(`Fetch failed for ${url}: ${err.message}`);
-      return null; // gracefully skip
+      return null;
     }
   }
 
@@ -79,14 +80,12 @@ export class CloudOceanService {
 
       allData = allData.concat(data);
       if (data.length < limit) break;
-
       offset += limit;
     }
 
     return allData;
   }
 
-  // Find largest numeric value in any nested object/array
   findLargestNumeric(obj) {
     let max = -Infinity;
     function traverse(o) {
@@ -201,4 +200,45 @@ export class CloudOceanService {
     logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
     return { devices: results, totals };
   }
+}
+
+// 🏃 Runner that prints only stations with real consumption
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  (async () => {
+    const service = new CloudOceanService();
+    try {
+      const startDate = "2024-10-16";
+      const endDate = "2024-11-25";
+
+      const data = await service.getConsumptionData(startDate, endDate);
+
+      console.log("\n⚡ Daily Energy per Station:\n");
+      data.devices.forEach(d => {
+        if (!d.cdrDaily || d.cdrDaily.every(r => r.daily_kwh === 0) && d.readsConsumption === 0) return;
+
+        console.log(`${d.name} (${d.location}):`);
+        console.table(d.cdrDaily.map((row, i) => ({
+          Date: row.date,
+          "Reads kWh": i === d.cdrDaily.length - 1 ? d.readsConsumption.toFixed(2) : '0.00',
+          "CDR kWh": row.daily_kwh.toFixed(2),
+          "Total kWh": (row.daily_kwh + (i === d.cdrDaily.length - 1 ? d.readsConsumption : 0)).toFixed(2),
+        })));
+      });
+
+      console.log("\n⚡ Totals:");
+      console.table(data.devices.map(d => ({
+        Name: d.name,
+        Reads_kWh: d.readsConsumption.toFixed(2),
+        CDR_kWh: d.cdrConsumption.toFixed(2),
+        Total_kWh: d.total.toFixed(2),
+      })));
+
+      console.log(`Reads Total: ${data.totals.totalReads.toFixed(2)} kWh`);
+      console.log(`CDR Total: ${data.totals.totalCdr.toFixed(2)} kWh`);
+      console.log(`Grand Total: ${data.totals.grandTotal.toFixed(2)} kWh`);
+    } catch (err) {
+      console.error("❌ Runner error:", err.message);
+    }
+  })();
 }
