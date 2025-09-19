@@ -37,8 +37,6 @@ async function createLineItem(env, itemData) {
   const entry = await env.createEntry("lineItem", {
     fields: {
       date: { "en-US": itemData.date },
-      startTime: { "en-US": itemData.startTime },
-      endTime: { "en-US": itemData.endTime },
       energyConsumed: { "en-US": itemData.energyConsumed },
       unitPrice: { "en-US": itemData.unitPrice },
       amount: { "en-US": itemData.amount },
@@ -124,8 +122,6 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   for (const d of invoiceData.daily) {
     const id = await createLineItem(env, {
       date: d.date,
-      startTime: `${d.date}T00:00:00`,
-      endTime: `${d.date}T23:59:59`,
       energyConsumed: d.kWh.toFixed(2),
       unitPrice: invoiceData.unitPrice,
       amount: (d.kWh * parseFloat(invoiceData.unitPrice)).toFixed(2),
