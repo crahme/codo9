@@ -30,15 +30,7 @@ export class CloudOceanService {
   async fetchWithExponentialBackoff(url, options, attempt = 1) {
     try {
       const response = await fetch(url, options);
-      let data;
-
-      try {
-        data = await response.json();
-      } catch (parseErr) {
-        const text = await response.text();
-        logger.error(`Invalid JSON response: ${text.slice(0, 200)}`);
-        throw new Error("Response was not valid JSON");
-      }
+      const data = await response.json();
 
       if (!response.ok) {
         logger.warn(`Request failed (${response.status}): ${JSON.stringify(data)}`);
@@ -88,6 +80,7 @@ export class CloudOceanService {
   // Robust function to detect the largest numeric value recursively
   findLargestNumeric(obj) {
     let max = -Infinity;
+
     function traverse(o) {
       if (o == null) return;
       if (typeof o === "number") {
@@ -100,6 +93,7 @@ export class CloudOceanService {
         }
       }
     }
+
     traverse(obj);
     return max === -Infinity ? 0 : max;
   }
@@ -111,10 +105,6 @@ export class CloudOceanService {
     fullUrl.searchParams.set("end", endDate);
 
     const allReads = await this.getAllPages(fullUrl.toString(), limit);
-
-    if (!allReads.length) {
-      return { date: endDate, cumulative_kwh: 0 };
-    }
 
     // Detect largest cumulative value across all readings
     const largestCumulative = this.findLargestNumeric(allReads);
@@ -141,7 +131,10 @@ export class CloudOceanService {
     });
 
     if (!sessions.length) {
-      return [];
+      return this.fillMissingDays(startDate, endDate).map(date => ({
+        date,
+        daily_kwh: 0,
+      }));
     }
 
     // Find energy field per session
@@ -151,18 +144,14 @@ export class CloudOceanService {
       if (!date) continue;
 
       const energy = this.findLargestNumeric(s);
-      if (energy > 0) {
-        dailyMap[date] = (dailyMap[date] || 0) + energy;
-      }
+      dailyMap[date] = (dailyMap[date] || 0) + energy;
     }
 
     const allDates = this.fillMissingDays(startDate, endDate);
-    return allDates
-      .map(date => ({
-        date,
-        daily_kwh: dailyMap[date] || 0,
-      }))
-      .filter(d => d.daily_kwh > 0); // 🚀 skip zero days
+    return allDates.map(date => ({
+      date,
+      daily_kwh: dailyMap[date] || 0,
+    }));
   }
 
   fillMissingDays(startDate, endDate) {
@@ -189,12 +178,6 @@ export class CloudOceanService {
       const read = await this.getReads(point, startDate, endDate, limit);
       const cdrArray = await this.getCdr(point, startDate, endDate, limit);
 
-      // skip stations with only zeros
-      if (read.cumulative_kwh === 0 && cdrArray.length === 0) {
-        logger.warn(`Skipping ${point.name}: no consumption data found`);
-        return null;
-      }
-
       const totalReads = read.cumulative_kwh;
       const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
 
@@ -209,16 +192,14 @@ export class CloudOceanService {
       };
     }));
 
-    const filteredResults = results.filter(r => r !== null);
-
     const totals = {
-      totalReads: filteredResults.reduce((sum, d) => sum + d.readsConsumption, 0),
-      totalCdr: filteredResults.reduce((sum, d) => sum + d.cdrConsumption, 0),
-      grandTotal: filteredResults.reduce((sum, d) => sum + d.total, 0),
+      totalReads: results.reduce((sum, d) => sum + d.readsConsumption, 0),
+      totalCdr: results.reduce((sum, d) => sum + d.cdrConsumption, 0),
+      grandTotal: results.reduce((sum, d) => sum + d.total, 0),
     };
 
-    logger.info(`Fetched data for ${filteredResults.length}/${measuringPoints.length} stations`);
-    return { devices: filteredResults, totals };
+    logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
+    return { devices: results, totals };
   }
 }
 
