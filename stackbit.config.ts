@@ -1,6 +1,17 @@
 // stackbit.config.ts
-import 'dotenv/config';
-import { defineStackbitConfig, SiteMapEntry } from '@stackbit/types';
+import dotenv from 'dotenv';
+dotenv.config();
+import types from '@stackbit/types';
+const { defineStackbitConfig } = types;
+// Note: SiteMapEntry is a TypeScript type from @stackbit/types (CJS). If you compile with TS, you can uncomment the next line:
+// import type { SiteMapEntry } from '@stackbit/types';
+// As a fallback for direct runtime execution without TS, declare a minimal structural type:
+type SiteMapEntry = {
+  stableId: string;
+  label: string;
+  urlPath: string;
+  isHomePage?: boolean;
+};
 import { ContentfulContentSource } from '@stackbit/cms-contentful';
 
 // --- Environment Variable Checks ---
@@ -29,8 +40,8 @@ export default defineStackbitConfig({
   ],
 
   modelExtensions: [
-    { name: 'page', type: 'page', urlPath: '/{fields.slug}' },
-    { name: 'invoice', type: 'page', urlPath: '/invoice/{fields.slug}' },
+    { name: 'page', type: 'page', urlPath: '/{slug}' },
+    { name: 'invoice', type: 'page', urlPath: '/invoice/{slug}' },
     { name: 'hero', type: 'data' },
     { name: 'stats', type: 'data' },
     { name: 'button', type: 'data' },
@@ -52,14 +63,13 @@ export default defineStackbitConfig({
       })
       .map((doc) => {
         const entryId = doc.id as string | undefined;
-        const slugField = doc.fields.slug;
+             const slugField = doc.fields.slug;
 const slug =
   typeof slugField === 'string'
     ? slugField
     : slugField && typeof slugField === 'object' && 'value' in slugField
     ? (slugField as any).value
     : undefined;
-
 
         const titleField = doc.fields.title;
         const title = typeof titleField === 'object' && titleField !== null && 'value' in titleField

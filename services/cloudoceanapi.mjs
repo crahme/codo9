@@ -11,9 +11,9 @@ const logger = winston.createLogger({
 const client = axios.create({
   baseURL: process.env.CLOUD_OCEAN_BASE_URL || "https://api.develop.rve.ca",
   headers: {
-    Authorization: `Bearer ${process.env.API_Key}`,
+    "Access-Token": `Bearer ${process.env.API_Key}`,
     "Content-Type": "application/json",
-    Accept: "application/json",
+    "Accept": "application/json",
   },
 });
 
@@ -65,7 +65,6 @@ export class CloudOceanAPI {
 
   async getMeasuringPointCdr(moduleUuid, measuringPointUuid, startDate, endDate) {
     const params = {
-      API_KEY: '$BEARER{process.env.API_Key}',
       start: toYMD(startDate),
       end: toYMD(endDate),
       limit: 50,
@@ -124,7 +123,6 @@ export class CloudOceanAPI {
 
   async getDeviceConsumption(deviceId, startDate, endDate) {
     const params = {
-      API_KEY:"$BEARER{process.env.API_Key}",
       start: toISO(startDate),
       end: toISO(endDate),
     };

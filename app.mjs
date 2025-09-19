@@ -136,3 +136,4 @@ app.listen(PORT, () => {
   logger.info(`Server is running on http://localhost:${PORT}`);
 });
 logger.info('Express application initialized successfully');
+export default app;

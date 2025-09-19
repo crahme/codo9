@@ -1,6 +1,6 @@
-import { CloudOceanAPI } from `${process.cwd()}/services/cloudoceanapi.js`;
-import {upsertInvoiceByNumber} from '../services/contentful.js';
-import { calculateBilling } from '../utils/billing.mjs';
+import CloudOceanAPI from '../../services/cloudoceanapi.mjs';
+import { upsertInvoiceByNumber } from './contentful_writer.js';
+import { calculateBilling } from './calculatebilling.js';
 
 export async function handler(event, context) {
 
