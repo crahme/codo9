@@ -12,7 +12,7 @@ error: (...args) => console.error("\[ERROR]", ...args),
 
 export class CloudOceanService {
 constructor() {
-this.baseUrl = "[https://api.develop.rve.ca/v1](https://api.develop.rve.ca/v1)";
+this.baseUrl = "https://api.develop.rve.ca/v1)";
 this.moduleId = "c667ff46-9730-425e-ad48-1e950691b3f9";
 this.headers = {
 "Access-Token": process.env.API_Key,
