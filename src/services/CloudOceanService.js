@@ -239,5 +239,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
     } catch (err) {
       console.error("❌ Runner error:", err.message);
     }
-  })
-};
+  })();
+}
