@@ -1,7 +1,6 @@
 // src/services/CloudOceanService.js
+import fetch from "node-fetch";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -27,37 +26,45 @@ export class CloudOceanService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  // Fetch with retry + safe JSON parsing
   async fetchWithExponentialBackoff(url, options, attempt = 1) {
     try {
       const response = await fetch(url, options);
-      const data = await response.json();
+      const text = await response.text();
 
       if (!response.ok) {
-        logger.warn(`Request failed (${response.status}): ${JSON.stringify(data)}`);
+        logger.warn(`HTTP ${response.status} at ${url}: ${text.slice(0, 200)}`);
         if (response.status === 503 && attempt < this.maxRetries) {
           const delay = this.baseDelay * Math.pow(2, attempt - 1);
           logger.info(`Retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
           await this.sleep(delay);
           return this.fetchWithExponentialBackoff(url, options, attempt + 1);
         }
-        throw new Error(`HTTP ${response.status}: ${data.detail || response.statusText}`);
+        return null; // gracefully skip
       }
 
-      return data;
-    } catch (error) {
-      if (error.name === "TypeError" && attempt < this.maxRetries) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        logger.error(`Non-JSON response at ${url}: ${text.slice(0, 200)}...`);
+        return null; // gracefully skip
+      }
+    } catch (err) {
+      if (attempt < this.maxRetries) {
         const delay = this.baseDelay * Math.pow(2, attempt - 1);
         logger.info(`Network error, retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
         await this.sleep(delay);
         return this.fetchWithExponentialBackoff(url, options, attempt + 1);
       }
-      throw error;
+      logger.error(`Fetch failed for ${url}: ${err.message}`);
+      return null; // gracefully skip
     }
   }
 
   async getAllPages(url, limit = 50) {
     let offset = 0;
     let allData = [];
+
     while (true) {
       const pageUrl = new URL(url);
       pageUrl.searchParams.set("limit", limit.toString());
@@ -68,32 +75,26 @@ export class CloudOceanService {
         headers: this.headers,
       });
 
-      if (!Array.isArray(data) || data.length === 0) break;
+      if (!data || !Array.isArray(data) || data.length === 0) break;
 
       allData = allData.concat(data);
-      if (data.length < limit) break; // no more pages
+      if (data.length < limit) break;
+
       offset += limit;
     }
+
     return allData;
   }
 
-  // Robust function to detect the largest numeric value recursively
+  // Find largest numeric value in any nested object/array
   findLargestNumeric(obj) {
     let max = -Infinity;
-
     function traverse(o) {
       if (o == null) return;
-      if (typeof o === "number") {
-        if (o > max) max = o;
-      } else if (Array.isArray(o)) {
-        o.forEach(traverse);
-      } else if (typeof o === "object") {
-        for (const key of Object.keys(o)) {
-          traverse(o[key]);
-        }
-      }
+      if (typeof o === "number") max = Math.max(max, o);
+      else if (Array.isArray(o)) o.forEach(traverse);
+      else if (typeof o === "object") Object.values(o).forEach(traverse);
     }
-
     traverse(obj);
     return max === -Infinity ? 0 : max;
   }
@@ -105,8 +106,6 @@ export class CloudOceanService {
     fullUrl.searchParams.set("end", endDate);
 
     const allReads = await this.getAllPages(fullUrl.toString(), limit);
-
-    // Detect largest cumulative value across all readings
     const largestCumulative = this.findLargestNumeric(allReads);
 
     return {
@@ -122,22 +121,14 @@ export class CloudOceanService {
     fullUrl.searchParams.set("end", endDate);
 
     const allData = await this.getAllPages(fullUrl.toString(), limit);
-
-    // Flatten possible nested CDR arrays
     const sessions = [];
     allData.forEach(item => {
       if (Array.isArray(item)) sessions.push(...item);
       else if (typeof item === "object") sessions.push(item);
     });
 
-    if (!sessions.length) {
-      return this.fillMissingDays(startDate, endDate).map(date => ({
-        date,
-        daily_kwh: 0,
-      }));
-    }
+    if (!sessions.length) return [];
 
-    // Find energy field per session
     const dailyMap = {};
     for (const s of sessions) {
       const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
@@ -172,25 +163,34 @@ export class CloudOceanService {
       { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
     ];
 
-    const results = await Promise.all(measuringPoints.map(async point => {
-      logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
+    const results = (
+      await Promise.all(
+        measuringPoints.map(async point => {
+          logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
 
-      const read = await this.getReads(point, startDate, endDate, limit);
-      const cdrArray = await this.getCdr(point, startDate, endDate, limit);
+          const read = await this.getReads(point, startDate, endDate, limit);
+          const cdrArray = await this.getCdr(point, startDate, endDate, limit);
 
-      const totalReads = read.cumulative_kwh;
-      const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
+          const totalReads = read.cumulative_kwh || 0;
+          const totalCdr = cdrArray.reduce((sum, d) => sum + (d.daily_kwh || 0), 0);
 
-      return {
-        uuid: point.uuid,
-        name: point.name,
-        location: point.location,
-        readsConsumption: totalReads,
-        cdrDaily: cdrArray,
-        cdrConsumption: totalCdr,
-        total: totalReads + totalCdr,
-      };
-    }));
+          if (totalReads === 0 && totalCdr === 0) {
+            logger.warn(`Skipping ${point.name} — no consumption data`);
+            return null;
+          }
+
+          return {
+            uuid: point.uuid,
+            name: point.name,
+            location: point.location,
+            readsConsumption: totalReads,
+            cdrDaily: cdrArray,
+            cdrConsumption: totalCdr,
+            total: totalReads + totalCdr,
+          };
+        })
+      )
+    ).filter(Boolean);
 
     const totals = {
       totalReads: results.reduce((sum, d) => sum + d.readsConsumption, 0),
@@ -201,43 +201,4 @@ export class CloudOceanService {
     logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
     return { devices: results, totals };
   }
-}
-
-// 🏃 Runner
-const __filename = fileURLToPath(import.meta.url);
-if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
-  const service = new CloudOceanService();
-  (async () => {
-    try {
-      const startDate = "2024-10-16";
-      const endDate = "2024-11-25";
-
-      const data = await service.getConsumptionData(startDate, endDate);
-
-      console.log("\n⚡ Daily Energy per Station:\n");
-      data.devices.forEach(d => {
-        console.log(`${d.name} (${d.location}):`);
-        console.table(d.cdrDaily.map((row, i) => ({
-          Date: row.date,
-          "Reads kWh": i === d.cdrDaily.length - 1 ? d.readsConsumption.toFixed(2) : '0.00',
-          "CDR kWh": row.daily_kwh.toFixed(2),
-          "Total kWh": (row.daily_kwh + (i === d.cdrDaily.length - 1 ? d.readsConsumption : 0)).toFixed(2),
-        })));
-      });
-
-      console.log("\n⚡ Totals:");
-      console.table(data.devices.map(d => ({
-        Name: d.name,
-        Reads_kWh: d.readsConsumption.toFixed(2),
-        CDR_kWh: d.cdrConsumption.toFixed(2),
-        Total_kWh: d.total.toFixed(2),
-      })));
-
-      console.log(`Reads Total: ${data.totals.totalReads.toFixed(2)} kWh`);
-      console.log(`CDR Total: ${data.totals.totalCdr.toFixed(2)} kWh`);
-      console.log(`Grand Total: ${data.totals.grandTotal.toFixed(2)} kWh`);
-    } catch (err) {
-      console.error("❌ Runner error:", err.message);
-    }
-  })();
 }
