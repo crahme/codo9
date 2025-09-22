@@ -14,15 +14,63 @@ export const client =
     ? createClient({ space, accessToken, host })
     : null;
 
-export async function getPageFromSlug(slug, contentType) {
+export async function getPageFromSlug(slugPath, explicitType) {
   if (!client) return null;
 
-  const entries = await client.getEntries({
-    content_type: "page" || "invoice",
-    "fields.slug": slug,
-    limit: 1,
-    include: 2,
-  });
+  const raw = typeof slugPath === 'string' ? slugPath : '/';
+  // Strip query/hash, remove trailing /index.html, keep leading slash for one candidate
+  const cleaned = raw.split('?')[0].split('#')[0].replace(/\/index\.html?$/i, '');
+  // Trim leading slashes for canonical slug value ('' for homepage)
+  const trimmed = cleaned.replace(/^\/+/, '');
+  const isHome = trimmed === '';
+  const looksInvoice = /^invoice\//i.test(trimmed);
 
-  return entries.items?.[0] || null;
+  const typesToTry = explicitType
+    ? [explicitType]
+    : looksInvoice
+    ? ['invoice']
+    : ['page', 'invoice'];
+
+  // Try a few slug representations since Contentful entries may store with or without leading '/'
+  const last = trimmed.split('/').pop();
+  const slugCandidates = isHome
+    ? ['/', '']
+    : Array.from(new Set([
+        trimmed,
+        '/' + trimmed,
+        cleaned,
+        last || '',
+        last ? '/' + last : '',
+        last ? (last + '/') : '',
+        last ? ('/' + last + '/') : ''
+      ].filter(Boolean)));
+
+  for (const type of typesToTry) {
+    for (const s of slugCandidates) {
+      try {
+        const entries = await client.getEntries({
+          content_type: type,
+          'fields.slug': s,
+          limit: 1,
+          include: 3,
+        });
+        let item = entries.items && entries.items[0];
+        // Fallback: for invoices, also try invoiceNumber matching by last segment
+        if (!item && type === 'invoice' && last) {
+          const byNumber = await client.getEntries({
+            content_type: type,
+            'fields.invoiceNumber': last,
+            limit: 1,
+            include: 3,
+          });
+          item = byNumber.items && byNumber.items[0];
+        }
+        if (item) return item;
+      } catch (_) {
+        // Ignore and continue trying candidates
+      }
+    }
+  }
+
+  return null;
 }
