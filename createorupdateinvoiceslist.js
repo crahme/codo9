@@ -11,7 +11,20 @@ const client = createClient({
 
 const INVOICES_DIR = path.resolve("./invoices");
 
+// Check if an asset with the same file name already exists
+async function getAssetByTitle(env, title) {
+  const assets = await env.getAssets({ "fields.title": title });
+  return assets.items.length > 0 ? assets.items[0] : null;
+}
+
+// Upload a PDF only if it doesn’t exist yet
 async function uploadAsset(env, filePath, fileName) {
+  const existingAsset = await getAssetByTitle(env, fileName);
+  if (existingAsset) {
+    console.log(`✅ Asset already exists for ${fileName}, skipping upload`);
+    return existingAsset;
+  }
+
   const fileContent = fs.readFileSync(filePath);
   const asset = await env.createAssetFromFiles({
     fields: {
@@ -28,6 +41,7 @@ async function uploadAsset(env, filePath, fileName) {
 
   await asset.processForAllLocales();
   await asset.publish();
+  console.log(`📄 Uploaded and published asset ${fileName}`);
   return asset;
 }
 
@@ -36,7 +50,6 @@ async function updateInvoicesList() {
     const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
     const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT);
 
-    // 1️⃣ Get all published invoices
     const invoices = await env.getPublishedEntries({ content_type: "invoice" });
     if (!invoices.items.length) {
       console.log("⚠️ No invoices found in Contentful.");
@@ -46,55 +59,51 @@ async function updateInvoicesList() {
     const localFiles = fs.existsSync(INVOICES_DIR) ? fs.readdirSync(INVOICES_DIR) : [];
 
     const invoiceNumbers = [];
-    let invoiceFileAssetId = null;
+    const invoiceAssets = [];
 
     for (const inv of invoices.items) {
       const number = inv.fields.invoiceNumber?.["en-US"];
       if (!number) continue;
       invoiceNumbers.push(number);
 
-      // Match local PDF
       const match = localFiles.find(
         (f) => f.toLowerCase().includes(number.toLowerCase()) && f.toLowerCase().endsWith(".pdf")
       );
 
       if (match) {
-        console.log(`📄 Uploading PDF for invoice ${number}...`);
         const asset = await uploadAsset(env, path.join(INVOICES_DIR, match), match);
-        invoiceFileAssetId = asset.sys.id; // Use last matched invoice file
+        invoiceAssets.push({ sys: { type: "Link", linkType: "Asset", id: asset.sys.id } });
       }
     }
 
     console.log("📑 Found invoice numbers:", invoiceNumbers);
 
-    // 2️⃣ Find existing invoicesList entry
     const entries = await env.getEntries({ content_type: "invoicesList", "fields.slug": "/invoicelist" });
-
     let entry;
+
+    const fields = {
+      slug: { "en-US": "/invoicelist" },
+      invoiceNumbers: { "en-US": invoiceNumbers },
+      invoiceDate: { "en-US": new Date().toISOString() },
+    };
+
+    if (invoiceAssets.length) fields.invoiceFile = { "en-US": invoiceAssets[0] }; // attach the first asset, adjust as needed
+
     if (entries.items.length > 0) {
       entry = entries.items[0];
-      entry.fields.invoiceNumbers = { "en-US": invoiceNumbers };
-      entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
-      if (invoiceFileAssetId) {
-        entry.fields.invoiceFile = { "en-US": { sys: { type: "Link", linkType: "Asset", id: invoiceFileAssetId } } };
-      }
-      console.log("🔄 Updating existing invoicesList entry");
+
+      // Merge fields safely
+      entry.fields = { ...entry.fields, ...fields };
+      const updated = await entry.update();
+      await updated.publish();
+      console.log("🔄 Updated & published existing invoicesList entry");
     } else {
-      const fields = {
-        slug: { "en-US": "/invoicelist" },
-        invoiceNumbers: { "en-US": invoiceNumbers },
-        invoiceDate: { "en-US": new Date().toISOString() },
-      };
-      if (invoiceFileAssetId) {
-        fields.invoiceFile = { "en-US": { sys: { type: "Link", linkType: "Asset", id: invoiceFileAssetId } } };
-      }
       entry = await env.createEntry("invoicesList", { fields });
-      console.log("🆕 Created new invoicesList entry");
+      await entry.publish();
+      console.log("🆕 Created & published new invoicesList entry");
     }
 
-    const updated = await entry.update();
-    await updated.publish();
-    console.log("✅ invoicesList entry updated & published successfully!");
+    console.log("✅ invoicesList syncing completed successfully!");
   } catch (err) {
     console.error("❌ Error syncing invoicesList:", err);
   }
