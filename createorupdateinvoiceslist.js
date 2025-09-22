@@ -13,19 +13,18 @@ async function updateInvoicesList() {
     const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
     const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT);
 
-    // 1. Get all published invoices
+    // 1️⃣ Get all published invoices
     const invoices = await env.getPublishedEntries({
       content_type: "invoice",
     });
 
-    // Extract invoiceNumbers
     const invoiceNumbers = invoices.items.map(
       (inv) => inv.fields.invoiceNumber["en-US"]
     );
 
     console.log("📑 Found invoice numbers:", invoiceNumbers);
 
-    // 2. Find invoicesList entry
+    // 2️⃣ Find invoicesList entry (slug = /invoicelist)
     const entries = await env.getEntries({
       content_type: "invoicesList",
       "fields.slug": "/invoicelist",
@@ -34,38 +33,68 @@ async function updateInvoicesList() {
     let entry;
 
     if (entries.items.length > 0) {
-      // Update existing
+      // Update existing entry
       entry = entries.items[0];
       entry.fields.invoiceNumbers = { "en-US": invoiceNumbers };
-      console.log("🔄 Updating existing invoicesList entry");
+
+      // Fill missing required fields
+      if (!entry.fields.invoiceDate) {
+        entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
+      }
+
+      if (!entry.fields.invoiceFile) {
+        if (!process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID) {
+          throw new Error(
+            "Missing CONTENTFUL_DEFAULT_INVOICE_FILE_ID in .env for required invoiceFile"
+          );
+        }
+        entry.fields.invoiceFile = {
+          "en-US": {
+            sys: {
+              type: "Link",
+              linkType: "Asset",
+              id: process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID,
+            },
+          },
+        };
+      }
+
+      console.log("🔄 Updating existing invoicesList entry with required fields");
     } else {
-      // Create new — must include required fields
+      // Create new entry
+      if (!process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID) {
+        throw new Error(
+          "Missing CONTENTFUL_DEFAULT_INVOICE_FILE_ID in .env for required invoiceFile"
+        );
+      }
+
       entry = await env.createEntry("invoicesList", {
         fields: {
           slug: { "en-US": "/invoicelist" },
           invoiceNumbers: { "en-US": invoiceNumbers },
-          invoiceDate: { "en-US": new Date().toISOString() }, // required
+          invoiceDate: { "en-US": new Date().toISOString() },
           invoiceFile: {
             "en-US": {
               sys: {
                 type: "Link",
                 linkType: "Asset",
-                id: process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID, // 👈 set this in .env
+                id: process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID,
               },
             },
           },
         },
       });
-      console.log("🆕 Created new invoicesList entry");
+
+      console.log("🆕 Created new invoicesList entry with required fields");
     }
 
-    // 3. Save + publish
+    // 3️⃣ Update + publish
     const updated = await entry.update();
     await updated.publish();
 
-    console.log("✅ invoicesList entry updated & published!");
+    console.log("✅ invoicesList entry updated & published successfully!");
   } catch (err) {
-    console.error("❌ Error syncing invoicesList:", err.message || err);
+    console.error("❌ Error syncing invoicesList:", err);
   }
 }
 
