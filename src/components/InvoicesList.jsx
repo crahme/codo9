@@ -8,6 +8,7 @@ import { documentToReactComponents } from "@contentful/rich-text-react-renderer"
 const client = createClient({
   space: process.env.CONTENTFUL_SPACE_ID,
   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+  environment:process.env.CONTENTFUL_ENVIRONMENT
 });
 
 // Management client (for updating InvoiceNumbers + deleting invoices)
