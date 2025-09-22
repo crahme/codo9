@@ -44,7 +44,7 @@ export default function InvoicesList() {
 
         // 3. Update the single InvoicesList entry dynamically
         const env = await mgmtClient
-          .getSpace(process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID)
+          .getSpace(process.env.CONTENTFUL_SPACE_ID)
           .then((space) => space.getEnvironment("master"));
 
         const entries = await env.getEntries({
@@ -73,7 +73,7 @@ export default function InvoicesList() {
   const handleDelete = async (invoiceId) => {
     try {
       const env = await mgmtClient
-        .getSpace(process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID)
+        .getSpace(process.env.CONTENTFUL_SPACE_ID)
         .then((space) => space.getEnvironment("master"));
 
       const entry = await env.getEntry(invoiceId);
