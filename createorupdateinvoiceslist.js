@@ -36,7 +36,7 @@ async function updateInvoicesList() {
     if (entries.items.length > 0) {
       // Update existing
       entry = entries.items[0];
-      entry.fields.invoicesNumbers = {
+      entry.fields.invoiceNumbers = {
         "en-US": invoiceNumbers,
       };
       console.log("🔄 Updating existing invoicesList entry");
