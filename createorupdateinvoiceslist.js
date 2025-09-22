@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-import pkg from 'contentful-management';
+import pkg from "contentful-management";
 const { createClient } = pkg;
 
 const client = createClient({
@@ -15,19 +15,19 @@ async function updateInvoicesList() {
 
     // 1. Get all published invoices
     const invoices = await env.getPublishedEntries({
-      content_type: "invoice", // 👈 replace with your Invoice content type ID
+      content_type: "invoice",
     });
 
     // Extract invoiceNumbers
     const invoiceNumbers = invoices.items.map(
-      (inv) => inv.fields.invoiceNumber["en-US"] // 👈 adjust locale if needed
+      (inv) => inv.fields.invoiceNumber["en-US"]
     );
 
     console.log("📑 Found invoice numbers:", invoiceNumbers);
 
-    // 2. Find invoicesList entry (slug = /invoicelist)
+    // 2. Find invoicesList entry
     const entries = await env.getEntries({
-      content_type: "invoicesList", // 👈 your invoicesList content type ID
+      content_type: "invoicesList",
       "fields.slug": "/invoicelist",
     });
 
@@ -36,16 +36,24 @@ async function updateInvoicesList() {
     if (entries.items.length > 0) {
       // Update existing
       entry = entries.items[0];
-      entry.fields.invoiceNumbers = {
-        "en-US": invoiceNumbers,
-      };
+      entry.fields.invoiceNumbers = { "en-US": invoiceNumbers };
       console.log("🔄 Updating existing invoicesList entry");
     } else {
-      // Create new
+      // Create new — must include required fields
       entry = await env.createEntry("invoicesList", {
         fields: {
           slug: { "en-US": "/invoicelist" },
           invoiceNumbers: { "en-US": invoiceNumbers },
+          invoiceDate: { "en-US": new Date().toISOString() }, // required
+          invoiceFile: {
+            "en-US": {
+              sys: {
+                type: "Link",
+                linkType: "Asset",
+                id: process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID, // 👈 set this in .env
+              },
+            },
+          },
         },
       });
       console.log("🆕 Created new invoicesList entry");
@@ -57,7 +65,7 @@ async function updateInvoicesList() {
 
     console.log("✅ invoicesList entry updated & published!");
   } catch (err) {
-    console.error("❌ Error syncing invoicesList:", err);
+    console.error("❌ Error syncing invoicesList:", err.message || err);
   }
 }
 
