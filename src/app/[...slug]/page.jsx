@@ -5,6 +5,7 @@ import { Stats } from '../../components/Stats.jsx';
 import { InvoiceSection } from '../../components/InvoiceSection.jsx';
 import { Invoice } from '../../components/Invoice.jsx';
 import { VisualEditorComponent } from '../../components/VisualEditorComponent.jsx';
+import { InvoicesList } from '../../components/InvoicesList.jsx';
 
 const componentMap = {
   hero: Hero,
@@ -12,10 +13,10 @@ const componentMap = {
   invoiceSection: InvoiceSection,
   invoice: Invoice,
   VisualEditorComponent: VisualEditorComponent,
+  invoicesList: InvoicesList, // ✅ fixed typo
 };
 
 export default async function ComposablePage({ params }) {
-  // Store resolved params for use in error handler
   let resolvedParams;
   let slugArray;
   let pageSlug;
@@ -25,7 +26,7 @@ export default async function ComposablePage({ params }) {
     // Validate and construct the slug
     resolvedParams = await params;
     slugArray = resolvedParams.slug;
-    
+
     if (!Array.isArray(slugArray) || slugArray.length === 0) {
       console.warn("Invalid slug parameter received:", resolvedParams);
       return notFound();
@@ -36,16 +37,18 @@ export default async function ComposablePage({ params }) {
     pageSlug = pageSlug.replace(/\/index\.html?$/i, '');
     fullPath = `/${pageSlug}`;
 
-    // Skip system requests early to avoid unnecessary processing
-    if (fullPath.includes('.well-known') || 
-        fullPath.includes('favicon.ico') || 
-        fullPath.includes('robots.txt') ||
-        fullPath.includes('sitemap.xml') ||
-        fullPath.includes('manifest.json')) {
+    // Skip system requests
+    if (
+      fullPath.includes('.well-known') ||
+      fullPath.includes('favicon.ico') ||
+      fullPath.includes('robots.txt') ||
+      fullPath.includes('sitemap.xml') ||
+      fullPath.includes('manifest.json')
+    ) {
       console.log(`Ignoring system request: ${fullPath}`);
       return notFound();
     }
-   
+
     const page = await getPageFromSlug(fullPath);
 
     if (!page || !page.sys?.contentType?.sys?.id) {
@@ -53,6 +56,7 @@ export default async function ComposablePage({ params }) {
       return notFound();
     }
 
+    // ✅ Handle "page" content type
     if (page.sys.contentType.sys.id === 'page') {
       if (!page.fields || !page.fields.sections) {
         console.warn(`Page entry found for slug '${fullPath}', but missing fields or sections.`, page);
@@ -88,6 +92,7 @@ export default async function ComposablePage({ params }) {
       );
     }
 
+    // ✅ Handle "invoice" content type
     if (page.sys.contentType.sys.id === 'invoice') {
       if (!page.fields) {
         console.warn(`Invoice entry found for slug '${fullPath}', but missing fields.`, page);
@@ -122,7 +127,6 @@ export default async function ComposablePage({ params }) {
             {page.fields.environmentalImpactText && (
               <div>
                 <h3>Environmental Impact</h3>
-                {/* Render rich text here as plain text, or use a Rich Text renderer if you have one */}
                 <div>{/* TODO: Add rich text renderer if needed */}</div>
               </div>
             )}
@@ -159,20 +163,42 @@ export default async function ComposablePage({ params }) {
             )}
           </section>
 
-          {/* If you have a total field, display it here */}
           {page.fields.total && <p><strong>Total:</strong> {page.fields.total}</p>}
         </div>
       );
     }
 
+    // ✅ Handle "invoicesList" content type
+    if (page.sys.contentType.sys.id === 'invoicesList') {
+      if (!page.fields || !page.fields.invoiceNumbers) {
+        console.warn(`InvoicesList entry found for slug '${fullPath}', but missing invoiceNumbers.`, page);
+        return notFound();
+      }
+
+      return (
+        <div data-sb-object-id={page.sys.id}>
+          <h1>Invoices List</h1>
+          {Array.isArray(page.fields.invoiceNumbers) && page.fields.invoiceNumbers.length > 0 ? (
+            <ul>
+              {page.fields.invoiceNumbers.map((num, i) => (
+                <li key={i}>Invoice #{num}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No invoices found.</p>
+          )}
+        </div>
+      );
+    }
+
+    // ❌ fallback
     console.warn(`Unsupported content type for slug '${fullPath}':`, page.sys.contentType.sys.id);
     return notFound();
 
   } catch (error) {
     const digest = error && error.digest;
-    // Suppress logging for framework-generated 404s (notFound)
     if (digest === 'NEXT_NOT_FOUND' || (typeof digest === 'string' && digest.includes('NEXT_HTTP_ERROR_FALLBACK;404'))) {
-      throw error; // Let Next.js handle the 404 without extra noise
+      throw error;
     }
     const errorSlug = slugArray ? slugArray.join('/') : 'unknown';
     console.error(`Error fetching or rendering page for slug '${errorSlug}':`, error);

@@ -8,6 +8,7 @@ import { InvoiceSection } from '../components/InvoiceSection.jsx';
 import { InvoiceLineItem } from '../components/InvoiceLineItem.jsx';
 import { VisualEditorComponent } from '../components/VisualEditorComponent.jsx';
 import { getPageFromSlug } from '../utils/content.js';
+import {InvoicesList} from "../components/InvoicesList.jsx";
 
 // Map Contentful Content Type IDs to React components
 const componentMap = {
@@ -17,6 +18,7 @@ const componentMap = {
   InvoiceSection: InvoiceSection,
   InvoiceLineItem: InvoiceLineItem,
   visualEditorComponent: VisualEditorComponent,
+  InvoicesList: InvoicesList,
   // Add mappings for any other section types you might create
 };
 
