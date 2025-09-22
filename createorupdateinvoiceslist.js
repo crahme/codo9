@@ -45,7 +45,7 @@ async function updateInvoicesList() {
       entry = await env.createEntry("invoicesList", {
         fields: {
           slug: { "en-US": "/invoicelist" },
-          invoicesNumbers: { "en-US": invoiceNumbers },
+          invoiceNumbers: { "en-US": invoiceNumbers },
         },
       });
       console.log("🆕 Created new invoicesList entry");
