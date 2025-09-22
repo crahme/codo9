@@ -47,6 +47,7 @@ export default defineStackbitConfig({
     { name: 'button', type: 'data' },
     { name: 'statItem', type: 'data' },
     { name: 'invoiceSection', type: 'data' },
+    {name:'invoicesList', type:'data'}
   ],
 
   siteMap: ({ documents }) => {
