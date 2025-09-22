@@ -6,7 +6,7 @@ remote_images = [
 
 [build]
 publish = ".next"
-command = "npm run build && npx update-browserslist-db@latest"
+command = "npm run build"
 base = "/"
 
  
