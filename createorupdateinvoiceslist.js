@@ -18,11 +18,28 @@ async function updateInvoicesList() {
       content_type: "invoice",
     });
 
+    if (!invoices.items.length) {
+      console.log("⚠️ No invoices found. Exiting.");
+      return;
+    }
+
     const invoiceNumbers = invoices.items.map(
       (inv) => inv.fields.invoiceNumber["en-US"]
     );
 
     console.log("📑 Found invoice numbers:", invoiceNumbers);
+
+    // Pick invoiceFile from the latest invoice (most recently published)
+    const latestInvoice = invoices.items[invoices.items.length - 1];
+    const invoiceFileLink = latestInvoice.fields.invoiceFile
+      ? latestInvoice.fields.invoiceFile["en-US"]
+      : null;
+
+    if (!invoiceFileLink) {
+      throw new Error(
+        "No invoiceFile found on the latest invoice. Cannot proceed without a file."
+      );
+    }
 
     // 2️⃣ Find invoicesList entry (slug = /invoicelist)
     const entries = await env.getEntries({
@@ -43,49 +60,22 @@ async function updateInvoicesList() {
       }
 
       if (!entry.fields.invoiceFile) {
-        if (!process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID) {
-          throw new Error(
-            "Missing CONTENTFUL_DEFAULT_INVOICE_FILE_ID in .env for required invoiceFile"
-          );
-        }
-        entry.fields.invoiceFile = {
-          "en-US": {
-            sys: {
-              type: "Link",
-              linkType: "Asset",
-              id: process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID,
-            },
-          },
-        };
+        entry.fields.invoiceFile = { "en-US": invoiceFileLink };
       }
 
-      console.log("🔄 Updating existing invoicesList entry with required fields");
+      console.log("🔄 Updating existing invoicesList entry with latest invoice file");
     } else {
       // Create new entry
-      if (!process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID) {
-        throw new Error(
-          "Missing CONTENTFUL_DEFAULT_INVOICE_FILE_ID in .env for required invoiceFile"
-        );
-      }
-
       entry = await env.createEntry("invoicesList", {
         fields: {
           slug: { "en-US": "/invoicelist" },
           invoiceNumbers: { "en-US": invoiceNumbers },
           invoiceDate: { "en-US": new Date().toISOString() },
-          invoiceFile: {
-            "en-US": {
-              sys: {
-                type: "Link",
-                linkType: "Asset",
-                id: process.env.CONTENTFUL_DEFAULT_INVOICE_FILE_ID,
-              },
-            },
-          },
+          invoiceFile: { "en-US": invoiceFileLink },
         },
       });
 
-      console.log("🆕 Created new invoicesList entry with required fields");
+      console.log("🆕 Created new invoicesList entry using latest invoice file");
     }
 
     // 3️⃣ Update + publish
