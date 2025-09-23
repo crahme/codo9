@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import fs from "fs";
 import path from "path";
-import pkg from "contentful-management";
+import pkg from "contentful";
 const { createClient } = pkg;
 
 const client = createClient({
