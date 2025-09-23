@@ -75,7 +75,7 @@ async function main() {
   if (!entry) {
     entry = await env.createEntry("invoicesList", {
       fields: {
-        slug: { "en-US": "/invoicelist" },
+        slug: { "en-US": "/invoiceslist" },
       },
     });
     console.log("ℹ️ Created new entry:", entry.sys.id);
