@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "contentful";
+import { createClient } from "contentful-management";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 
 const client = createClient({
