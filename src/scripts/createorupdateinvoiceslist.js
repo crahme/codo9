@@ -11,7 +11,7 @@ const ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT || "master";
 const ACCESS_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
 const SLUG = process.env.SLUG || "/invoicelist";
 const INVOICE_FOLDER = process.env.INVOICE_FOLDER || path.join(process.cwd(), "invoices");
-const CONTENT_TYPE_ID = process.env.CONTENT_TYPE_ID || "invoiceList";
+const CONTENT_TYPE_ID = process.env.CONTENT_TYPE_ID || "invoicesList";
 
 const client = contentful.createClient({ accessToken: ACCESS_TOKEN });
 
