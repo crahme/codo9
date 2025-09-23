@@ -1,4 +1,4 @@
-// src/scripts/createOrUpdateInvoicesList.js
+// src/scripts/createorupdateinvoiceslist.js
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
@@ -14,26 +14,31 @@ const client = contentful.createClient({
   accessToken: ACCESS_TOKEN,
 });
 
-const INVOICE_FOLDER = path.join(process.cwd(), "invoices"); // folder containing PDF files
-const ENTRY_ID = process.env.INVOICE_ENTRY_ID; // existing entry to update
+const INVOICE_FOLDER = path.join(process.cwd(), "invoices");
+const ENTRY_ID = process.env.INVOICE_ENTRY_ID;
 
 async function uploadAsset(filePath, fileName) {
-  const fileData = fs.readFileSync(filePath);
+  const env = await client.getSpace(SPACE_ID).then(space => space.getEnvironment(ENVIRONMENT));
 
-  const asset = await client.getSpace(SPACE_ID)
-    .then(space => space.getEnvironment(ENVIRONMENT))
-    .then(env => env.createAsset({
-      fields: {
-        title: { "en-US": fileName },
-        file: {
-          "en-US": {
-            contentType: "application/pdf",
-            fileName,
-            upload: `data:application/pdf;base64,${fileData.toString("base64")}`,
-          },
+  // Check if asset exists
+  const existing = await env.getAssets({ "fields.title": fileName });
+  if (existing.items.length > 0) {
+    console.log(`✅ Asset already exists for ${fileName}`);
+    return existing.items[0];
+  }
+
+  const asset = await env.createAsset({
+    fields: {
+      title: { "en-US": fileName },
+      file: {
+        "en-US": {
+          contentType: "application/pdf",
+          fileName,
+          upload: `file://${filePath}`, // <-- local file path
         },
       },
-    }));
+    },
+  });
 
   await asset.processForAllLocales();
   await asset.publish();
@@ -43,64 +48,36 @@ async function uploadAsset(filePath, fileName) {
 
 async function main() {
   const files = fs.readdirSync(INVOICE_FOLDER).filter(f => f.endsWith(".pdf"));
-  if (files.length === 0) {
-    console.log("No PDF files found in invoices folder.");
-    return;
-  }
+  if (files.length === 0) return console.log("No PDF files found");
 
   const assets = [];
   for (const file of files) {
     const filePath = path.join(INVOICE_FOLDER, file);
-
-    // Check if asset already exists by title (optional, you could improve this)
-    let asset;
-    try {
-      asset = await client.getSpace(SPACE_ID)
-        .then(space => space.getEnvironment(ENVIRONMENT))
-        .then(env => env.getAssets({ "fields.title": file }));
-      if (asset.items.length > 0) {
-        console.log(`✅ Asset already exists for ${file}`);
-        asset = asset.items[0];
-      } else {
-        asset = await uploadAsset(filePath, file);
-      }
-    } catch (err) {
-      asset = await uploadAsset(filePath, file);
-    }
+    const asset = await uploadAsset(filePath, file);
     assets.push(asset);
   }
 
-  // Now update the invoices list entry
   const env = await client.getSpace(SPACE_ID).then(space => space.getEnvironment(ENVIRONMENT));
   const entry = await env.getEntry(ENTRY_ID);
 
-  // Single invoiceFile: pick the first asset
-  const mainInvoice = assets[0];
+  // First PDF as single invoiceFile
   entry.fields.invoiceFile = {
     "en-US": {
-      sys: { type: "Link", linkType: "Asset", id: mainInvoice.sys.id }
-    }
+      sys: { type: "Link", linkType: "Asset", id: assets[0].sys.id },
+    },
   };
 
-  // Multiple invoiceFiles: array of all assets
+  // All PDFs as invoiceFiles array
   entry.fields.invoiceFiles = {
-    "en-US": assets.map(a => ({
-      sys: { type: "Link", linkType: "Asset", id: a.sys.id }
-    }))
+    "en-US": assets.map(a => ({ sys: { type: "Link", linkType: "Asset", id: a.sys.id } })),
   };
 
-  // Update invoiceNumbers and invoiceDate
-  entry.fields.invoiceNumbers = {
-    "en-US": files
-  };
-  entry.fields.invoiceDate = {
-    "en-US": new Date().toISOString()
-  };
+  entry.fields.invoiceNumbers = { "en-US": files };
+  entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
 
-  // Save and publish
   await entry.update();
   await entry.publish();
-  console.log("✅ InvoicesList entry updated and published successfully.");
+  console.log("✅ InvoicesList updated successfully");
 }
 
 main().catch(console.error);
