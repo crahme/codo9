@@ -16,7 +16,7 @@ const client = contentful.createClient({ accessToken: ACCESS_TOKEN });
 const INVOICE_FOLDER = path.join(process.cwd(), "invoices");
 
 // The entry ID for your invoice list in Contentful
-//const ENTRY_ID = process.env.INVOICE_ENTRY_ID; // You can also hardcode it if needed
+const ENTRY_ID = process.env.CONTENTFUL_INVOICE_ENTRY_ID; // You can also hardcode it if needed
 
 async function uploadAsset(filePath, fileName) {
   const env = await client.getSpace(SPACE_ID).then(space => space.getEnvironment(ENVIRONMENT));
