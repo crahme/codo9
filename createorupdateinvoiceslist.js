@@ -108,7 +108,7 @@ async function updateInvoicesList() {
     if (entries.items.length > 0) {
       entry = entries.items[0];
       entry.fields.invoiceNumbers = { "en-US": invoiceNumbers };
-      entry.fields.invoiceFiles = { "en-US": invoiceFile };
+      entry.fields.invoiceFile = { "en-US": invoiceFile };
       entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
       console.log("🔄 Updating existing invoicesList entry");
     } else {
