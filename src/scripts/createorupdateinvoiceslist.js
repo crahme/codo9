@@ -1,91 +1,106 @@
-import dotenv from "dotenv";
-dotenv.config();
+// src/scripts/createOrUpdateInvoicesList.js
 import fs from "fs";
 import path from "path";
-import pkg from "contentful-management";
-const { createClient } = pkg;
+import dotenv from "dotenv";
+import contentful from "contentful-management";
 
-const client = createClient({
-  accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+dotenv.config();
+
+const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
+const ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT || "master";
+const ACCESS_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
+
+const client = contentful.createClient({
+  accessToken: ACCESS_TOKEN,
 });
 
-const INVOICES_DIR = path.join(process.cwd(), "invoices");
+const INVOICE_FOLDER = path.join(process.cwd(), "invoices"); // folder containing PDF files
+const ENTRY_ID = process.env.INVOICE_ENTRY_ID; // existing entry to update
 
-async function uploadAsset(env, filename, filePath) {
-  const existingAssets = await env.getAssets({ "fields.title": filename });
-  if (existingAssets.items.length > 0) {
-    const asset = existingAssets.items[0];
-    if (!asset.isPublished()) await asset.publish();
-    console.log(`✅ Asset already exists for ${filename}`);
-    return asset.sys.id;
-  }
+async function uploadAsset(filePath, fileName) {
+  const fileData = fs.readFileSync(filePath);
 
-  const asset = await env.createAsset({
-    fields: {
-      title: { "en-US": filename },
-      file: {
-        "en-US": {
-          contentType: "application/pdf",
-          fileName: filename,
-          upload: `file://${filePath}`,
+  const asset = await client.getSpace(SPACE_ID)
+    .then(space => space.getEnvironment(ENVIRONMENT))
+    .then(env => env.createAsset({
+      fields: {
+        title: { "en-US": fileName },
+        file: {
+          "en-US": {
+            contentType: "application/pdf",
+            fileName,
+            upload: `data:application/pdf;base64,${fileData.toString("base64")}`,
+          },
         },
       },
-    },
-  });
+    }));
 
   await asset.processForAllLocales();
   await asset.publish();
-  console.log(`⬆️ Uploaded and published new asset ${filename}`);
-  return asset.sys.id;
+  console.log(`✅ Uploaded and published: ${fileName}`);
+  return asset;
 }
 
-async function updateInvoicesList() {
-  try {
-    const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-    const env = await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT);
-
-    // 1️⃣ Get all published invoices
-    const invoices = await env.getPublishedEntries({ content_type: "invoice" });
-    const invoiceNumbers = invoices.items.map(inv => inv.fields.invoiceNumber["en-US"]);
-    console.log("📑 Found invoice numbers:", invoiceNumbers);
-
-    // 2️⃣ Upload PDFs & collect asset IDs
-    const assetIds = [];
-    for (const invNum of invoiceNumbers) {
-      const pdfPath = path.join(INVOICES_DIR, `${invNum}.pdf`);
-      if (!fs.existsSync(pdfPath)) {
-        console.warn(`⚠ PDF not found for ${invNum}, skipping.`);
-        continue;
-      }
-      const assetId = await uploadAsset(env, `${invNum}.pdf`, pdfPath);
-      assetIds.push({ sys: { type: "Link", linkType: "Asset", id: assetId } });
-    }
-
-    if (assetIds.length === 0) throw new Error("No invoice PDFs found in /invoices");
-
-    // 3️⃣ Find or create invoicesList entry
-    const entries = await env.getEntries({ content_type: "invoicesList", "fields.slug": "/invoicelist" });
-    let entry;
-
-    if (entries.items.length > 0) {
-      entry = entries.items[0];
-      console.log("🔄 Updating existing invoicesList entry");
-    } else {
-      entry = await env.createEntry("invoicesList", { fields: { slug: { "en-US": "/invoicelist" } } });
-      console.log("🆕 Created new invoicesList entry");
-    }
-
-    // 4️⃣ Update fields
-    entry.fields.invoiceNumbers = { "en-US": invoiceNumbers };
-    entry.fields.invoiceFile = { "en-US": assetIds };
-    entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
-
-    const updated = await entry.update();
-    await updated.publish();
-    console.log("✅ invoicesList entry updated & published!");
-  } catch (err) {
-    console.error("❌ Error syncing invoicesList:", err);
+async function main() {
+  const files = fs.readdirSync(INVOICE_FOLDER).filter(f => f.endsWith(".pdf"));
+  if (files.length === 0) {
+    console.log("No PDF files found in invoices folder.");
+    return;
   }
+
+  const assets = [];
+  for (const file of files) {
+    const filePath = path.join(INVOICE_FOLDER, file);
+
+    // Check if asset already exists by title (optional, you could improve this)
+    let asset;
+    try {
+      asset = await client.getSpace(SPACE_ID)
+        .then(space => space.getEnvironment(ENVIRONMENT))
+        .then(env => env.getAssets({ "fields.title": file }));
+      if (asset.items.length > 0) {
+        console.log(`✅ Asset already exists for ${file}`);
+        asset = asset.items[0];
+      } else {
+        asset = await uploadAsset(filePath, file);
+      }
+    } catch (err) {
+      asset = await uploadAsset(filePath, file);
+    }
+    assets.push(asset);
+  }
+
+  // Now update the invoices list entry
+  const env = await client.getSpace(SPACE_ID).then(space => space.getEnvironment(ENVIRONMENT));
+  const entry = await env.getEntry(ENTRY_ID);
+
+  // Single invoiceFile: pick the first asset
+  const mainInvoice = assets[0];
+  entry.fields.invoiceFile = {
+    "en-US": {
+      sys: { type: "Link", linkType: "Asset", id: mainInvoice.sys.id }
+    }
+  };
+
+  // Multiple invoiceFiles: array of all assets
+  entry.fields.invoiceFiles = {
+    "en-US": assets.map(a => ({
+      sys: { type: "Link", linkType: "Asset", id: a.sys.id }
+    }))
+  };
+
+  // Update invoiceNumbers and invoiceDate
+  entry.fields.invoiceNumbers = {
+    "en-US": files
+  };
+  entry.fields.invoiceDate = {
+    "en-US": new Date().toISOString()
+  };
+
+  // Save and publish
+  await entry.update();
+  await entry.publish();
+  console.log("✅ InvoicesList entry updated and published successfully.");
 }
 
-updateInvoicesList();
+main().catch(console.error);
