@@ -9,7 +9,7 @@ dotenv.config();
 const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
 const ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT || "master";
 const ACCESS_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
-const ENTRY_SLUG = "/invoicelist"; // change if needed
+const ENTRY_SLUG = "/invoicelist"; 
 const INVOICE_FOLDER = path.join(process.cwd(), "invoices");
 
 const client = contentful.createClient({ accessToken: ACCESS_TOKEN });
@@ -26,16 +26,10 @@ async function uploadAsset(env, filePath, fileName) {
     return existing.items[0];
   }
 
-  const asset = await env.createAsset({
+  const asset = await env.createAssetFromFiles({
     fields: {
       title: { "en-US": fileName },
-      file: {
-        "en-US": {
-          contentType: "application/pdf",
-          fileName,
-          upload: `https://example.com/dummy.pdf`, // placeholder
-        },
-      },
+      file: { "en-US": { contentType: "application/pdf", fileName, file: fs.createReadStream(filePath) } },
     },
   });
 
@@ -62,7 +56,7 @@ async function main() {
     assets.push(asset);
   }
 
-  // Check if an entry already exists by slug
+  // Find existing entry by slug
   const entries = await env.getEntries({
     content_type: "invoicesList",
     "fields.slug": ENTRY_SLUG,
@@ -74,35 +68,22 @@ async function main() {
     console.log(`ℹ️ Updating existing entry: ${entry.sys.id}`);
   } else {
     entry = await env.createEntry("invoicesList", {
-      fields: {
-        slug: { "en-US": ENTRY_SLUG },
-      },
+      fields: { slug: { "en-US": ENTRY_SLUG } },
     });
     console.log(`ℹ️ Created new entry: ${entry.sys.id}`);
   }
 
   // Update fields
-  if ("invoiceFile" in entry.fields) {
-    entry.fields.invoiceFile = {
-      "en-US": { sys: { type: "Link", linkType: "Asset", id: assets[0].sys.id } },
-    };
-  }
+  entry.fields.invoiceFile = {
+    "en-US": { sys: { type: "Link", linkType: "Asset", id: assets[0].sys.id } },
+  };
 
-  if ("invoiceFiles" in entry.fields) {
-    entry.fields.invoiceFiles = {
-      "en-US": assets.map(a => ({ sys: { type: "Link", linkType: "Asset", id: a.sys.id } })),
-    };
-  } else {
-    console.log("⚠️ Field 'invoiceFiles' does not exist. Skipping multi-asset update.");
-  }
+  entry.fields.invoiceFiles = {
+    "en-US": assets.map(a => ({ sys: { type: "Link", linkType: "Asset", id: a.sys.id } })),
+  };
 
-  if ("invoiceNumbers" in entry.fields) {
-    entry.fields.invoiceNumbers = { "en-US": files };
-  }
-
-  if ("invoiceDate" in entry.fields) {
-    entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
-  }
+  entry.fields.invoiceNumbers = { "en-US": files };
+  entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
 
   // Update and publish
   await entry.update();
