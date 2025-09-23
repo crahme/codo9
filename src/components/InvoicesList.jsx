@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "contentful-management";
+import { createClient } from "contentful";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 
 const client = createClient({
@@ -12,7 +12,7 @@ const client = createClient({
 });
 
 // Management client (for updating InvoiceNumbers + deleting invoices)
-import { createClient as createManagementClient } from "contentful-management";
+import { createClient as createManagementClient } from "contentful";
 
 const mgmtClient = createManagementClient({
   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
