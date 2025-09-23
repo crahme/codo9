@@ -9,21 +9,17 @@ dotenv.config();
 const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
 const ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT || "master";
 const ACCESS_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
-const SLUG = process.env.SLUG || "/invoicelist";
-const INVOICE_FOLDER = process.env.INVOICE_FOLDER || path.join(process.cwd(), "invoices");
-const CONTENT_TYPE_ID = process.env.CONTENT_TYPE_ID || "invoicesList";
+const ENTRY_SLUG = "/invoicelist"; // change if needed
+const INVOICE_FOLDER = path.join(process.cwd(), "invoices");
 
 const client = contentful.createClient({ accessToken: ACCESS_TOKEN });
 
 async function getEnvironment() {
   const space = await client.getSpace(SPACE_ID);
-  return await space.getEnvironment(ENVIRONMENT);
+  return space.getEnvironment(ENVIRONMENT);
 }
 
-async function uploadAsset(filePath, fileName) {
-  const env = await getEnvironment();
-
-  // Check if asset already exists
+async function uploadAsset(env, filePath, fileName) {
   const existing = await env.getAssets({ "fields.title": fileName });
   if (existing.items.length > 0) {
     console.log(`✅ Asset already exists for ${fileName}`);
@@ -37,8 +33,7 @@ async function uploadAsset(filePath, fileName) {
         "en-US": {
           contentType: "application/pdf",
           fileName,
-          upload: fs.existsSync(filePath) ? undefined : `https://example.com/${fileName}`,
-          file: fs.existsSync(filePath) ? fs.readFileSync(filePath) : undefined,
+          upload: `https://example.com/dummy.pdf`, // placeholder
         },
       },
     },
@@ -51,64 +46,70 @@ async function uploadAsset(filePath, fileName) {
 }
 
 async function main() {
-  try {
-    const env = await getEnvironment();
+  const files = fs.readdirSync(INVOICE_FOLDER).filter(f => f.endsWith(".pdf"));
+  if (files.length === 0) {
+    console.log("No PDF files found in invoices folder");
+    return;
+  }
 
-    // Check content type exists
-    const contentTypes = await env.getContentTypes();
-    if (!contentTypes.items.find(ct => ct.sys.id === CONTENT_TYPE_ID)) {
-      throw new Error(`Content type "${CONTENT_TYPE_ID}" does not exist. Please create it first.`);
-    }
+  const env = await getEnvironment();
 
-    // Upload PDFs
-    const files = fs.readdirSync(INVOICE_FOLDER).filter(f => f.endsWith(".pdf"));
-    if (files.length === 0) return console.log("No PDF files found in invoices folder.");
+  // Upload all PDFs
+  const assets = [];
+  for (const file of files) {
+    const filePath = path.join(INVOICE_FOLDER, file);
+    const asset = await uploadAsset(env, filePath, file);
+    assets.push(asset);
+  }
 
-    const assets = [];
-    for (const file of files) {
-      const filePath = path.join(INVOICE_FOLDER, file);
-      const asset = await uploadAsset(filePath, file);
-      assets.push(asset);
-    }
+  // Check if an entry already exists by slug
+  const entries = await env.getEntries({
+    content_type: "invoicesList",
+    "fields.slug": ENTRY_SLUG,
+  });
 
-    // Find existing entry by slug
-    let entry;
-    const existingEntries = await env.getEntries({
-      content_type: CONTENT_TYPE_ID,
-      "fields.slug": SLUG,
+  let entry;
+  if (entries.items.length > 0) {
+    entry = entries.items[0];
+    console.log(`ℹ️ Updating existing entry: ${entry.sys.id}`);
+  } else {
+    entry = await env.createEntry("invoicesList", {
+      fields: {
+        slug: { "en-US": ENTRY_SLUG },
+      },
     });
+    console.log(`ℹ️ Created new entry: ${entry.sys.id}`);
+  }
 
-    if (existingEntries.items.length > 0) {
-      entry = existingEntries.items[0];
-      console.log(`ℹ️ Updating existing entry: ${entry.sys.id}`);
-    } else {
-      entry = await env.createEntry(CONTENT_TYPE_ID, {
-        fields: {
-          slug: { "en-US": SLUG },
-        },
-      });
-      console.log(`ℹ️ Created new entry: ${entry.sys.id}`);
-    }
-
-    // Update entry fields
+  // Update fields
+  if ("invoiceFile" in entry.fields) {
     entry.fields.invoiceFile = {
       "en-US": { sys: { type: "Link", linkType: "Asset", id: assets[0].sys.id } },
     };
+  }
 
+  if ("invoiceFiles" in entry.fields) {
     entry.fields.invoiceFiles = {
       "en-US": assets.map(a => ({ sys: { type: "Link", linkType: "Asset", id: a.sys.id } })),
     };
-
-    entry.fields.invoiceNumbers = { "en-US": files };
-    entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
-
-    await entry.update();
-    await entry.publish();
-
-    console.log("✅ Invoices list updated successfully!");
-  } catch (err) {
-    console.error("❌ Error running script:", err);
+  } else {
+    console.log("⚠️ Field 'invoiceFiles' does not exist. Skipping multi-asset update.");
   }
+
+  if ("invoiceNumbers" in entry.fields) {
+    entry.fields.invoiceNumbers = { "en-US": files };
+  }
+
+  if ("invoiceDate" in entry.fields) {
+    entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
+  }
+
+  // Update and publish
+  await entry.update();
+  await entry.publish();
+  console.log("✅ InvoicesList entry updated successfully");
 }
 
-main();
+main().catch(err => {
+  console.error("❌ Error running script:", err);
+});
