@@ -57,7 +57,7 @@ async function main() {
   // Fetch or create entry
   let entry;
   const existingEntries = await env.getEntries({
-    content_type: InvoicesList,
+    content_type: entry.sys.id,
     "fields.slug": ENTRY_SLUG,
     limit: 1,
   });
