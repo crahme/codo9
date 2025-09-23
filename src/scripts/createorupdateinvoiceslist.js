@@ -77,7 +77,7 @@ async function updateInvoicesList() {
 
     // 4️⃣ Update fields
     entry.fields.invoiceNumbers = { "en-US": invoiceNumbers };
-    entry.fields.invoiceFiles = { "en-US": assetIds };
+    entry.fields.invoiceFile = { "en-US": assetIds };
     entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
 
     const updated = await entry.update();
