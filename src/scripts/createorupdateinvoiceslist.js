@@ -93,7 +93,7 @@ async function main() {
   // Save and publish
   await entry.update();
   await entry.publish();
-  console.log("✅ InvoicesList entry updated successfully");
+  console.log("✅ InvoicesList entry updated successfully", InvoicesList);
 }
 
 main().catch(err => {
