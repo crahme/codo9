@@ -57,7 +57,7 @@ async function main() {
   // Fetch or create entry
   let entry;
   const existingEntries = await env.getEntries({
-    content_type: CONTENT_TYPE_ID,
+    content_type: invoicesList,
     "fields.slug": ENTRY_SLUG,
     limit: 1,
   });
@@ -84,7 +84,7 @@ async function main() {
   entry.fields.invoiceFile = {
     "en-US": { sys: { type: "Link", linkType: "Asset", id: assets[0].sys.id } },
   };
-  entry.fields.invoiceFiles = {
+  entry.fields.invoiceFile = {
     "en-US": assets.map(a => ({ sys: { type: "Link", linkType: "Asset", id: a.sys.id } })),
   };
   entry.fields.invoiceNumbers = { "en-US": files };
