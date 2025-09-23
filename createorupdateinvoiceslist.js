@@ -108,7 +108,7 @@ async function updateInvoicesList() {
     if (entries.items.length > 0) {
       entry = entries.items[0];
       entry.fields.invoiceNumbers = { "en-US": invoiceNumbers };
-      entry.fields.invoiceFiles = { "en-US": invoiceFiles };
+      entry.fields.invoiceFiles = { "en-US": invoiceFile };
       entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
       console.log("🔄 Updating existing invoicesList entry");
     } else {
@@ -116,7 +116,7 @@ async function updateInvoicesList() {
         fields: {
           slug: { "en-US": "/invoicelist" },
           invoiceNumbers: { "en-US": invoiceNumbers },
-          invoiceFiles: { "en-US": invoiceFiles },
+          invoiceFiles: { "en-US": invoiceFile },
           invoiceDate: { "en-US": new Date().toISOString() },
         },
       });
