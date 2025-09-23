@@ -9,16 +9,15 @@ dotenv.config();
 const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
 const ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT || "master";
 const ACCESS_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
-const ENTRY_ID = process.env.INVOICE_ENTRY_ID; // optional, can be undefined
+const ENTRY_ID = process.env.INVOICE_ENTRY_ID; // optional
 const CONTENT_TYPE = "invoicesList"; // your content type
+const INVOICE_FOLDER = path.join(process.cwd(), "invoices");
 
 const client = contentful.createClient({ accessToken: ACCESS_TOKEN });
-const INVOICE_FOLDER = path.join(process.cwd(), "invoices");
 
 async function uploadAsset(filePath, fileName) {
   const env = await client.getSpace(SPACE_ID).then(space => space.getEnvironment(ENVIRONMENT));
 
-  // Check if asset already exists
   const existing = await env.getAssets({ "fields.title": fileName });
   if (existing.items.length > 0) {
     console.log(`✅ Asset already exists for ${fileName}`);
@@ -32,7 +31,7 @@ async function uploadAsset(filePath, fileName) {
         "en-US": {
           contentType: "application/pdf",
           fileName,
-          upload: `https://${filePath.replace(/\\/g, "/")}` // Contentful now requires HTTPS upload or a URL
+          upload: `file://${filePath.replace(/\\/g, "/")}`
         },
       },
     },
@@ -67,9 +66,8 @@ async function main() {
     }
   }
 
-  // If entry not found, create a new one
   if (!entry) {
-    // Avoid slug conflict: use a unique slug if /invoicelist exists
+    // Avoid slug conflicts
     const slugBase = "/invoicelist";
     const existingEntries = await env.getEntries({ content_type: CONTENT_TYPE, "fields.slug": slugBase });
     const slug = existingEntries.items.length === 0 ? slugBase : `${slugBase}-${Date.now()}`;
@@ -94,10 +92,11 @@ async function main() {
   entry.fields.invoiceNumbers = { "en-US": files };
   entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
 
-  // Update and publish
-  await entry.update();
-  await entry.publish();
-  console.log("✅ InvoicesList entry updated successfully.");
+  // First update, then fetch latest version for publishing
+  const updatedEntry = await entry.update();
+  await env.getEntry(updatedEntry.sys.id); // refetch latest
+  await updatedEntry.publish();
+  console.log("✅ InvoicesList entry updated and published successfully.");
 }
 
 main().catch(err => console.error("❌ Error running script:", err));
