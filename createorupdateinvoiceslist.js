@@ -116,7 +116,7 @@ async function updateInvoicesList() {
         fields: {
           slug: { "en-US": "/invoicelist" },
           invoiceNumbers: { "en-US": invoiceNumbers },
-          invoiceFiles: { "en-US": invoiceFile },
+          invoiceFile: { "en-US": invoiceFile },
           invoiceDate: { "en-US": new Date().toISOString() },
         },
       });
