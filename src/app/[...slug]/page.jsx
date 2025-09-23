@@ -5,7 +5,7 @@ import { Stats } from '../../components/Stats.jsx';
 import { InvoiceSection } from '../../components/InvoiceSection.jsx';
 import { Invoice } from '../../components/Invoice.jsx';
 import { VisualEditorComponent } from '../../components/VisualEditorComponent.jsx';
-import { InvoicesList } from '../../components/InvoicesList.jsx';
+import  InvoicesList from '../../components/InvoicesList.jsx';
 
 const componentMap = {
   hero: Hero,
