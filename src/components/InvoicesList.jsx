@@ -9,7 +9,7 @@ function InvoicesList() {
   useEffect(() => {
     async function fetchInvoices() {
       try {
-        const res = await fetch("/api/invoices"); // Next.js API route
+        const res = await fetch("/invoiceslist/invoicelist-1758624798660"); // Next.js API route
         const data = await res.json();
         setInvoices(data);
       } catch (err) {
