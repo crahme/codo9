@@ -12,11 +12,11 @@ const client = createClient({
 });
 
 // Management client (for updating InvoiceNumbers + deleting invoices)
-import { createClient as createManagementClient } from "contentful";
+// import { createClient as createManagementClient } from "contentful";
 
-const mgmtClient = createManagementClient({
-  accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
-});
+// const mgmtClient = createManagementClient({
+//   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
+// });
 
 export default function InvoicesList() {
   const [invoices, setInvoices] = useState([]);
