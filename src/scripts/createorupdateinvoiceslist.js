@@ -9,15 +9,21 @@ dotenv.config();
 const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
 const ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT || "master";
 const ACCESS_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
-const INVOICE_FOLDER = path.join(process.cwd(), "invoices");
-const SLUG = "/invoicelist";
+const SLUG = process.env.SLUG || "/invoicelist";
+const INVOICE_FOLDER = process.env.INVOICE_FOLDER || path.join(process.cwd(), "invoices");
+const CONTENT_TYPE_ID = process.env.CONTENT_TYPE_ID || "invoiceList";
 
 const client = contentful.createClient({ accessToken: ACCESS_TOKEN });
 
-async function uploadAsset(filePath, fileName) {
-  const env = await client.getSpace(SPACE_ID).then(space => space.getEnvironment(ENVIRONMENT));
+async function getEnvironment() {
+  const space = await client.getSpace(SPACE_ID);
+  return await space.getEnvironment(ENVIRONMENT);
+}
 
-  // Check if asset exists
+async function uploadAsset(filePath, fileName) {
+  const env = await getEnvironment();
+
+  // Check if asset already exists
   const existing = await env.getAssets({ "fields.title": fileName });
   if (existing.items.length > 0) {
     console.log(`✅ Asset already exists for ${fileName}`);
@@ -31,7 +37,8 @@ async function uploadAsset(filePath, fileName) {
         "en-US": {
           contentType: "application/pdf",
           fileName,
-          upload: `file://${filePath}`,
+          upload: fs.existsSync(filePath) ? undefined : `https://example.com/${fileName}`,
+          file: fs.existsSync(filePath) ? fs.readFileSync(filePath) : undefined,
         },
       },
     },
@@ -45,9 +52,17 @@ async function uploadAsset(filePath, fileName) {
 
 async function main() {
   try {
-    const env = await client.getSpace(SPACE_ID).then(space => space.getEnvironment(ENVIRONMENT));
+    const env = await getEnvironment();
+
+    // Check content type exists
+    const contentTypes = await env.getContentTypes();
+    if (!contentTypes.items.find(ct => ct.sys.id === CONTENT_TYPE_ID)) {
+      throw new Error(`Content type "${CONTENT_TYPE_ID}" does not exist. Please create it first.`);
+    }
+
+    // Upload PDFs
     const files = fs.readdirSync(INVOICE_FOLDER).filter(f => f.endsWith(".pdf"));
-    if (!files.length) return console.log("No PDF files found");
+    if (files.length === 0) return console.log("No PDF files found in invoices folder.");
 
     const assets = [];
     for (const file of files) {
@@ -56,38 +71,41 @@ async function main() {
       assets.push(asset);
     }
 
-    // Check if entry exists
+    // Find existing entry by slug
+    let entry;
     const existingEntries = await env.getEntries({
-      content_type: "invoiceList",
+      content_type: CONTENT_TYPE_ID,
       "fields.slug": SLUG,
     });
 
-    let entry;
     if (existingEntries.items.length > 0) {
       entry = existingEntries.items[0];
       console.log(`ℹ️ Updating existing entry: ${entry.sys.id}`);
     } else {
-      // Create new entry first
-      entry = await env.createEntry("invoiceList", {
-        fields: { slug: { "en-US": SLUG } },
+      entry = await env.createEntry(CONTENT_TYPE_ID, {
+        fields: {
+          slug: { "en-US": SLUG },
+        },
       });
       console.log(`ℹ️ Created new entry: ${entry.sys.id}`);
     }
 
-    // Update all fields BEFORE publishing
+    // Update entry fields
     entry.fields.invoiceFile = {
       "en-US": { sys: { type: "Link", linkType: "Asset", id: assets[0].sys.id } },
     };
+
     entry.fields.invoiceFiles = {
       "en-US": assets.map(a => ({ sys: { type: "Link", linkType: "Asset", id: a.sys.id } })),
     };
+
     entry.fields.invoiceNumbers = { "en-US": files };
     entry.fields.invoiceDate = { "en-US": new Date().toISOString() };
 
-    const updatedEntry = await entry.update(); // increment version properly
-    await updatedEntry.publish(); // safe publish
+    await entry.update();
+    await entry.publish();
 
-    console.log("✅ InvoicesList entry updated and published successfully");
+    console.log("✅ Invoices list updated successfully!");
   } catch (err) {
     console.error("❌ Error running script:", err);
   }
