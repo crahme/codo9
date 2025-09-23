@@ -73,7 +73,7 @@ async function main() {
   }
 
   if (!entry) {
-    entry = await env.createEntry("invoiceList", {
+    entry = await env.createEntry("invoicesList", {
       fields: {
         slug: { "en-US": "/invoicelist" },
       },
