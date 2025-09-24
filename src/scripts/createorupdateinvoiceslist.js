@@ -12,8 +12,9 @@ const client = contentful.createClient({
 
 const INVOICES_FOLDER = path.resolve("invoices"); // your local invoices folder
 const CONTENT_TYPE = "invoicesList"; // must match your Contentful content type
-const ENTRY_SLUG = "/invoiceslist";  // unique slug
+const ENTRY_SLUG = "invoiceslist";  // unique slug
 
+// Upload a PDF file to Contentful and return the published asset
 async function uploadAsset(env, filePath, fileName) {
   const buffer = fs.readFileSync(filePath);
 
@@ -36,7 +37,6 @@ async function uploadAsset(env, filePath, fileName) {
     },
   });
 
-  // Process & publish
   asset = await asset.processForAllLocales();
   const published = await asset.publish();
 
@@ -44,12 +44,18 @@ async function uploadAsset(env, filePath, fileName) {
   return published;
 }
 
-async function getOrCreateInvoicesList(env, assetIds, fileNames) {
-  // Check if an entry with this slug exists
+// Create or update the invoicesList entry
+async function getOrCreateInvoicesList(env, assetList) {
   const existing = await env.getEntries({
     content_type: CONTENT_TYPE,
     "fields.slug": ENTRY_SLUG,
   });
+
+  const invoiceNumbers = assetList.map(a => a.fields.title["en-US"]);
+  const invoiceDates = assetList.map(() => new Date().toISOString());
+  const invoiceFiles = assetList.map(a => ({
+    sys: { type: "Link", linkType: "Asset", id: a.sys.id },
+  }));
 
   if (existing.items.length > 0) {
     const entry = existing.items[0];
@@ -58,16 +64,9 @@ async function getOrCreateInvoicesList(env, assetIds, fileNames) {
     entry.fields = {
       ...entry.fields,
       slug: { "en-US": ENTRY_SLUG },
-      invoiceDate: { "en-US": new Date().toISOString() },
-      invoiceNumbers: { "en-US": fileNames },
-      invoiceFile: {
-        "en-US": { sys: { type: "Link", linkType: "Asset", id: assetIds[0] } },
-      },
-      invoiceFiles: {
-        "en-US": assetIds.map((id) => ({
-          sys: { type: "Link", linkType: "Asset", id },
-        })),
-      },
+      invoiceNumbers: { "en-US": invoiceNumbers },
+      invoiceDates: { "en-US": invoiceDates },
+      invoiceFiles: { "en-US": invoiceFiles },
     };
 
     const updated = await entry.update();
@@ -80,16 +79,9 @@ async function getOrCreateInvoicesList(env, assetIds, fileNames) {
     const entry = await env.createEntry(CONTENT_TYPE, {
       fields: {
         slug: { "en-US": ENTRY_SLUG },
-        invoiceDate: { "en-US": new Date().toISOString() },
-        invoiceNumbers: { "en-US": fileNames },
-        invoiceFile: {
-          "en-US": { sys: { type: "Link", linkType: "Asset", id: assetIds[0] } },
-        },
-        invoiceFiles: {
-          "en-US": assetIds.map((id) => ({
-            sys: { type: "Link", linkType: "Asset", id },
-          })),
-        },
+        invoiceNumbers: { "en-US": invoiceNumbers },
+        invoiceDates: { "en-US": invoiceDates },
+        invoiceFiles: { "en-US": invoiceFiles },
       },
     });
 
@@ -99,23 +91,22 @@ async function getOrCreateInvoicesList(env, assetIds, fileNames) {
   }
 }
 
+// Main
 async function main() {
   try {
     const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
     const env = await space.getEnvironment("master");
 
-    // Collect all PDFs in invoices/ folder
     const files = fs
       .readdirSync(INVOICES_FOLDER)
-      .filter((f) => f.toLowerCase().endsWith(".pdf"));
+      .filter(f => f.toLowerCase().endsWith(".pdf"));
 
     if (files.length === 0) {
       console.warn("⚠️ No PDF files found in invoices/ folder.");
       return;
     }
 
-    const assetIds = [];
-    const fileNames = [];
+    const assetList = [];
 
     for (const fileName of files) {
       const filePath = path.join(INVOICES_FOLDER, fileName);
@@ -124,18 +115,16 @@ async function main() {
       const existing = await env.getAssets({ "fields.title": fileName });
       if (existing.items.length > 0) {
         console.log(`✅ Asset already exists for ${fileName}`);
-        assetIds.push(existing.items[0].sys.id);
-        fileNames.push(fileName);
+        assetList.push(existing.items[0]);
         continue;
       }
 
       const asset = await uploadAsset(env, filePath, fileName);
-      assetIds.push(asset.sys.id);
-      fileNames.push(fileName);
+      assetList.push(asset);
     }
 
-    // Create or update invoicesList entry
-    await getOrCreateInvoicesList(env, assetIds, fileNames);
+    // Create or update the invoicesList entry
+    await getOrCreateInvoicesList(env, assetList);
 
   } catch (err) {
     console.error("❌ Error running script:", err);
