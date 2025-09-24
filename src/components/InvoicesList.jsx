@@ -9,7 +9,7 @@ function InvoicesList() {
   useEffect(() => {
     async function fetchInvoices() {
       try {
-        const res = await fetch("/api/invoices"); // API route you create
+        const res = await fetch("/api/invoices/route"); // API route you create
         const data = await res.json();
 
         // Map Contentful fields into UI-friendly objects
