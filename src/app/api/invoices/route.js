@@ -14,7 +14,7 @@ export async function GET() {
       `https://cdn.contentful.com/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/entries?content_type=${CONTENT_TYPE}&fields.slug=${ENTRY_SLUG}`,
       {
         headers: {
-          Authorization: `Bearer ${CDA_TOKEN}`,
+          "Access-Token":  CDA_TOKEN,
         },
       }
     );
