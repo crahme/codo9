@@ -92,9 +92,15 @@ const slug =
         } else if (doc.modelName === 'invoice') {
           const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
           urlPath = `/invoice/${cleanSlug}`;
-        } else {
-          return null;
         }
+        else if (doc.modelName === 'invoicesList') {
+          const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
+          urlPath = `/invoiceslist/${cleanSlug}`;
+       } 
+         else {
+                return null;
+              }
+         
 
         return {
           stableId: entryId,
