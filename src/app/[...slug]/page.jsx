@@ -1,3 +1,4 @@
+// app/[...slug]/page.jsx
 import { notFound } from 'next/navigation';
 import { getPageFromSlug } from '../../utils/content.js';
 import { Hero } from '../../components/Hero.jsx';
@@ -35,6 +36,7 @@ export default async function ComposablePage({ params }) {
     pageSlug = pageSlug.replace(/\/index\.html?$/i, '');
     fullPath = `/${pageSlug}`;
 
+    // ignore system paths
     if (
       fullPath.includes('.well-known') ||
       fullPath.includes('favicon.ico') ||
@@ -53,8 +55,10 @@ export default async function ComposablePage({ params }) {
       return notFound();
     }
 
+    const type = page.sys.contentType.sys.id;
+
     // ✅ Handle "page"
-    if (page.sys.contentType.sys.id === 'page') {
+    if (type === 'page') {
       if (!page.fields || !page.fields.sections) {
         console.warn(`Page entry found for slug '${fullPath}', but missing fields or sections.`, page);
         return notFound();
@@ -66,10 +70,7 @@ export default async function ComposablePage({ params }) {
             page.fields.sections.map((section) => {
               if (
                 !section ||
-                !section.sys ||
-                !section.sys.contentType ||
-                !section.sys.contentType.sys ||
-                !section.sys.id ||
+                !section.sys?.contentType?.sys?.id ||
                 !section.fields
               ) {
                 console.warn("Skipping rendering of invalid section object:", section);
@@ -88,29 +89,85 @@ export default async function ComposablePage({ params }) {
     }
 
     // ✅ Handle "invoice"
-    if (page.sys.contentType.sys.id === 'invoice') {
-      if (!page.fields) {
+    if (type === 'invoice') {
+      const f = page.fields;
+      if (!f) {
         console.warn(`Invoice entry found for slug '${fullPath}', but missing fields.`, page);
         return notFound();
       }
+
       return (
         <div data-sb-object-id={page.sys.id}>
-          <h1>Invoice: {page.fields.invoiceNumber || page.fields.slug || 'Unknown'}</h1>
-          {/* same invoice details as before */}
+          <h1>Invoice: {f.invoiceNumber || f.slug || 'Unknown'}</h1>
+
+          <section>
+            <p><strong>Syndicate:</strong> {f.syndicateName}</p>
+            <p><strong>Address:</strong> {f.address}</p>
+            <p><strong>Contact:</strong> {f.contact}</p>
+          </section>
+
+          <section>
+            <p><strong>Client:</strong> {f.clientName}</p>
+            <p><strong>Email:</strong> {f.clientEmail}</p>
+          </section>
+
+          <section>
+            <p><strong>Invoice Date:</strong> {f.invoiceDate ? new Date(f.invoiceDate).toLocaleDateString() : ''}</p>
+            <p><strong>Charger Serial:</strong> {f.chargerSerialNumber}</p>
+            <p><strong>Billing Period:</strong>
+              {f.billingPeriodStart ? new Date(f.billingPeriodStart).toLocaleDateString() : ''} – {f.billingPeriodEnd ? new Date(f.billingPeriodEnd).toLocaleDateString() : ''}
+            </p>
+            <p><strong>Payment Due:</strong> {f.paymentDueDate ? new Date(f.paymentDueDate).toLocaleDateString() : ''}</p>
+            <p><strong>Late Fee Rate:</strong> {f.lateFeeRate}</p>
+          </section>
+
+          <section>
+            {Array.isArray(f.lineItems) && f.lineItems.length > 0 ? (
+              <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Energy</th>
+                    <th>Unit Price</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {f.lineItems.map((item) => (
+                    <tr key={item.sys.id}>
+                      <td>{item.fields.date ? new Date(item.fields.date).toLocaleDateString() : ''}</td>
+                      <td>{item.fields.startTime ? new Date(item.fields.startTime).toLocaleTimeString() : ''}</td>
+                      <td>{item.fields.endTime ? new Date(item.fields.endTime).toLocaleTimeString() : ''}</td>
+                      <td>{item.fields.energyConsumed}</td>
+                      <td>{item.fields.unitPrice}</td>
+                      <td>{item.fields.amount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>No line items.</p>
+            )}
+          </section>
+
+          {f.total && <p><strong>Total:</strong> {f.total}</p>}
         </div>
       );
     }
 
     // ✅ Handle "invoicesList"
-    if (page.sys.contentType.sys.id === 'invoicesList') {
-      if (!page.fields || !page.fields.invoiceNumbers || !page.fields.invoiceDates || !page.fields.invoiceFiles) {
+    if (type === 'invoicesList') {
+      const f = page.fields;
+      if (!f?.invoiceNumbers || !f?.invoiceDates || !f?.invoiceFiles) {
         console.warn(`InvoicesList entry found for slug '${fullPath}', but missing invoice data.`, page);
         return notFound();
       }
 
-      const numbers = page.fields.invoiceNumbers || [];
-      const dates = page.fields.invoiceDates || [];
-      const files = page.fields.invoiceFiles || [];
+      const numbers = f.invoiceNumbers || [];
+      const dates = f.invoiceDates || [];
+      const files = f.invoiceFiles || [];
 
       return (
         <div data-sb-object-id={page.sys.id}>
@@ -146,7 +203,7 @@ export default async function ComposablePage({ params }) {
                         <button
                           onClick={() => {
                             if (confirm(`Are you sure you want to delete invoice #${num}?`)) {
-                              // TODO: implement delete handler (API call to Contentful or your backend)
+                              // TODO: hook into Contentful Management API
                               console.log(`Delete invoice ${num}`);
                             }
                           }}
@@ -167,11 +224,11 @@ export default async function ComposablePage({ params }) {
     }
 
     // ❌ fallback
-    console.warn(`Unsupported content type for slug '${fullPath}':`, page.sys.contentType.sys.id);
+    console.warn(`Unsupported content type for slug '${fullPath}':`, type);
     return notFound();
 
   } catch (error) {
-    const digest = error && error.digest;
+    const digest = error?.digest;
     if (digest === 'NEXT_NOT_FOUND' || (typeof digest === 'string' && digest.includes('NEXT_HTTP_ERROR_FALLBACK;404'))) {
       throw error;
     }
