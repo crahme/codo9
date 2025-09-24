@@ -9,9 +9,18 @@ function InvoicesList() {
   useEffect(() => {
     async function fetchInvoices() {
       try {
-        const res = await fetch("/invoiceslist/invoicelist-1758624798660"); // Next.js API route
+        const res = await fetch("/api/invoices"); // API route you create
         const data = await res.json();
-        setInvoices(data);
+
+        // Map Contentful fields into UI-friendly objects
+        const mapped = data.invoiceNumbers.map((num, idx) => ({
+          id: `${num}-${idx}`, // local id
+          number: num,
+          date: data.invoiceDates[idx],
+          url: data.invoiceFiles[idx]?.url || "#",
+        }));
+
+        setInvoices(mapped);
       } catch (err) {
         console.error("Error fetching invoices:", err);
       } finally {
@@ -35,8 +44,8 @@ function InvoicesList() {
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this invoice?")) return;
-
-    const res = await fetch(`/invoiceslist/invoicelist-1758624798660`, { method: "DELETE" });
+    // Implement DELETE in your /api/invoices route
+    const res = await fetch(`/api/invoices?id=${id}`, { method: "DELETE" });
     if (res.ok) setInvoices((prev) => prev.filter((inv) => inv.id !== id));
   };
 
