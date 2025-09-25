@@ -2,25 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-function InvoicesList() {
+export default function InvoicesList() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchInvoices() {
       try {
-        const res = await fetch("/api/invoices/route"); // API route you create
+        const res = await fetch("/api/invoices"); // fetches from Contentful
         const data = await res.json();
-
-        // Map Contentful fields into UI-friendly objects
-        const mapped = data.invoiceNumbers.map((num, idx) => ({
-          id: `${num}-${idx}`, // local id
-          number: num,
-          date: data.invoiceDates[idx],
-          url: data.invoiceFiles[idx]?.url || "#",
-        }));
-
-        setInvoices(mapped);
+        setInvoices(data);
       } catch (err) {
         console.error("Error fetching invoices:", err);
       } finally {
@@ -44,9 +35,13 @@ function InvoicesList() {
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this invoice?")) return;
-    // Implement DELETE in your /api/invoices route
-    const res = await fetch(`/api/invoices?id=${id}`, { method: "DELETE" });
-    if (res.ok) setInvoices((prev) => prev.filter((inv) => inv.id !== id));
+
+    const res = await fetch(`../app/api/invoices/route`, { method: "DELETE" });
+    if (res.ok) {
+      setInvoices((prev) => prev.filter((inv) => inv.id !== id));
+    } else {
+      alert("Failed to delete invoice");
+    }
   };
 
   if (loading) return <p>Loading invoices...</p>;
@@ -55,7 +50,7 @@ function InvoicesList() {
   return (
     <table className="min-w-full border border-gray-300">
       <thead>
-        <tr className="bg-gray-100">
+        <tr className="bg-gray-100 text-center">
           <th className="px-4 py-2 border">Invoice Number</th>
           <th className="px-4 py-2 border">Invoice Date</th>
           <th className="px-4 py-2 border">Actions</th>
@@ -64,10 +59,15 @@ function InvoicesList() {
       <tbody>
         {invoices.map((inv) => (
           <tr key={inv.id} className="text-center">
+            {/* 1st column */}
             <td className="px-4 py-2 border">{inv.number}</td>
+
+            {/* 2nd column */}
             <td className="px-4 py-2 border">
               {inv.date ? new Date(inv.date).toLocaleDateString() : "-"}
             </td>
+
+            {/* 3rd column */}
             <td className="px-4 py-2 border space-x-2">
               <button
                 className="px-2 py-1 bg-blue-500 text-white rounded"
@@ -94,5 +94,3 @@ function InvoicesList() {
     </table>
   );
 }
-
-export default InvoicesList;
