@@ -1,96 +1,53 @@
-// src/app/api/invoices/route.js
-import { NextResponse } from "next/server";
-
-// Contentful Delivery API credentials
-const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
-const ENVIRONMENT = "master";
-const CDA_TOKEN = process.env.CONTENTFUL_DELIVERY_TOKEN; // Delivery, not Management API
-
-const CONTENT_TYPE = "invoicesList";
+// src/pages/api/invoices/route.js
+import { getPageFromSlug } from "../../../utils/content";
 
 export async function GET() {
   try {
-    const res = await fetch(
-      `https://cdn.contentful.com/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/entries?content_type=${CONTENT_TYPE}&include=2`,
-      {
-        headers: {
-          Authorization: `Bearer ${CDA_TOKEN}`,
-        },
-      }
-    );
+    // Always fetch the invoicesList entry regardless of slug
+    const entry = await getPageFromSlug("invoiceslist", "invoicesList");
 
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: "Failed to fetch from Contentful" },
-        { status: res.status }
-      );
+    if (!entry) {
+      return new Response(JSON.stringify({ error: "Invoices list not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    const data = await res.json();
+    const fields = entry.fields || {};
 
-    if (data.items.length === 0) {
-      return NextResponse.json([]);
-    }
+    // Map invoice files
+    const invoiceFiles = (fields.invoiceFiles?.["en-US"] || []).map((asset) => {
+      const file = asset.fields?.file?.["en-US"];
+      return file
+        ? {
+            id: asset.sys.id,
+            title: asset.fields.title["en-US"] || "",
+            url: file.url.startsWith("//") ? "https:" + file.url : file.url,
+          }
+        : null;
+    }).filter(Boolean);
 
-    // always take the first invoicesList entry
-    const entry = data.items[0];
-    const assets = data.includes?.Asset || [];
+    // Map invoice numbers and dates
+    const invoiceNumbers = fields.invoiceNumbers?.["en-US"] || [];
+    const invoiceDates = fields.invoiceDates?.["en-US"] || [];
 
-    // Build invoice list in UI-friendly shape
-    const invoices = (entry.fields.invoiceNumbers?.["en-US"] || []).map(
-      (num, idx) => {
-        const date =
-          entry.fields.invoiceDates?.["en-US"]?.[idx] || new Date().toISOString();
-        const assetLink = entry.fields.invoiceFiles?.["en-US"]?.[idx];
-        let url = "#";
+    const invoices = invoiceFiles.map((file, index) => ({
+      id: file.id,
+      title: file.title,
+      url: file.url,
+      number: invoiceNumbers[index] || null,
+      date: invoiceDates[index] || null,
+    }));
 
-        if (assetLink) {
-          const asset = assets.find((a) => a.sys.id === assetLink.sys.id);
-          url = asset?.fields?.file?.["en-US"]?.url
-            ? `https:${asset.fields.file["en-US"].url}`
-            : "#";
-        }
-
-        return {
-          id: `${num}-${idx}`,
-          number: num,
-          date,
-          url,
-        };
-      }
-    );
-
-    return NextResponse.json(invoices);
+    return new Response(JSON.stringify({ invoices }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
-    console.error("Error fetching invoices:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(req) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Missing invoice ID" },
-        { status: 400 }
-      );
-    }
-
-    // In production you'd call the Contentful Management API here
-    // to unpublish/delete the asset or remove it from the entry.
-    // For now, we’ll just simulate success:
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("Error deleting invoice:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("❌ /api/invoices error:", err);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
