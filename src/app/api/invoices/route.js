@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 
-// Contentful Delivery API credentials
 const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
 const ENVIRONMENT = "master";
-const CDA_TOKEN = process.env.CONTENTFUL_DELIVERY_TOKEN; // not the management one!
+const CDA_TOKEN = process.env.CONTENTFUL_DELIVERY_TOKEN;
 
 const CONTENT_TYPE = "invoicesList";
 const ENTRY_SLUG = "invoiceslist";
@@ -11,35 +10,35 @@ const ENTRY_SLUG = "invoiceslist";
 export async function GET() {
   try {
     const res = await fetch(
-      `https://cdn.contentful.com/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/entries?content_type=${CONTENT_TYPE}&fields.slug=${ENTRY_SLUG}`,
+      `https://cdn.contentful.com/spaces/${SPACE_ID}/environments/${ENVIRONMENT}/entries?content_type=${CONTENT_TYPE}&fields.slug=${ENTRY_SLUG}&include=2`,
       {
         headers: {
-          "Access-Token":  CDA_TOKEN,
+          Authorization: `Bearer ${CDA_TOKEN}`, // ✅ correct auth header
         },
+        cache: "no-store", // optional: avoid caching in dev
       }
     );
 
     if (!res.ok) {
-      return NextResponse.json(
-        { error: "Failed to fetch from Contentful" },
-        { status: res.status }
-      );
+      console.error("Contentful fetch failed:", res.status, res.statusText);
+      return NextResponse.json([], { status: res.status });
     }
 
     const data = await res.json();
 
-    if (data.items.length === 0) {
-      return NextResponse.json([]);
+    if (!data.items || data.items.length === 0) {
+      return NextResponse.json([]); // ✅ always return an array
     }
 
     const entry = data.items[0];
     const assets = data.includes?.Asset || [];
 
-    // Build invoice list in UI-friendly shape
-    const invoices = (entry.fields.invoiceNumbers["en-US"] || []).map(
+    // Map invoices into UI-friendly shape
+    const invoices = (entry.fields.invoiceNumbers?.["en-US"] || []).map(
       (num, idx) => {
         const date =
-          entry.fields.invoiceDates?.["en-US"]?.[idx] || new Date().toISOString();
+          entry.fields.invoiceDates?.["en-US"]?.[idx] ||
+          new Date().toISOString();
         const assetLink = entry.fields.invoiceFiles?.["en-US"]?.[idx];
         let url = "#";
 
@@ -62,10 +61,7 @@ export async function GET() {
     return NextResponse.json(invoices);
   } catch (err) {
     console.error("Error fetching invoices:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json([], { status: 500 }); // ✅ always return an array
   }
 }
 
@@ -75,21 +71,15 @@ export async function DELETE(req) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Missing invoice ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing invoice ID" }, { status: 400 });
     }
 
-    // In a real app, you'd call the Contentful Management API here
-    // to unpublish/delete the asset or remove it from the entry.
-    // For now, we’ll just simulate success:
+    // TODO: Call Contentful Management API to actually delete
+    console.log("Pretend deleting invoice:", id);
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Error deleting invoice:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
