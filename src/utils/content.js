@@ -20,7 +20,7 @@ export async function getPageFromSlug(slugPath, explicitType) {
   const raw = typeof slugPath === "string" ? slugPath : "/";
 
   // 🚨 Guard: skip API routes so Visual Editor won't try to load them as pages
-  if (raw.startsWith("/api/")) {
+  if (raw.startsWith("api/")) {
     return null;
   }
 
