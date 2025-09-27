@@ -41,6 +41,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-id-swiper": "latest",
+    "react-scroll": "^1.9.3",
     "sequelize": "latest",
     "sqlite3": "latest",
     "winston": "^3.17.0"
