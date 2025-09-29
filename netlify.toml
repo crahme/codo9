@@ -41,6 +41,11 @@ status = 200
   url = ":url"
   w = ":width"
   q = ":quality"
+  [[redirects]]
+  from = "/invoiceslist"
+  to = "invoiceslist/invoiceslist-1758624798660"
+  status = 300
+  force = true
 
 [[redirects]]
   from = "/api/*"
