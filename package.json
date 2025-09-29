@@ -25,7 +25,7 @@
     "contentful-management": "^11.56.0",
     "express": "^5.1.0",
     "gh-pages": "^6.3.0",
-    "glob": "^11.0.3",
+    "glob": "^9.0.0",
     "markdown-to-jsx": "^7.4.7",
     "morgan": "^1.10.1",
     "neon-js": "^1.1.2",
@@ -53,7 +53,8 @@
   },
   "overrides": {
     "rimraf": "^6.0.1",
-    "eslint": "^9.36.0"
+    "eslint": "^9.36.0",
+    "glob":"^9.0.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.3",
