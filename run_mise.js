@@ -1,4 +1,5 @@
-import { addSetting } from 'mise';
+import pkg from 'mise';
+const { addSetting } = pkg;
 
 async function main() {
   try {
