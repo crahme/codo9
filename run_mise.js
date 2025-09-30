@@ -1,4 +1,5 @@
-import { Mise } from 'mise';
+import pkg from 'mise';
+const { Mise } = pkg;
 
 async function main() {
   // Create a new Mise instance
