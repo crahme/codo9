@@ -3,7 +3,7 @@ const { Mise } = pkg;
 
 async function main() {
   // Create a new Mise instance
-  const mise = new Mise();
+  
 
   try {
     // Add the setting
