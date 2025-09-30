@@ -1,12 +1,11 @@
-// run_mise.js
-import mise from 'mise';
+import { addSetting } from 'mise';
 
 async function main() {
   try {
-    await mise.settings.add('idiomatic_version_file_enable_tools', 'node');
+    await addSetting('idiomatic_version_file_enable_tools', 'node');
     console.log('Setting added successfully!');
   } catch (err) {
-    console.error(err);
+    console.error('Error adding setting:', err);
   }
 }
 
