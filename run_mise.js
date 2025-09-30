@@ -1,9 +1,12 @@
-import pkg from 'mise';
-const { addSetting } = pkg;
+import { Mise } from 'mise';
 
 async function main() {
+  // Create a new Mise instance
+  const mise = new Mise();
+
   try {
-    await addSetting('idiomatic_version_file_enable_tools', 'node');
+    // Add the setting
+    await mise.settings.add('idiomatic_version_file_enable_tools', 'node');
     console.log('Setting added successfully!');
   } catch (err) {
     console.error('Error adding setting:', err);
