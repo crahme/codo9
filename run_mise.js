@@ -1,13 +1,13 @@
 // run_mise.js
-import Mise from 'mise';
+import miseModule from 'mise';
 
 async function main() {
   try {
-    // Create a Mise instance
-    const mise = new Mise();
+    // Access the settings object directly
+    const { settings } = miseModule.default ?? miseModule;
 
     // Add the setting
-    mise.settings.add('idiomatic_version_file_enable_tools', 'node');
+    settings.add('idiomatic_version_file_enable_tools', 'node');
 
     console.log('✅ Setting added successfully!');
   } catch (err) {
@@ -15,5 +15,5 @@ async function main() {
   }
 }
 
-// Run the main function
 main();
+
