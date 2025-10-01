@@ -1,7 +1,7 @@
 // src/app/[...slug]/page.jsx
 import { notFound } from "next/navigation";
 import { draftMode } from "next/headers";
-import { getPageFromSlug } from "../../utils/content.js"; // <-- adjust to your helper
+import { getPageFromSlug } from "@/lib/contentful"; // <-- adjust to your helper
 import { NextResponse } from "next/server";
 
 export default async function Page({ params }) {
