@@ -5,7 +5,7 @@ const ENVIRONMENT = "master";
 const CDA_TOKEN = process.env.CONTENTFUL_DELIVERY_TOKEN;
 
 const CONTENT_TYPE = "invoicesList";
-const ENTRY_SLUG = "invoiceslist";
+const ENTRY_SLUG = "invoiceslist/invoiceslist-1758624798660";
 
 export async function GET() {
   try {
