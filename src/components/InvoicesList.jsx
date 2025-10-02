@@ -36,7 +36,7 @@ export default function InvoicesList() {
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this invoice?")) return;
 
-    const res = await fetch(`../app/api/invoices/route`, { method: "DELETE" });
+    const res = await fetch(`/invoiceslist/invoiceslist-1758624798660`, { method: "DELETE" });
     if (res.ok) {
       setInvoices((prev) => prev.filter((inv) => inv.id !== id));
     } else {
