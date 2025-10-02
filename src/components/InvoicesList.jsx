@@ -8,8 +8,8 @@ export default function InvoicesList() {
 
   useEffect(() => {
     async function fetchInvoices() {
-      try {/invoiceslist/invoiceslist-1758624798660
-        const res = await fetch("/api/invoices"); // fetches from Contentful
+      try {
+        const res = await fetch("/invoiceslist/invoiceslist-1758624798660"); // fetches from Contentful
         const data = await res.json();
         setInvoices(data);
       } catch (err) {
