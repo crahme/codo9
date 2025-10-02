@@ -8,7 +8,7 @@ export default function InvoicesList() {
 
   useEffect(() => {
     async function fetchInvoices() {
-      try {
+      try {/invoiceslist/invoiceslist-1758624798660
         const res = await fetch("/api/invoices"); // fetches from Contentful
         const data = await res.json();
         setInvoices(data);
