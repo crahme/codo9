@@ -232,7 +232,7 @@ export default async function ComposablePage({ params }) {
       const f = page.fields;
 
       let numbers = f.invoiceNumbers || [];
-      let dates = f.invoiceDates || [];
+      let dates = f.invoiceDate || [];
       let files = f.invoiceFiles || [];
 
       // fallback: if only singular invoiceFile exists
