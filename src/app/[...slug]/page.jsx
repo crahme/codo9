@@ -305,6 +305,9 @@ export default async function ComposablePage({ params }) {
           ) : (
             <p>No invoices found.</p>
           )}
+          console.log("Page fields:", page.fields);
+          console.log("Raw invoiceFiles:", page.fields?.invoiceFiles);
+
         </div>
       );
     }
