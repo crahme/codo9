@@ -36,7 +36,7 @@ export default async function ComposablePage({ params }) {
     pageSlug = pageSlug.replace(/\/index\.html?$/i, "");
     fullPath = `/${pageSlug}`;
 
-    // Ignore system paths
+    // ignore system paths
     if (
       fullPath.includes(".well-known") ||
       fullPath.includes("favicon.ico") ||
@@ -95,11 +95,7 @@ export default async function ComposablePage({ params }) {
                 );
               }
               return (
-                <Component
-                  key={section.sys.id}
-                  {...section.fields}
-                  id={section.sys.id}
-                />
+                <Component key={section.sys.id} {...section.fields} id={section.sys.id} />
               );
             })}
         </div>
@@ -227,18 +223,37 @@ export default async function ComposablePage({ params }) {
       );
     }
 
-    // ✅ Handle "invoicesList" with ONLY invoiceFiles
+    // ✅ Handle "invoicesList"
     if (type === "invoicesList") {
       const f = page.fields;
 
-      const numbers = f.invoiceNumbers || [];
-      const dates = f.invoiceDates || [];
-      const files = f.invoiceFiles || [];
+      // normalize invoiceFiles into an array
+      let filesRaw = f?.invoiceFiles || [];
+      const files = Array.isArray(filesRaw) ? filesRaw : [filesRaw];
+
+      const numbers = f?.invoiceNumbers || [];
+      const dates = f?.invoiceDates || [];
+
+      // Debug logging so you can see exactly what Contentful is returning
+      console.log("InvoicesList debug:", {
+        raw: f?.invoiceFiles,
+        normalized: files,
+        numbers,
+        dates,
+        isArray: Array.isArray(filesRaw),
+        length: files.length,
+      });
+
+      if (files.length === 0) {
+        console.warn(
+          `InvoicesList entry '${fullPath}' has no invoiceFiles attached.`
+        );
+      }
 
       return (
         <div data-sb-object-id={page.sys.id}>
           <h1>Invoices List</h1>
-          {Array.isArray(files) && files.length > 0 ? (
+          {files.length > 0 ? (
             <table
               border="1"
               cellPadding="8"
@@ -253,6 +268,8 @@ export default async function ComposablePage({ params }) {
               </thead>
               <tbody>
                 {files.map((file, i) => {
+                  if (!file) return null;
+
                   const num = numbers[i] || "Unknown";
                   const date = dates[i]
                     ? new Date(dates[i]).toLocaleDateString()
@@ -292,7 +309,7 @@ export default async function ComposablePage({ params }) {
       );
     }
 
-    // ❌ Fallback
+    // ❌ fallback
     console.warn(`Unsupported content type for slug '${fullPath}':`, type);
     return notFound();
   } catch (error) {
