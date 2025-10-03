@@ -310,8 +310,7 @@ export default async function ComposablePage({ params }) {
         </div>
         
       );
-       console.log("Page fields:", page.fields);
-       console.log("Raw invoiceFiles:", page.fields?.invoiceFiles);
+       
     }
 
     // ❌ fallback
