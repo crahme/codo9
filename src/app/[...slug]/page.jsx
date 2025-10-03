@@ -95,7 +95,11 @@ export default async function ComposablePage({ params }) {
                 );
               }
               return (
-                <Component key={section.sys.id} {...section.fields} id={section.sys.id} />
+                <Component
+                  key={section.sys.id}
+                  {...section.fields}
+                  id={section.sys.id}
+                />
               );
             })}
         </div>
@@ -227,22 +231,21 @@ export default async function ComposablePage({ params }) {
     if (type === "invoicesList") {
       const f = page.fields;
 
+      // Debug logs
+      console.log("Page fields:", page.fields);
+      console.log("Raw invoiceFiles:", page.fields?.invoiceFiles);
+
       // normalize invoiceFiles into an array
-      const filesRaw = f?.invoiceFiles || [];
-      const files = Array.isArray(filesRaw) ? filesRaw : [filesRaw];
+      const files = Array.isArray(page.fields?.invoiceFiles)
+        ? page.fields.invoiceFiles
+        : page.fields?.invoiceFiles
+        ? [page.fields.invoiceFiles] // handle singular
+        : [];
 
       const numbers = f?.invoiceNumbers || [];
       const dates = f?.invoiceDates || [];
 
-      // Debug logging so you can see exactly what Contentful is returning
-      console.log("InvoicesList debug:", {
-        raw: f?.invoiceFiles,
-        normalized: files,
-        numbers,
-        dates,
-        isArray: Array.isArray(filesRaw),
-        length: files.length,
-      });
+      console.log("InvoicesList normalized files:", files);
 
       if (files.length === 0) {
         console.warn(
@@ -305,12 +308,8 @@ export default async function ComposablePage({ params }) {
           ) : (
             <p>No invoices found.</p>
           )}
-         
-
         </div>
-        
       );
-       
     }
 
     // ❌ fallback
