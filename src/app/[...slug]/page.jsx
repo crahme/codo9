@@ -227,25 +227,18 @@ export default async function ComposablePage({ params }) {
       );
     }
 
-    // ✅ Handle "invoicesList" with BOTH invoiceFile & invoiceFiles
+    // ✅ Handle "invoicesList" with ONLY invoiceFiles
     if (type === "invoicesList") {
       const f = page.fields;
 
-      let numbers = f.invoiceNumbers || [];
-      let dates = f.invoiceDate || [];
-      let files = f.invoiceFiles || [];
-
-      // fallback: if only singular invoiceFile exists
-      if (!numbers.length && f.invoiceFile) {
-        numbers = [f.invoiceNumber || "Unknown"];
-        dates = [f.invoiceDate || new Date().toISOString()];
-        files = [f.invoiceFile];
-      }
+      const numbers = f.invoiceNumbers || [];
+      const dates = f.invoiceDates || [];
+      const files = f.invoiceFiles || [];
 
       return (
         <div data-sb-object-id={page.sys.id}>
           <h1>Invoices List</h1>
-          {numbers.length > 0 ? (
+          {Array.isArray(files) && files.length > 0 ? (
             <table
               border="1"
               cellPadding="8"
@@ -259,21 +252,24 @@ export default async function ComposablePage({ params }) {
                 </tr>
               </thead>
               <tbody>
-                {numbers.map((num, i) => {
+                {files.map((file, i) => {
+                  const num = numbers[i] || "Unknown";
                   const date = dates[i]
                     ? new Date(dates[i]).toLocaleDateString()
                     : "N/A";
-                  const file =
-                    files[i]?.fields?.file?.url || files[i]?.fields?.file?.["en-US"]?.url || null;
+                  const fileUrl =
+                    file?.fields?.file?.url ||
+                    file?.fields?.file?.["en-US"]?.url ||
+                    null;
 
                   return (
                     <tr key={i}>
                       <td>{num}</td>
                       <td>{date}</td>
                       <td>
-                        {file ? (
+                        {fileUrl ? (
                           <a
-                            href={`https:${file}`}
+                            href={`https:${fileUrl}`}
                             download
                             target="_blank"
                             rel="noopener noreferrer"
