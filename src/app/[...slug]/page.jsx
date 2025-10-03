@@ -119,7 +119,7 @@ export default async function ComposablePage({ params }) {
 
           <section>
             <p>
-              <strong>Syndicate:</strong> {f.syndicateName}
+              <strong>Syndicate Name:</strong> {f.syndicateName}
             </p>
             <p>
               <strong>Address:</strong> {f.address}
@@ -131,10 +131,10 @@ export default async function ComposablePage({ params }) {
 
           <section>
             <p>
-              <strong>Client:</strong> {f.clientName}
+              <strong>Client Name:</strong> {f.clientName}
             </p>
             <p>
-              <strong>Email:</strong> {f.clientEmail}
+              <strong>Client Email:</strong> {f.clientEmail}
             </p>
           </section>
 
@@ -228,18 +228,20 @@ export default async function ComposablePage({ params }) {
       const f = page.fields;
 
       // normalize invoiceFiles into an array
-      let filesRaw = f?.invoiceFiles || [];
-      const files = Array.isArray(filesRaw) ? filesRaw : [filesRaw];
+      const filesRaw = f?.invoiceFiles || [];
+      const files = Array.isArray(filesRaw) ? filesRaw : filesRaw ? [filesRaw] : [];
 
       const numbers = f?.invoiceNumbers || [];
-      const dates = f?.invoiceDates || [];
+      const date = f?.invoiceDate
+        ? new Date(f.invoiceDate).toLocaleDateString()
+        : "N/A";
 
-      // Debug logging so you can see exactly what Contentful is returning
+      // Debug logging
       console.log("InvoicesList debug:", {
         raw: f?.invoiceFiles,
         normalized: files,
         numbers,
-        dates,
+        date,
         isArray: Array.isArray(filesRaw),
         length: files.length,
       });
@@ -270,10 +272,7 @@ export default async function ComposablePage({ params }) {
                 {files.map((file, i) => {
                   if (!file) return null;
 
-                  const num = numbers[i] || "Unknown";
-                  const date = dates[i]
-                    ? new Date(dates[i]).toLocaleDateString()
-                    : "N/A";
+                  const num = numbers[i] || `Invoice ${i + 1}`;
                   const fileUrl =
                     file?.fields?.file?.url ||
                     file?.fields?.file?.["en-US"]?.url ||
