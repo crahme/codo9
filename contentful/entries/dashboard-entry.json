@@ -2,7 +2,7 @@
   "contentTypes": [],
   "entries": [
     {
-      "sys": { "id": "hero-section-1", "contentType": { "sys": { "id": "heroSection" } } },
+      "sys": { "id": "hero-section-1", "contentType": { "sys": { "id": "hero" } } },
       "fields": {
         "title": { "en-US": "Welcome to Your Admin Panel" },
         "subtitle": { "en-US": "Manage your data, invoices, and analytics in one place." }
