@@ -1,0 +1,64 @@
+{
+  "name": "Dashboard",
+  "description": "Dashboard overview content type for RVE Invoice System – includes stats, charts, invoices, and recommendations.",
+  "displayField": "title",
+  "fields": [
+    {
+      "id": "title",
+      "name": "Title",
+      "type": "Symbol",
+      "required": true,
+      "localized": false
+    },
+    {
+      "id": "totalDevices",
+      "name": "Total Devices",
+      "type": "Integer",
+      "required": true
+    },
+    {
+      "id": "totalConsumption",
+      "name": "Total Consumption (kWh)",
+      "type": "Number",
+      "required": true
+    },
+    {
+      "id": "recentInvoicesCount",
+      "name": "Recent Invoices Count",
+      "type": "Integer",
+      "required": true
+    },
+    {
+      "id": "devices",
+      "name": "Devices Data",
+      "type": "Object",
+      "required": false,
+      "validations": [],
+      "helpText": "Example: [{ \"name\": \"Device A\", \"consumption\": 320 }]"
+    },
+    {
+      "id": "consumptionTrend",
+      "name": "Consumption Trend Data",
+      "type": "Object",
+      "required": false,
+      "validations": [],
+      "helpText": "Example: [{ \"date\": \"2025-01-01\", \"value\": 12345 }]"
+    },
+    {
+      "id": "recentInvoices",
+      "name": "Recent Invoices List",
+      "type": "Object",
+      "required": false,
+      "validations": [],
+      "helpText": "Example: [{ \"invoiceId\": \"INV-001\", \"device\": \"EV-1\", \"amount\": 210, \"status\": \"Paid\" }]"
+    },
+    {
+      "id": "energyRecommendations",
+      "name": "Energy Recommendations",
+      "type": "Object",
+      "required": false,
+      "validations": [],
+      "helpText": "Example: { \"usage\": \"15.4 MWh\", \"savings\": 63431, \"score\": 40 }"
+    }
+  ]
+}
