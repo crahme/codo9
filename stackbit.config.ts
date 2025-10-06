@@ -58,7 +58,10 @@ export default defineStackbitConfig({
 
     const entries: (SiteMapEntry | null)[] = documents
       .filter((doc) => {
-        const isPageModel = doc && doc.modelName && (doc.modelName === 'page' || doc.modelName === 'invoice');
+        const isPageModel =
+          doc &&
+          doc.modelName &&
+          (doc.modelName === 'page' || doc.modelName === 'invoice' || doc.modelName === 'invoicesList');
         const hasFields = doc && typeof doc.fields === 'object' && doc.fields !== null;
         return isPageModel && hasFields;
       })
