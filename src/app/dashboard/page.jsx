@@ -1,9 +1,9 @@
-import { getDashboardData } from "@/utils/content"; 
-import { StatsCards } from "@/components/dashboard/StatsCards";
-import { DeviceOverviewChart } from "@/components/dashboard/DeviceOverviewChart";
-import { ConsumptionTrendChart } from "@/components/dashboard/ConsumptionTrendChart";
-import { RecentInvoicesTable } from "@/components/dashboard/RecentInvoicesTable";
-import { EnergyRecommendations } from "@/components/dashboard/EnergyRecommendations";
+import { getDashboardData } from "./utils/content..js"; 
+import { StatsCards } from "./components/dashboard/StatsCards";
+import { DeviceOverviewChart } from "./components/dashboard/DeviceOverviewChart";
+import { ConsumptionTrendChart } from "./components/dashboard/ConsumptionTrendChart";
+import { RecentInvoicesTable } from "./components/dashboard/RecentInvoicesTable";
+import { EnergyRecommendations } from "./components/dashboard/EnergyRecommendations";
 
 export default async function DashboardPage() {
   const data = await getDashboardData(); // from Contentful
