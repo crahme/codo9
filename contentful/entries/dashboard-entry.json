@@ -1,0 +1,101 @@
+{
+  "contentTypes": [],
+  "entries": [
+    {
+      "sys": { "id": "hero-section-1", "contentType": { "sys": { "id": "heroSection" } } },
+      "fields": {
+        "title": { "en-US": "Welcome to Your Admin Panel" },
+        "subtitle": { "en-US": "Manage your data, invoices, and analytics in one place." }
+      }
+    },
+    {
+      "sys": { "id": "stat-item-1", "contentType": { "sys": { "id": "statItem" } } },
+      "fields": {
+        "label": { "en-US": "Total Invoices" },
+        "value": { "en-US": "1,234" }
+      }
+    },
+    {
+      "sys": { "id": "stat-item-2", "contentType": { "sys": { "id": "statItem" } } },
+      "fields": {
+        "label": { "en-US": "Active Users" },
+        "value": { "en-US": "567" }
+      }
+    },
+    {
+      "sys": { "id": "stat-item-3", "contentType": { "sys": { "id": "statItem" } } },
+      "fields": {
+        "label": { "en-US": "Revenue (USD)" },
+        "value": { "en-US": "$42,870" }
+      }
+    },
+    {
+      "sys": { "id": "invoice-section-1", "contentType": { "sys": { "id": "invoiceSection" } } },
+      "fields": {
+        "title": { "en-US": "Recent Invoices" },
+        "description": { "en-US": "List of the latest invoices issued this week." }
+      }
+    },
+    {
+      "sys": { "id": "visual-editor-1", "contentType": { "sys": { "id": "visualEditorComponent" } } },
+      "fields": {
+        "content": {
+          "en-US": "<h2>System Updates</h2><p>New analytics features have been added to improve performance insights.</p>"
+        }
+      }
+    },
+    {
+      "sys": { "id": "widget-card-1", "contentType": { "sys": { "id": "widgetCard" } } },
+      "fields": {
+        "title": { "en-US": "Performance Overview" },
+        "description": { "en-US": "Weekly performance summary for your team." }
+      }
+    },
+    {
+      "sys": { "id": "widget-card-2", "contentType": { "sys": { "id": "widgetCard" } } },
+      "fields": {
+        "title": { "en-US": "Activity Feed" },
+        "description": { "en-US": "Recent user activity and system logs." }
+      }
+    },
+    {
+      "sys": { "id": "dashboard-main", "contentType": { "sys": { "id": "dashboard" } } },
+      "fields": {
+        "title": { "en-US": "Main Admin Dashboard" },
+        "heroSection": {
+          "en-US": { "sys": { "type": "Link", "linkType": "Entry", "id": "hero-section-1" } }
+        },
+        "statsSection": {
+          "en-US": [
+            { "sys": { "type": "Link", "linkType": "Entry", "id": "stat-item-1" } },
+            { "sys": { "type": "Link", "linkType": "Entry", "id": "stat-item-2" } },
+            { "sys": { "type": "Link", "linkType": "Entry", "id": "stat-item-3" } }
+          ]
+        },
+        "invoiceSection": {
+          "en-US": { "sys": { "type": "Link", "linkType": "Entry", "id": "invoice-section-1" } }
+        },
+        "visualEditorComponent": {
+          "en-US": { "sys": { "type": "Link", "linkType": "Entry", "id": "visual-editor-1" } }
+        },
+        "widgets": {
+          "en-US": [
+            { "sys": { "type": "Link", "linkType": "Entry", "id": "widget-card-1" } },
+            { "sys": { "type": "Link", "linkType": "Entry", "id": "widget-card-2" } }
+          ]
+        }
+      }
+    }
+  ],
+  "assets": [],
+  "locales": [
+    {
+      "name": "English (United States)",
+      "code": "en-US",
+      "default": true,
+      "contentManagementApi": true,
+      "contentDeliveryApi": true,
+      "optional": false
+    }
+  ]
+}
