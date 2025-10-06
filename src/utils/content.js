@@ -30,12 +30,15 @@ export async function getPageFromSlug(slugPath, explicitType) {
   const trimmed = cleaned.replace(/^\/+/, "");
   const isHome = trimmed === "";
   const looksInvoice = /^invoice\//i.test(trimmed);
+  const looksInvoicesList = /^invoiceslist\//i.test(trimmed);
 
   const typesToTry = explicitType
     ? [explicitType]
     : looksInvoice
     ? ["invoice"]
-    : ["page", "invoice"];
+    : looksInvoicesList
+    ? ["invoicesList"]
+    : ["page", "invoice", "invoicesList"];
 
   // Try a few slug representations since Contentful entries may store with or without leading '/'
   const last = trimmed.split("/").pop();
@@ -83,4 +86,37 @@ export async function getPageFromSlug(slugPath, explicitType) {
   }
 
   return null;
+}
+
+export async function getDashboardData() {
+  // Minimal mock data to allow build to succeed; replace with real Contentful queries as needed.
+  return {
+    totalDevices: 3,
+    totalConsumption: 1250,
+    recentInvoicesCount: 5,
+    devices: [
+      { name: "Charger A", consumption: 420 },
+      { name: "Charger B", consumption: 330 },
+      { name: "Charger C", consumption: 500 }
+    ],
+    recentInvoices: [
+      { invoiceId: "INV-2024-001", device: "Charger A", amount: 120.5, status: "Paid" },
+      { invoiceId: "INV-2024-002", device: "Charger B", amount: 98.75, status: "Unpaid" },
+      { invoiceId: "INV-2024-003", device: "Charger C", amount: 150.0, status: "Overdue" }
+    ],
+    consumptionTrend: [
+      { name: "Mon", consumption: 180 },
+      { name: "Tue", consumption: 210 },
+      { name: "Wed", consumption: 190 },
+      { name: "Thu", consumption: 230 },
+      { name: "Fri", consumption: 210 },
+      { name: "Sat", consumption: 260 },
+      { name: "Sun", consumption: 270 }
+    ],
+    energyRecommendations: {
+      usage: "High",
+      savings: 45.2,
+      score: 78
+    }
+  };
 }

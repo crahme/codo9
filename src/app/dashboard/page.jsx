@@ -1,7 +1,7 @@
 import { getDashboardData } from "../../utils/content.js"; 
 import { StatsCards } from "../../components/dashboard/StatsCards.jsx";
 import { DeviceOverviewChart } from "../../components/dashboard/DeviceOverviewChart.jsx";
-import { ConsumptionTrendChart } from "../../components/dashboard/ConsumptionTrendChart";
+import { DeviceOverviewChart as ConsumptionTrendChart } from "../../components/dashboard/ConsumptionTrendChart.jsx";
 import { RecentInvoicesTable } from "../../components/dashboard/RecentInvoicesTable.jsx";
 import { EnergyRecommendations } from "../../components/dashboard/EnergyRecommendations.jsx";
 
