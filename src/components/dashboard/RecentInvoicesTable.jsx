@@ -1,4 +1,4 @@
-
+import { Card, CardContent } from "@/components/ui/card"
 
 export function RecentInvoicesTable({ invoices }) {
   return (

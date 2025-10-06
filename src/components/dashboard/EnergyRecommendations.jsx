@@ -1,4 +1,5 @@
 
+import { Card, CardContent } from "@/components/ui/card"
 export function EnergyRecommendations({ data }) {
   return (
     <Card className="bg-slate-800 text-white">
