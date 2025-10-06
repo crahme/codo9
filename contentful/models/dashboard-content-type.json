@@ -43,15 +43,7 @@
             { "linkContentType": ["invoiceSection"] }
           ]
         },
-        {
-          "id": "visualEditorComponent",
-          "name": "Visual Editor Component",
-          "type": "Link",
-          "linkType": "Entry",
-          "validations": [
-            { "linkContentType": ["visualEditorComponent"] }
-          ]
-        },
+        
         {
           "id": "widgets",
           "name": "Widgets",
