@@ -25,17 +25,28 @@ export default function InvoicesList() {
   const handleDownload = async (url) => {
     try {
       if (!url) return;
-      // Robust cross-origin download: fetch as blob and trigger a download
+      // Fetch the file as a Blob to support reliable cross-origin downloads
       const response = await fetch(url, { mode: "cors" });
       if (!response.ok) {
-        // Fallback: open in a new tab if direct download fails
         window.open(url, "_blank");
         return;
       }
       const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
       const filename = (url.split("/").pop() || "invoice.pdf").split("?")[0];
 
+      // Prefer a library for robust downloads (if available)
+      try {
+        const mod = await import("file-saver");
+        if (mod && typeof mod.saveAs === "function") {
+          mod.saveAs(blob, filename);
+          return;
+        }
+      } catch (_) {
+        // Library not available at runtime; fall back to manual link method
+      }
+
+      // Fallback: manual anchor approach
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = filename;
