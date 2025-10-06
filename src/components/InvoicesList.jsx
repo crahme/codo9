@@ -25,35 +25,17 @@ export default function InvoicesList() {
   const handleDownload = async (url) => {
     try {
       if (!url) return;
-      // Fetch the file as a Blob to support reliable cross-origin downloads
-      const response = await fetch(url, { mode: "cors" });
-      if (!response.ok) {
-        window.open(url, "_blank");
-        return;
-      }
-      const blob = await response.blob();
-      const filename = (url.split("/").pop() || "invoice.pdf").split("?")[0];
+      // Call server-side proxy to force attachment download
+      const encoded = encodeURIComponent(url);
+      const downloadUrl = `/api/download?url=${encoded}`;
 
-      // Prefer a library for robust downloads (if available)
-      try {
-        const mod = await import("file-saver");
-        if (mod && typeof mod.saveAs === "function") {
-          mod.saveAs(blob, filename);
-          return;
-        }
-      } catch (_) {
-        // Library not available at runtime; fall back to manual link method
-      }
-
-      // Fallback: manual anchor approach
-      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = filename;
+      link.href = downloadUrl;
+      link.rel = "noopener noreferrer";
+      link.download = ""; // hint; server sets Content-Disposition
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
     } catch (e) {
       console.error("Download failed, opening in new tab instead:", e);
       window.open(url, "_blank");
