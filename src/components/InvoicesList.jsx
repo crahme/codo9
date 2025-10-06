@@ -22,11 +22,31 @@ export default function InvoicesList() {
     fetchInvoices();
   }, []);
 
-  const handleDownload = (url) => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = url.split("/").pop();
-    link.click();
+  const handleDownload = async (url) => {
+    try {
+      if (!url) return;
+      // Robust cross-origin download: fetch as blob and trigger a download
+      const response = await fetch(url, { mode: "cors" });
+      if (!response.ok) {
+        // Fallback: open in a new tab if direct download fails
+        window.open(url, "_blank");
+        return;
+      }
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const filename = (url.split("/").pop() || "invoice.pdf").split("?")[0];
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error("Download failed, opening in new tab instead:", e);
+      window.open(url, "_blank");
+    }
   };
 
   const handleOpen = (url) => {
