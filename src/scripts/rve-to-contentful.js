@@ -205,7 +205,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
           date: d.date,
           initialReading: d.reads_initial || 0,
           finalReading: d.reads_final || 0,
-          consumption: d.reads_kwh || 0
+          consumption: d.finalReading- d.initialReading
         }))
       };
 
