@@ -87,8 +87,6 @@ function generateInvoicePDF(invoiceData) {
   // Station Info
   doc.fontSize(14).text("Station Details:", { underline: true });
   doc.fontSize(12)
-    .text(`Name: ${invoiceData.stationName}`)
-    .text(`Location: ${invoiceData.stationLocation}`)
     .text(`Serial: ${invoiceData.chargerSerialNumber}`);
   doc.moveDown();
 
@@ -177,8 +175,6 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     billingPeriodStart: { "en-US": invoiceData.billingPeriodStart },
     billingPeriodEnd: { "en-US": invoiceData.billingPeriodEnd },
     paymentDueDate: { "en-US": invoiceData.paymentDueDate },
-    stationName: { "en-US": invoiceData.stationName },
-    stationLocation: { "en-US": invoiceData.stationLocation },
     ratePerKwh: { "en-US": Number(invoiceData.unitPrice) },
     totalConsumption: { "en-US": Number(invoiceData.totalConsumption) },
     totalAmount: { "en-US": Number(invoiceData.totalConsumption * parseFloat(invoiceData.unitPrice)) },
@@ -230,8 +226,6 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         
         // Station details
         chargerSerialNumber: station.station,
-        stationName: station.station,
-        stationLocation: station.location,
         
         // Financial details
         unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
