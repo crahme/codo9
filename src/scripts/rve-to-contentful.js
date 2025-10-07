@@ -135,7 +135,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       unitPrice: invoiceData.unitPrice
     });
     lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
-    totalConsumption += day.consumption;
+    totalConsumption += consumption;
   }
 
   function setField(field, value) {
