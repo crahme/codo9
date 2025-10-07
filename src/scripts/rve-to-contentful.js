@@ -131,7 +131,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       date: day.date,
       initialReading: day.initialReading,
       finalReading: day.finalReading,
-      consumption: day.consumption,
+      consumption: finalReading-initialReading,
       unitPrice: invoiceData.unitPrice
     });
     lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
