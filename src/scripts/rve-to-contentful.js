@@ -131,11 +131,11 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
       date: day.date,
       initialReading: day.initialReading,
       finalReading: day.finalReading,
-      consumption: finalReading-initialReading,
+      consumption: day.finalReading-day.initialReading,
       unitPrice: invoiceData.unitPrice
     });
     lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
-    totalConsumption += consumption;
+    totalConsumption += day.consumption;
   }
 
   function setField(field, value) {
