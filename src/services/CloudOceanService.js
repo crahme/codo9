@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
-import path from "path";
 import { fileURLToPath } from "url";
+import path from "path";
 
 dotenv.config();
 
@@ -11,73 +11,92 @@ const logger = {
 };
 
 export class CloudOceanService {
-    // ...existing constructor and other methods...
-
-    async validateApiData(point, startDate, endDate) {
-        logger.info(`Validating data for ${point.name}...`);
-        
-        try {
-            // Get both reads and CDR data
-            const read = await this.getReads(point, startDate, endDate);
-            const cdrArray = await this.getCdr(point, startDate, endDate);
-
-            // Log detailed validation
-            console.table({
-                'Station Name': point.name,
-                'Days with Data': cdrArray.filter(d => d.daily_kwh > 0).length,
-                'Total Days': cdrArray.length,
-                'Has Readings': read.cumulative_kwh > 0 ? 'Yes' : 'No',
-                'CDR Total': cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0).toFixed(2),
-                'Reads Total': read.cumulative_kwh.toFixed(2)
-            });
-
-            // Return validation results
-            return {
-                hasReadings: read.cumulative_kwh > 0,
-                hasCdrRecords: cdrArray.some(d => d.daily_kwh > 0),
-                daysWithData: cdrArray.filter(d => d.daily_kwh > 0).length,
-                totalDays: cdrArray.length
-            };
-        } catch (error) {
-            logger.error(`Validation failed for ${point.name}: ${error.message}`);
-            return {
-                hasReadings: false,
-                hasCdrRecords: false,
-                daysWithData: 0,
-                totalDays: 0,
-                error: error.message
-            };
-        }
+    constructor() {
+        this.baseUrl = 'https://api.develop.rve.ca/v1';
+        this.moduleId = 'c667ff46-9730-425e-ad48-1e950691b3f9';
+        this.headers = {
+            "Access-Token":  process.env.API_KEY,
+            'Content-Type': 'application/json'
+        };
     }
 
-    async validateAllStations(startDate, endDate) {
+    async getReads(point, startDate, endDate) {
+        const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`);
+        url.searchParams.set('start', startDate);
+        url.searchParams.set('end', endDate);
+
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: this.headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+            const sortedData = data.sort((a, b) => 
+                new Date(a.time_stamp) - new Date(b.time_stamp)
+            );
+            return {
+                cumulative_kwh: sortedData[sortedData.length - 1].cumulative_kwh - sortedData[0].cumulative_kwh,
+                readings: sortedData
+            };
+        }
+        return { cumulative_kwh: 0, readings: [] };
+    }
+
+    async getCdr(point, startDate, endDate) {
+        const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`);
+        url.searchParams.set('start', startDate);
+        url.searchParams.set('end', endDate);
+
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: this.headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+    }
+
+    // ... existing validateApiData and validateAllStations methods ...
+
+    async getConsumptionData(startDate, endDate) {
         const measuringPoints = [
             { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
             { uuid: "fd7e69ef-cd01-4b9a-8958-2aa5051428d4", name: "EV Charger Station 02", location: "Building A - Level 2" },
             { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" }
         ];
 
-        logger.info(`Starting validation for all stations from ${startDate} to ${endDate}`);
-        
         const results = [];
         for (const point of measuringPoints) {
-            const validation = await this.validateApiData(point, startDate, endDate);
-            results.push({
-                station: point.name,
-                location: point.location,
-                ...validation
-            });
-        }
+            try {
+                const readData = await this.getReads(point, startDate, endDate);
+                const cdrData = await this.getCdr(point, startDate, endDate);
 
-        // Log summary
-        console.log('\nValidation Summary:');
-        console.table(results);
+                results.push({
+                    station: point.name,
+                    location: point.location,
+                    consumption: readData.cumulative_kwh,
+                    sessions: cdrData.length,
+                    dailyData: cdrData
+                });
+            } catch (error) {
+                logger.error(`Error fetching data for ${point.name}: ${error.message}`);
+            }
+        }
 
         return results;
     }
 }
 
-// Update runner section
+// Runner section
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     const service = new CloudOceanService();
     (async () => {
@@ -85,15 +104,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
             const startDate = "2024-10-16";
             const endDate = "2024-11-25";
 
-            // Run validation first
             console.log('\nValidating API Data...');
             await service.validateAllStations(startDate, endDate);
 
-            // Then fetch consumption data
             console.log('\nFetching Consumption Data...');
             const data = await service.getConsumptionData(startDate, endDate);
-
-            // ...existing console.log statements...
+            console.log(JSON.stringify(data, null, 2));
         } catch (err) {
             console.error("❌ Runner error:", err.message);
         }
