@@ -31,14 +31,13 @@ function toRichText(text) {
 }
 
 async function createLineItem(env, itemData) {
+  const consumption = itemData.finalReading - itemData.initialReading;
   const entry = await env.createEntry("lineItem", {
     fields: {
       date: { "en-US": itemData.date },
-      initialReading: { "en-US": Number(itemData.initialReading) },
-      finalReading: { "en-US": Number(itemData.finalReading) },
-      energyConsumed: { "en-US": Number(itemData.consumption) },
-      unitPrice: { "en-US": Number(itemData.unitPrice) },
-      amount: { "en-US": Number((itemData.consumption * parseFloat(itemData.unitPrice)).toFixed(2)) },
+      energyConsumed: { "en-US": Number(consumption.toFixed(2)) },
+      rate: { "en-US": Number(itemData.unitPrice) },
+      amount: { "en-US": Number((consumption * parseFloat(itemData.unitPrice)).toFixed(2)) }
     },
   });
   await entry.publish();
@@ -46,7 +45,6 @@ async function createLineItem(env, itemData) {
 }
 
 function generateInvoicePDF(invoiceData) {
-  // ...existing PDF generation code...
   const outputDir = "./invoices";
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 
@@ -84,12 +82,13 @@ function generateInvoicePDF(invoiceData) {
   // Line Items
   let total = 0;
   invoiceData.daily.forEach(item => {
-    const amount = item.consumption * parseFloat(invoiceData.unitPrice);
+    const consumption = item.finalReading - item.initialReading;
+    const amount = consumption * parseFloat(invoiceData.unitPrice);
     total += amount;
     doc.text(item.date, 50, doc.y, { continued: true })
       .text(item.initialReading.toFixed(2), 150, doc.y, { continued: true })
       .text(item.finalReading.toFixed(2), 250, doc.y, { continued: true })
-      .text(item.consumption.toFixed(2), 350, doc.y, { continued: true })
+      .text(consumption.toFixed(2), 350, doc.y, { continued: true })
       .text(`$${amount.toFixed(2)}`, 450, doc.y);
   });
 
@@ -127,15 +126,15 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
   let totalConsumption = 0;
 
   for (const day of invoiceData.daily) {
+    const consumption = day.finalReading - day.initialReading;
     const id = await createLineItem(env, {
       date: day.date,
       initialReading: day.initialReading,
       finalReading: day.finalReading,
-      consumption: day.finalReading-day.initialReading,
       unitPrice: invoiceData.unitPrice
     });
     lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
-    totalConsumption += day.consumption;
+    totalConsumption += consumption;
   }
 
   function setField(field, value) {
@@ -200,12 +199,10 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         stationName: station.name,
         stationLocation: station.location,
         unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        // Use dailyData instead of cdrDaily
         daily: station.dailyData.map(d => ({
           date: d.date,
           initialReading: d.reads_initial || 0,
-          finalReading: d.reads_final || 0,
-          consumption: d.finalReading- d.initialReading
+          finalReading: d.reads_final || 0
         }))
       };
 
