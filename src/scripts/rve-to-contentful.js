@@ -1,10 +1,10 @@
 import dotenv from "dotenv";
-dotenv.config();
-
 import { CloudOceanService } from "../services/CloudOceanService.js";
 import contentful from "contentful-management";
 import fs from "fs";
 import PDFDocument from "pdfkit";
+
+dotenv.config();
 
 // --- Contentful setup ---
 const client = contentful.createClient({
@@ -36,7 +36,6 @@ async function createLineItem(env, itemData) {
     fields: {
       date: { "en-US": itemData.date },
       energyConsumed: { "en-US": Number(consumption.toFixed(2)) },
-      rate: { "en-US": Number(itemData.unitPrice) },
       amount: { "en-US": Number((consumption * parseFloat(itemData.unitPrice)).toFixed(2)) }
     },
   });
