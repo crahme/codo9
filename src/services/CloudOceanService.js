@@ -1,4 +1,3 @@
-// src/services/CloudOceanService.js
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -71,13 +70,109 @@ export class CloudOceanService {
       if (!Array.isArray(data) || data.length === 0) break;
 
       allData = allData.concat(data);
-      if (data.length < limit) break; // no more pages
+      if (data.length < limit) break;
       offset += limit;
     }
     return allData;
   }
 
-  // Robust function to detect the largest numeric value recursively
+  async getDailyReads(point, startDate, endDate) {
+    const dailyReadings = [];
+    const currentDate = new Date(startDate);
+    const endDateTime = new Date(endDate);
+
+    while (currentDate <= endDateTime) {
+      const dayStart = new Date(currentDate);
+      dayStart.setHours(0, 0, 0, 0);
+      
+      const dayEnd = new Date(currentDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`;
+      const fullUrl = new URL(url);
+      fullUrl.searchParams.set("start", dayStart.toISOString());
+      fullUrl.searchParams.set("end", dayEnd.toISOString());
+      
+      try {
+        const data = await this.fetchWithExponentialBackoff(fullUrl.toString(), {
+          method: "GET",
+          headers: this.headers,
+        });
+
+        if (Array.isArray(data) && data.length >= 2) {
+          const sortedReads = data.sort((a, b) => 
+            new Date(a.time_stamp) - new Date(b.time_stamp)
+          );
+          
+          const firstReading = parseFloat(sortedReads[0].cumulative_kwh) || 0;
+          const lastReading = parseFloat(sortedReads[sortedReads.length - 1].cumulative_kwh) || 0;
+          
+          dailyReadings.push({
+            date: currentDate.toISOString().split('T')[0],
+            initialReading: firstReading,
+            finalReading: lastReading,
+            consumption: Math.max(0, lastReading - firstReading)
+          });
+        } else {
+          dailyReadings.push({
+            date: currentDate.toISOString().split('T')[0],
+            initialReading: 0,
+            finalReading: 0,
+            consumption: 0
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to get readings for ${currentDate.toISOString().split('T')[0]}:`, error);
+        dailyReadings.push({
+          date: currentDate.toISOString().split('T')[0],
+          initialReading: 0,
+          finalReading: 0,
+          consumption: 0,
+          error: error.message
+        });
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return dailyReadings;
+  }
+
+  async getCdr(point, startDate, endDate, limit = 50) {
+    const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`;
+    const fullUrl = new URL(url);
+    fullUrl.searchParams.set("start", startDate);
+    fullUrl.searchParams.set("end", endDate);
+
+    const allData = await this.getAllPages(fullUrl.toString(), limit);
+    const sessions = [];
+    allData.forEach(item => {
+      if (Array.isArray(item)) sessions.push(...item);
+      else if (typeof item === "object") sessions.push(item);
+    });
+
+    if (!sessions.length) {
+      return this.fillMissingDays(startDate, endDate).map(date => ({
+        date,
+        daily_kwh: 0,
+      }));
+    }
+
+    const dailyMap = {};
+    for (const s of sessions) {
+      const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
+      if (!date) continue;
+      const energy = this.findLargestNumeric(s);
+      dailyMap[date] = (dailyMap[date] || 0) + energy;
+    }
+
+    const allDates = this.fillMissingDays(startDate, endDate);
+    return allDates.map(date => ({
+      date,
+      daily_kwh: dailyMap[date] || 0,
+    }));
+  }
+
   findLargestNumeric(obj) {
     let max = -Infinity;
 
@@ -96,62 +191,6 @@ export class CloudOceanService {
 
     traverse(obj);
     return max === -Infinity ? 0 : max;
-  }
-
-  async getReads(point, startDate, endDate, limit = 50) {
-    const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`;
-    const fullUrl = new URL(url);
-    fullUrl.searchParams.set("start", startDate);
-    fullUrl.searchParams.set("end", endDate);
-
-    const allReads = await this.getAllPages(fullUrl.toString(), limit);
-
-    // Detect largest cumulative value across all readings
-    const largestCumulative = this.findLargestNumeric(allReads);
-
-    return {
-      date: endDate,
-      cumulative_kwh: largestCumulative,
-    };
-  }
-
-  async getCdr(point, startDate, endDate, limit = 50) {
-    const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`;
-    const fullUrl = new URL(url);
-    fullUrl.searchParams.set("start", startDate);
-    fullUrl.searchParams.set("end", endDate);
-
-    const allData = await this.getAllPages(fullUrl.toString(), limit);
-
-    // Flatten possible nested CDR arrays
-    const sessions = [];
-    allData.forEach(item => {
-      if (Array.isArray(item)) sessions.push(...item);
-      else if (typeof item === "object") sessions.push(item);
-    });
-
-    if (!sessions.length) {
-      return this.fillMissingDays(startDate, endDate).map(date => ({
-        date,
-        daily_kwh: 0,
-      }));
-    }
-
-    // Find energy field per session
-    const dailyMap = {};
-    for (const s of sessions) {
-      const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
-      if (!date) continue;
-
-      const energy = this.findLargestNumeric(s);
-      dailyMap[date] = (dailyMap[date] || 0) + energy;
-    }
-
-    const allDates = this.fillMissingDays(startDate, endDate);
-    return allDates.map(date => ({
-      date,
-      daily_kwh: dailyMap[date] || 0,
-    }));
   }
 
   fillMissingDays(startDate, endDate) {
@@ -173,20 +212,28 @@ export class CloudOceanService {
     ];
 
     const results = await Promise.all(measuringPoints.map(async point => {
-      logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
+      logger.info(`Processing ${point.name} (${point.location})`);
 
-      const read = await this.getReads(point, startDate, endDate, limit);
+      const dailyReads = await this.getDailyReads(point, startDate, endDate);
       const cdrArray = await this.getCdr(point, startDate, endDate, limit);
 
-      const totalReads = read.cumulative_kwh;
+      const totalReads = dailyReads.reduce((sum, day) => sum + day.consumption, 0);
       const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
+
+      // Combine daily reads and CDR data
+      const combinedDaily = dailyReads.map((read, index) => ({
+        date: read.date,
+        reads_kwh: read.consumption,
+        cdr_kwh: cdrArray[index]?.daily_kwh || 0,
+        total_kwh: read.consumption + (cdrArray[index]?.daily_kwh || 0)
+      }));
 
       return {
         uuid: point.uuid,
         name: point.name,
         location: point.location,
+        dailyData: combinedDaily,
         readsConsumption: totalReads,
-        cdrDaily: cdrArray,
         cdrConsumption: totalCdr,
         total: totalReads + totalCdr,
       };
@@ -198,12 +245,12 @@ export class CloudOceanService {
       grandTotal: results.reduce((sum, d) => sum + d.total, 0),
     };
 
-    logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
+    logger.info(`Completed processing ${results.length}/${measuringPoints.length} stations`);
     return { devices: results, totals };
   }
 }
 
-// 🏃 Runner
+// Runner
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const service = new CloudOceanService();
@@ -217,11 +264,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
       console.log("\n⚡ Daily Energy per Station:\n");
       data.devices.forEach(d => {
         console.log(`${d.name} (${d.location}):`);
-        console.table(d.cdrDaily.map((row, i) => ({
+        console.table(d.dailyData.map(row => ({
           Date: row.date,
-          "Reads kWh": i === d.cdrDaily.length - 1 ? d.readsConsumption.toFixed(2) : '0.00',
-          "CDR kWh": row.daily_kwh.toFixed(2),
-          "Total kWh": (row.daily_kwh + (i === d.cdrDaily.length - 1 ? d.readsConsumption : 0)).toFixed(2),
+          "Reads kWh": row.reads_kwh.toFixed(2),
+          "CDR kWh": row.cdr_kwh.toFixed(2),
+          "Total kWh": row.total_kwh.toFixed(2),
         })));
       });
 
