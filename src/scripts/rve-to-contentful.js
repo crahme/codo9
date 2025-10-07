@@ -51,7 +51,90 @@ async function createLineItem(env, itemData) {
   }
 }
 
-// ... rest of existing functions unchanged ...
+function generateInvoicePDF(invoiceData) {
+  const outputDir = "./invoices";
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+
+  const filePath = `${outputDir}/${invoiceData.invoiceNumber}.pdf`;
+  const doc = new PDFDocument({ margin: 50 });
+  const stream = fs.createWriteStream(filePath);
+  doc.pipe(stream);
+
+  // Company Header
+  doc.fontSize(20).text(invoiceData.syndicateName, { align: "center" });
+  doc.fontSize(10)
+    .text(invoiceData.address, { align: "center" })
+    .text(invoiceData.contact, { align: "center" });
+  doc.moveDown();
+
+  // Invoice Header
+  doc.fontSize(20).text("INVOICE", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12)
+    .text(`Invoice Number: ${invoiceData.invoiceNumber}`)
+    .text(`Invoice Date: ${invoiceData.invoiceDate}`)
+    .text(`Billing Period: ${invoiceData.billingPeriodStart} → ${invoiceData.billingPeriodEnd}`)
+    .text(`Payment Due: ${invoiceData.paymentDueDate}`);
+  doc.moveDown();
+
+  // Client Info
+  doc.fontSize(14).text("Client Details:", { underline: true });
+  doc.fontSize(12)
+    .text(`Name: ${invoiceData.clientName}`)
+    .text(`Email: ${invoiceData.clientEmail}`);
+  doc.moveDown();
+
+  // Station Info
+  doc.fontSize(14).text("Station Details:", { underline: true });
+  doc.fontSize(12)
+    .text(`Name: ${invoiceData.stationName}`)
+    .text(`Location: ${invoiceData.stationLocation}`)
+    .text(`Serial: ${invoiceData.chargerSerialNumber}`);
+  doc.moveDown();
+
+  // Table Header
+  doc.fontSize(10)
+    .text('Date', 50, doc.y, { continued: true })
+    .text('Initial (kWh)', 150, doc.y, { continued: true })
+    .text('Final (kWh)', 250, doc.y, { continued: true })
+    .text('Daily kWh', 350, doc.y, { continued: true })
+    .text('Amount', 450, doc.y);
+  doc.moveDown();
+
+  // Line Items
+  let totalKwh = 0;
+  let totalAmount = 0;
+  
+  invoiceData.daily.forEach(day => {
+    const dailyKwh = day.finalReading - day.initialReading;
+    const amount = dailyKwh * parseFloat(invoiceData.unitPrice);
+    
+    totalKwh += dailyKwh;
+    totalAmount += amount;
+    
+    doc.fontSize(9)
+      .text(day.date, 50, doc.y, { continued: true })
+      .text(day.initialReading.toFixed(2), 150, doc.y, { continued: true })
+      .text(day.finalReading.toFixed(2), 250, doc.y, { continued: true })
+      .text(dailyKwh.toFixed(2), 350, doc.y, { continued: true })
+      .text(`$${amount.toFixed(2)}`, 450, doc.y);
+  });
+
+  // Summary
+  doc.moveDown()
+    .fontSize(12)
+    .text('Total:', 250, doc.y, { continued: true })
+    .text(`${totalKwh.toFixed(2)} kWh`, 350, doc.y, { continued: true })
+    .text(`$${totalAmount.toFixed(2)}`, 450, doc.y);
+
+  // Environmental Impact
+  doc.moveDown().moveDown()
+    .fontSize(10)
+    .text(invoiceData.environmentalImpactText, { align: "left" });
+
+  doc.end();
+  return filePath;
+}
 
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
@@ -83,32 +166,22 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
   // Set all required fields
   entry.fields = {
-    // Required fields
     syndicateName: { "en-US": invoiceData.syndicateName },
     address: { "en-US": invoiceData.address },
     contact: { "en-US": invoiceData.contact },
     clientName: { "en-US": invoiceData.clientName },
     clientEmail: { "en-US": invoiceData.clientEmail },
     chargerSerialNumber: { "en-US": invoiceData.chargerSerialNumber },
-    
-    // Invoice details
     invoiceNumber: { "en-US": invoiceData.invoiceNumber },
     invoiceDate: { "en-US": invoiceData.invoiceDate },
     billingPeriodStart: { "en-US": invoiceData.billingPeriodStart },
     billingPeriodEnd: { "en-US": invoiceData.billingPeriodEnd },
     paymentDueDate: { "en-US": invoiceData.paymentDueDate },
-    
-    // Station details
-    stationId: { "en-US": invoiceData.chargerSerialNumber },
     stationName: { "en-US": invoiceData.stationName },
     stationLocation: { "en-US": invoiceData.stationLocation },
-    
-    // Financial details
     ratePerKwh: { "en-US": Number(invoiceData.unitPrice) },
     totalConsumption: { "en-US": Number(invoiceData.totalConsumption) },
     totalAmount: { "en-US": Number(invoiceData.totalConsumption * parseFloat(invoiceData.unitPrice)) },
-    
-    // Additional info
     environmentalImpact: { "en-US": toRichText(invoiceData.environmentalImpactText) },
     lineItems: { "en-US": lineItemIds }
   };
@@ -140,9 +213,9 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
       const invoiceData = {
         // Company details
-        syndicateName: "EV Charging Solutions",
-        address: "123 Main Street, City, Country",
-        contact: "+1 234 567 8900",
+        syndicateName: "RVE Cloud Ocean",
+        address: "123 EV Way Montreal, Quebec",
+        contact: "contact@rve.ca",
         
         // Client details
         clientName: "John Doe",
