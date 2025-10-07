@@ -175,7 +175,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     billingPeriodStart: { "en-US": invoiceData.billingPeriodStart },
     billingPeriodEnd: { "en-US": invoiceData.billingPeriodEnd },
     paymentDueDate: { "en-US": invoiceData.paymentDueDate },
-    ratePerKwh: { "en-US": Number(invoiceData.unitPrice) },
+    unitPrice: { "en-US": Number(invoiceData.unitPrice) },
     totalConsumption: { "en-US": Number(invoiceData.totalConsumption) },
     totalAmount: { "en-US": Number(invoiceData.totalConsumption * parseFloat(invoiceData.unitPrice)) },
     environmentalImpact: { "en-US": toRichText(invoiceData.environmentalImpactText) },
