@@ -1,199 +1,243 @@
+// src/services/CloudOceanService.js
 import dotenv from "dotenv";
-import { fileURLToPath } from "url";
 import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const logger = {
-    info: (...args) => console.log("[INFO]", ...args),
-    warn: (...args) => console.warn("[WARN]", ...args),
-    error: (...args) => console.error("[ERROR]", ...args),
-    debug: (...args) => console.debug("[DEBUG]", ...args)
+  info: (...args) => console.log("[INFO]", ...args),
+  warn: (...args) => console.warn("[WARN]", ...args),
+  error: (...args) => console.error("[ERROR]", ...args),
 };
 
 export class CloudOceanService {
-    constructor() {
-        this.baseUrl = 'https://api.develop.rve.ca/v1';
-        this.moduleId = 'c667ff46-9730-425e-ad48-1e950691b3f9';
-        this.headers = {
-            "Access-Token": process.env.API_KEY,
-            'Content-Type': 'application/json'
-        };
-        this.measuringPoints = [
-            { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
-            { uuid: "fd7e69ef-cd01-4b9a-8958-2aa5051428d4", name: "EV Charger Station 02", location: "Building A - Level 2" },
-            { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" }
-        ];
-    }
+  constructor() {
+    this.baseUrl = "https://api.develop.rve.ca/v1";
+    this.moduleId = "c667ff46-9730-425e-ad48-1e950691b3f9";
+    this.headers = {
+      "Access-Token": process.env.API_Key,
+      "Content-Type": "application/json",
+    };
+    this.maxRetries = 3;
+    this.baseDelay = 4000;
+  }
 
-    async getReads(point, startDate, endDate) {
-        try {
-            const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`);
-            url.searchParams.set('start', startDate);
-            url.searchParams.set('end', endDate);
+  async sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
-            logger.debug(`Fetching reads for ${point.name}`);
-            const response = await fetch(url.toString(), {
-                method: 'GET',
-                headers: this.headers
-            });
+  async fetchWithExponentialBackoff(url, options, attempt = 1) {
+    try {
+      const response = await fetch(url, options);
+      const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            if (Array.isArray(data) && data.length > 0) {
-                const sortedData = data.sort((a, b) => 
-                    new Date(a.time_stamp) - new Date(b.time_stamp)
-                );
-                return {
-                    cumulative_kwh: sortedData[sortedData.length - 1].cumulative_kwh - sortedData[0].cumulative_kwh,
-                    readings: sortedData,
-                    firstReading: sortedData[0],
-                    lastReading: sortedData[sortedData.length - 1]
-                };
-            }
-            return { cumulative_kwh: 0, readings: [], firstReading: null, lastReading: null };
-        } catch (error) {
-            logger.error(`Error fetching reads for ${point.name}: ${error.message}`);
-            throw error;
+      if (!response.ok) {
+        logger.warn(`Request failed (${response.status}): ${JSON.stringify(data)}`);
+        if (response.status === 503 && attempt < this.maxRetries) {
+          const delay = this.baseDelay * Math.pow(2, attempt - 1);
+          logger.info(`Retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
+          await this.sleep(delay);
+          return this.fetchWithExponentialBackoff(url, options, attempt + 1);
         }
+        throw new Error(`HTTP ${response.status}: ${data.detail || response.statusText}`);
+      }
+
+      return data;
+    } catch (error) {
+      if (error.name === "TypeError" && attempt < this.maxRetries) {
+        const delay = this.baseDelay * Math.pow(2, attempt - 1);
+        logger.info(`Network error, retrying in ${delay / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
+        await this.sleep(delay);
+        return this.fetchWithExponentialBackoff(url, options, attempt + 1);
+      }
+      throw error;
     }
+  }
 
-    async getCdr(point, startDate, endDate) {
-        try {
-            const url = new URL(`${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`);
-            url.searchParams.set('start', startDate);
-            url.searchParams.set('end', endDate);
+  async getAllPages(url, limit = 50) {
+    let offset = 0;
+    let allData = [];
+    while (true) {
+      const pageUrl = new URL(url);
+      pageUrl.searchParams.set("limit", limit.toString());
+      pageUrl.searchParams.set("offset", offset.toString());
 
-            logger.debug(`Fetching CDR for ${point.name}`);
-            const response = await fetch(url.toString(), {
-                method: 'GET',
-                headers: this.headers
-            });
+      const data = await this.fetchWithExponentialBackoff(pageUrl.toString(), {
+        method: "GET",
+        headers: this.headers,
+      });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+      if (!Array.isArray(data) || data.length === 0) break;
 
-            const data = await response.json();
-            return Array.isArray(data) ? data : [];
-        } catch (error) {
-            logger.error(`Error fetching CDR for ${point.name}: ${error.message}`);
-            throw error;
+      allData = allData.concat(data);
+      if (data.length < limit) break; // no more pages
+      offset += limit;
+    }
+    return allData;
+  }
+
+  // Robust function to detect the largest numeric value recursively
+  findLargestNumeric(obj) {
+    let max = -Infinity;
+
+    function traverse(o) {
+      if (o == null) return;
+      if (typeof o === "number") {
+        if (o > max) max = o;
+      } else if (Array.isArray(o)) {
+        o.forEach(traverse);
+      } else if (typeof o === "object") {
+        for (const key of Object.keys(o)) {
+          traverse(o[key]);
         }
+      }
     }
 
-    async validateMeasuringPoint(point, startDate, endDate) {
-        try {
-            logger.info(`Validating measuring point ${point.name}...`);
-            
-            const [readData, cdrData] = await Promise.all([
-                this.getReads(point, startDate, endDate),
-                this.getCdr(point, startDate, endDate)
-            ]);
+    traverse(obj);
+    return max === -Infinity ? 0 : max;
+  }
 
-            const validation = {
-                name: point.name,
-                location: point.location,
-                uuid: point.uuid,
-                reads: {
-                    count: readData.readings.length,
-                    totalConsumption: readData.cumulative_kwh,
-                    firstTimestamp: readData.firstReading?.time_stamp,
-                    lastTimestamp: readData.lastReading?.time_stamp
-                },
-                cdr: {
-                    count: cdrData.length,
-                    totalConsumption: cdrData.reduce((sum, session) => sum + (session.energy_kwh || 0), 0)
-                },
-                hasData: readData.readings.length > 0 || cdrData.length > 0
-            };
+  async getReads(point, startDate, endDate, limit = 50) {
+    const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/reads`;
+    const fullUrl = new URL(url);
+    fullUrl.searchParams.set("start", startDate);
+    fullUrl.searchParams.set("end", endDate);
 
-            logger.info(`Validation results for ${point.name}:`, validation);
-            return validation;
+    const allReads = await this.getAllPages(fullUrl.toString(), limit);
 
-        } catch (error) {
-            logger.error(`Validation failed for ${point.name}: ${error.message}`);
-            return {
-                name: point.name,
-                location: point.location,
-                uuid: point.uuid,
-                error: error.message,
-                hasData: false
-            };
-        }
+    // Detect largest cumulative value across all readings
+    const largestCumulative = this.findLargestNumeric(allReads);
+
+    return {
+      date: endDate,
+      cumulative_kwh: largestCumulative,
+    };
+  }
+
+  async getCdr(point, startDate, endDate, limit = 50) {
+    const url = `${this.baseUrl}/modules/${this.moduleId}/measuring-points/${point.uuid}/cdr`;
+    const fullUrl = new URL(url);
+    fullUrl.searchParams.set("start", startDate);
+    fullUrl.searchParams.set("end", endDate);
+
+    const allData = await this.getAllPages(fullUrl.toString(), limit);
+
+    // Flatten possible nested CDR arrays
+    const sessions = [];
+    allData.forEach(item => {
+      if (Array.isArray(item)) sessions.push(...item);
+      else if (typeof item === "object") sessions.push(item);
+    });
+
+    if (!sessions.length) {
+      return this.fillMissingDays(startDate, endDate).map(date => ({
+        date,
+        daily_kwh: 0,
+      }));
     }
 
-    async validateAllStations(startDate, endDate) {
-        logger.info(`Starting validation for all stations from ${startDate} to ${endDate}`);
-        
-        const results = [];
-        for (const point of this.measuringPoints) {
-            const validation = await this.validateMeasuringPoint(point, startDate, endDate);
-            results.push(validation);
-        }
+    // Find energy field per session
+    const dailyMap = {};
+    for (const s of sessions) {
+      const date = s.start_time?.split("T")[0] || s.date?.split("T")[0];
+      if (!date) continue;
 
-        // Display results in table format
-        console.table(results.map(r => ({
-            'Station': r.name,
-            'Location': r.location,
-            'Has Data': r.hasData,
-            'Reads Count': r?.reads?.count || 0,
-            'CDR Count': r?.cdr?.count || 0,
-            'Total kWh (Reads)': r?.reads?.totalConsumption?.toFixed(2) || 0,
-            'Total kWh (CDR)': r?.cdr?.totalConsumption?.toFixed(2) || 0,
-            'Error': r.error || ''
-        })));
-
-        return results;
+      const energy = this.findLargestNumeric(s);
+      dailyMap[date] = (dailyMap[date] || 0) + energy;
     }
 
-    async getConsumptionData(startDate, endDate) {
-        const results = [];
-        for (const point of this.measuringPoints) {
-            try {
-                const [readData, cdrData] = await Promise.all([
-                    this.getReads(point, startDate, endDate),
-                    this.getCdr(point, startDate, endDate)
-                ]);
+    const allDates = this.fillMissingDays(startDate, endDate);
+    return allDates.map(date => ({
+      date,
+      daily_kwh: dailyMap[date] || 0,
+    }));
+  }
 
-                results.push({
-                    station: point.name,
-                    location: point.location,
-                    consumption: readData.cumulative_kwh,
-                    sessions: cdrData.length,
-                    dailyData: cdrData
-                });
-            } catch (error) {
-                logger.error(`Error fetching data for ${point.name}: ${error.message}`);
-            }
-        }
-        return results;
+  fillMissingDays(startDate, endDate) {
+    const dates = [];
+    let current = new Date(startDate);
+    const end = new Date(endDate);
+    while (current <= end) {
+      dates.push(current.toISOString().split("T")[0]);
+      current.setDate(current.getDate() + 1);
     }
+    return dates;
+  }
+
+  async getConsumptionData(startDate, endDate, limit = 50) {
+    const measuringPoints = [
+      { uuid: "71ef9476-3855-4a3f-8fc5-333cfbf9e898", name: "EV Charger Station 01", location: "Building A - Level 1" },
+      { uuid: "fd7e69ef-cd01-4b9a-8958-2aa5051428d4", name: "EV Charger Station 02", location: "Building A - Level 2" },
+      { uuid: "b7423cbc-d622-4247-bb9a-8d125e5e2351", name: "EV Charger Station 03", location: "Building B - Parking Garage" },
+    ];
+
+    const results = await Promise.all(measuringPoints.map(async point => {
+      logger.info(`Fetching reads and daily CDR for ${point.name} (${point.location})`);
+
+      const read = await this.getReads(point, startDate, endDate, limit);
+      const cdrArray = await this.getCdr(point, startDate, endDate, limit);
+
+      const totalReads = read.cumulative_kwh;
+      const totalCdr = cdrArray.reduce((sum, d) => sum + d.daily_kwh, 0);
+
+      return {
+        uuid: point.uuid,
+        name: point.name,
+        location: point.location,
+        readsConsumption: totalReads,
+        cdrDaily: cdrArray,
+        cdrConsumption: totalCdr,
+        total: totalReads + totalCdr,
+      };
+    }));
+
+    const totals = {
+      totalReads: results.reduce((sum, d) => sum + d.readsConsumption, 0),
+      totalCdr: results.reduce((sum, d) => sum + d.cdrConsumption, 0),
+      grandTotal: results.reduce((sum, d) => sum + d.total, 0),
+    };
+
+    logger.info(`Fetched data for ${results.length}/${measuringPoints.length} stations`);
+    return { devices: results, totals };
+  }
 }
 
-// Runner section
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const service = new CloudOceanService();
-    (async () => {
-        try {
-            const startDate = "2024-10-16";
-            const endDate = "2024-11-25";
+// 🏃 Runner
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  const service = new CloudOceanService();
+  (async () => {
+    try {
+      const startDate = "2024-10-16";
+      const endDate = "2024-11-25";
 
-            console.log('\nValidating API Data...');
-            const validationResults = await service.validateAllStations(startDate, endDate);
-            
-            if (validationResults.some(r => r.hasData)) {
-                console.log('\nFetching Consumption Data...');
-                const data = await service.getConsumptionData(startDate, endDate);
-                console.log(JSON.stringify(data, null, 2));
-            } else {
-                console.log('\n❌ No valid data found in any station');
-            }
-        } catch (err) {
-            console.error("❌ Runner error:", err.message);
-        }
-    })();
+      const data = await service.getConsumptionData(startDate, endDate);
+
+      console.log("\n⚡ Daily Energy per Station:\n");
+      data.devices.forEach(d => {
+        console.log(`${d.name} (${d.location}):`);
+        console.table(d.cdrDaily.map((row, i) => ({
+          Date: row.date,
+          "Reads kWh": i === d.cdrDaily.length - 1 ? d.readsConsumption.toFixed(2) : '0.00',
+          "CDR kWh": row.daily_kwh.toFixed(2),
+          "Total kWh": (row.daily_kwh + (i === d.cdrDaily.length - 1 ? d.readsConsumption : 0)).toFixed(2),
+        })));
+      });
+
+      console.log("\n⚡ Totals:");
+      console.table(data.devices.map(d => ({
+        Name: d.name,
+        Reads_kWh: d.readsConsumption.toFixed(2),
+        CDR_kWh: d.cdrConsumption.toFixed(2),
+        Total_kWh: d.total.toFixed(2),
+      })));
+
+      console.log(`Reads Total: ${data.totals.totalReads.toFixed(2)} kWh`);
+      console.log(`CDR Total: ${data.totals.totalCdr.toFixed(2)} kWh`);
+      console.log(`Grand Total: ${data.totals.grandTotal.toFixed(2)} kWh`);
+    } catch (err) {
+      console.error("❌ Runner error:", err.message);
+    }
+  })();
 }
