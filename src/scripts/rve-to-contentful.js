@@ -85,7 +85,7 @@ function generateInvoicePDF(invoiceData) {
     doc.text(item.date, 50, doc.y, { continued: true });
     doc.text(item.kWh.toFixed(2), 200, doc.y, { continued: true });
     doc.text(`$${invoiceData.unitPrice}`, 350, doc.y, { continued: true });
-    doc.text(`$${(item.kWh * parseFloat(invoiceData.unitPrice)).toFixed(2)}`, 450, doc.y);
+    doc.text(`$${(item.kWh * parseFloat(invoiceData.unitPrice)).toFixed(2)}`, 400, doc.y);
   });
 
   // --- TOTAL Row
