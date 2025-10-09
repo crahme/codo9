@@ -189,9 +189,9 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         stationName: station.name,
         stationLocation: station.location,
         unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        daily: station.cdrDaily.map(d => ({
+        daily: station.dailyData.map(d => ({
           date: d.date,
-          kWh: d.daily_kwh,
+          kWh: d.reads_kwh,
         })),
       };
 
