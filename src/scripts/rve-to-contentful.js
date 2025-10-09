@@ -75,7 +75,7 @@ function generateInvoicePDF(invoiceData) {
   doc.fontSize(12).text("Date", 50, doc.y, { continued: true });
   doc.text("Energy (kWh)", 200, doc.y, { continued: true });
   doc.text("Unit Price", 350, doc.y, { continued: true });
-  doc.text("Amount", 350, doc.y);
+  doc.text("Amount", 400, doc.y);
   doc.moveDown();
 
   // --- Line Items
