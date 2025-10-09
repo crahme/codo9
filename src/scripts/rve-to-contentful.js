@@ -4,7 +4,8 @@ dotenv.config();
 
 import { CloudOceanService } from "../services/CloudOceanService.js";
 import contentful from "contentful-management";
-import { InvoiceGenerator } from "../../services/invoicegenerator.mjs";
+import fs from "fs";
+import PDFDocument from "pdfkit";
 
 // --- Contentful setup ---
 const client = contentful.createClient({
@@ -45,6 +46,96 @@ async function createLineItem(env, itemData) {
   return entry.sys.id;
 }
 
+// --- Generate PDF invoice ---
+function generateInvoicePDF(invoiceData) {
+  const outputDir = "./invoices";
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+
+  const filePath = `${outputDir}/${invoiceData.invoiceNumber}.pdf`;
+  const doc = new PDFDocument({ margin: 50 });
+  const stream = fs.createWriteStream(filePath);
+  doc.pipe(stream);
+
+  // --- Header
+  doc.fontSize(20).text("INVOICE", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text(`Invoice Number: ${invoiceData.invoiceNumber}`);
+  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
+  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} → ${invoiceData.billingPeriodEnd}`);
+  doc.text(`Payment Due: ${invoiceData.paymentDueDate}`);
+  doc.moveDown();
+
+  // --- Station Info
+  doc.fontSize(14).text("Station:", { underline: true });
+  doc.fontSize(12).text(invoiceData.stationName || "N/A");
+  doc.text(invoiceData.stationLocation || "N/A");
+  doc.moveDown();
+
+  // --- Bordered and aligned table
+  const left = doc.page.margins.left;
+  let y = doc.y;
+  const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const colWidths = [contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.25];
+  const rowHeight = 24;
+
+  function drawRow(cells, isHeader = false) {
+    let x = left;
+    doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(12);
+    for (let i = 0; i < cells.length; i++) {
+      // Cell border
+      doc.rect(x, y, colWidths[i], rowHeight).stroke();
+      // Cell text
+      const align = i === 0 ? "left" : "right";
+      doc.text(String(cells[i]), x + 6, y + 6, {
+        width: colWidths[i] - 12,
+        align,
+      });
+      x += colWidths[i];
+    }
+    y += rowHeight;
+  }
+
+  // Header row
+  drawRow(["Date", "Energy (kWh)", "Unit Price", "Amount"], true);
+
+  // Data rows
+  let totalCost = 0;
+  let totalConsumption = 0;
+  const unitPriceNum = parseFloat(invoiceData.unitPrice);
+  invoiceData.daily.forEach(item => {
+    const amount = item.kWh * unitPriceNum;
+    totalCost += amount;
+    totalConsumption += item.kWh;
+
+    // Page break with header re-draw
+    if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+      y = doc.page.margins.top;
+      drawRow(["Date", "Energy (kWh)", "Unit Price", "Amount"], true);
+    }
+
+    drawRow([
+      item.date,
+      item.kWh.toFixed(2),
+      `${unitPriceNum.toFixed(2)}`,
+      `${amount.toFixed(2)}`,
+    ]);
+  });
+
+  // --- Totals summary lines
+  y += 10;
+  doc.font("Helvetica-Bold").fontSize(12);
+  doc.text(`Total cost:$ ${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
+  y += 18;
+  doc.text(`Total consumption: ${totalConsumption.toFixed(2)} kWh`, left, y, { width: contentWidth, align: "left" });
+
+  // --- Environmental Impact
+  y += 24;
+  doc.font("Helvetica").fontSize(10).text(invoiceData.environmentalImpactText, left, y, { width: contentWidth, align: "left" });
+
+  doc.end();
+  return filePath;
+}
 
 // --- Create or update invoice entry safely ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
@@ -116,26 +207,14 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
     console.log("[INFO] Fetching station consumption data...");
     const { devices } = await service.getConsumptionData(startDate, endDate);
-    const generator = new InvoiceGenerator("./invoices");
 
     if (!devices || devices.length === 0) {
       throw new Error("No station data returned from CloudOceanService.");
     }
 
-    for (const [index, station] of devices.entries()) {
-      const now = new Date(endDate);
-      const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
-      const invNum = `INV-${yearMonth}-${String(index + 1).padStart(3, "0")}`;
-      const rateNum = parseFloat(process.env.RATE_PER_KWH || 0.15);
-      const daily = station.dailyData.map(d => ({
-        date: d.date,
-        kWh: d.reads_kwh,
-      }));
-      const totalKwh = daily.reduce((s, d) => s + d.kWh, 0);
-      const totalAmount = totalKwh * rateNum;
-
+    for (const station of devices) {
       const invoiceData = {
-        invoiceNumber: invNum,
+        invoiceNumber: `fac-${station.uuid}-${Date.now()}`,
         invoiceDate: new Date().toISOString().split("T")[0],
         chargerSerialNumber: "CHG-001",
         billingPeriodStart: startDate,
@@ -146,38 +225,18 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         clientEmail: "john.doe@example.com",
         stationName: station.name,
         stationLocation: station.location,
-        unitPrice: rateNum.toFixed(2),
-        daily,
+        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
+        daily: station.dailyData.map(d => ({
+          date: d.date,
+          kWh: d.reads_kwh,
+        })),
       };
 
       console.log(`[INFO] Writing invoice for ${station.name} to Contentful...`);
       await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
 
       console.log(`[INFO] Generating PDF for ${station.name}...`);
-      const genData = {
-        invoice_number: invNum,
-        syndicate_name: "RVE Cloud Ocean",
-        company_address: "123 EV Way, Montreal, QC",
-        company_phone: "+1 (555) 123-4567",
-        company_email: "contact@rve.ca",
-        company_website: "https://rve.ca",
-        billing_period_start: startDate,
-        billing_period_end: endDate,
-        total_kwh: totalKwh,
-        total_amount: totalAmount,
-        rate: rateNum,
-        due_date: invoiceData.paymentDueDate,
-        charging_sessions: daily.map(d => ({
-          date: d.date,
-          start_time: "00:00",
-          end_time: "23:59",
-          duration: "24:00",
-          kwh: d.kWh,
-          rate: rateNum,
-          amount: d.kWh * rateNum
-        }))
-      };
-      const pdfPath = await generator.generateInvoice(genData);
+      const pdfPath = generateInvoicePDF(invoiceData);
       console.log(`[INFO] PDF generated: ${pdfPath}`);
     }
 
