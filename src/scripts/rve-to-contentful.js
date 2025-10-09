@@ -71,30 +71,67 @@ function generateInvoicePDF(invoiceData) {
   doc.text(invoiceData.stationLocation || "N/A");
   doc.moveDown();
 
-  // --- Table Header
-  doc.fontSize(12).text("Date", 50, doc.y, { continued: true });
-  doc.text("Energy (kWh)", 200, doc.y, { continued: true });
-  doc.text("Unit Price", 350, doc.y, { continued: true });
-  doc.text("Amount", 400, doc.y);
-  doc.moveDown();
+  // --- Bordered and aligned table
+  const left = doc.page.margins.left;
+  let y = doc.y;
+  const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const colWidths = [contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.25];
+  const rowHeight = 24;
 
-  // --- Line Items
-  let total = 0;
+  function drawRow(cells, isHeader = false) {
+    let x = left;
+    doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(12);
+    for (let i = 0; i < cells.length; i++) {
+      // Cell border
+      doc.rect(x, y, colWidths[i], rowHeight).stroke();
+      // Cell text
+      const align = i === 0 ? "left" : "right";
+      doc.text(String(cells[i]), x + 6, y + 6, {
+        width: colWidths[i] - 12,
+        align,
+      });
+      x += colWidths[i];
+    }
+    y += rowHeight;
+  }
+
+  // Header row
+  drawRow(["Date", "Energy (kWh)", "Unit Price", "Amount"], true);
+
+  // Data rows
+  let totalCost = 0;
+  let totalConsumption = 0;
+  const unitPriceNum = parseFloat(invoiceData.unitPrice);
   invoiceData.daily.forEach(item => {
-    total += item.kWh * parseFloat(invoiceData.unitPrice);
-    doc.text(item.date, 50, doc.y, { continued: true });
-    doc.text(item.kWh.toFixed(2), 200, doc.y, { continued: true });
-    doc.text(`$${invoiceData.unitPrice}`, 350, doc.y, { continued: true });
-    doc.text(`$${(item.kWh * parseFloat(invoiceData.unitPrice)).toFixed(2)}`, 400, doc.y);
+    const amount = item.kWh * unitPriceNum;
+    totalCost += amount;
+    totalConsumption += item.kWh;
+
+    // Page break with header re-draw
+    if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+      y = doc.page.margins.top;
+      drawRow(["Date", "Energy (kWh)", "Unit Price", "Amount"], true);
+    }
+
+    drawRow([
+      item.date,
+      item.kWh.toFixed(2),
+      `${unitPriceNum.toFixed(2)}`,
+      `${amount.toFixed(2)}`,
+    ]);
   });
 
-  // --- TOTAL Row
-  doc.moveDown();
-  doc.fontSize(12).text("TOTAL", 350, doc.y, { continued: true });
-  doc.text(`$${total.toFixed(2)}`, 450, doc.y);
+  // --- Totals summary lines
+  y += 10;
+  doc.font("Helvetica-Bold").fontSize(12);
+  doc.text(`Total cost: ${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
+  y += 18;
+  doc.text(`Total consumption: ${totalConsumption.toFixed(2)} kWh`, left, y, { width: contentWidth, align: "left" });
 
   // --- Environmental Impact
-  doc.moveDown().fontSize(10).text(invoiceData.environmentalImpactText, { align: "left" });
+  y += 24;
+  doc.font("Helvetica").fontSize(10).text(invoiceData.environmentalImpactText, left, y, { width: contentWidth, align: "left" });
 
   doc.end();
   return filePath;
