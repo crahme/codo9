@@ -85,6 +85,7 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown(1);
 
   const left = doc.page.margins.left;
+  const indent = left + 20;
   let y = doc.y;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
