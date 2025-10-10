@@ -57,21 +57,25 @@ function generateInvoicePDF(invoiceData) {
   doc.pipe(stream);
 
   // --- Header
-  doc.fontSize(20).text("INVOICE", { align: "center" });
+  doc.fontSize(20).text("EV Station Invoice Statement", { align: "Left" });
   doc.moveDown();
-  doc.fontSize(12).text(`Invoice Number: ${invoiceData.invoiceNumber}`);
-  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
-  doc.text(`Billing Period: ${invoiceData.billingPeriodStart} → ${invoiceData.billingPeriodEnd}`);
-  doc.text(`Payment Due: ${invoiceData.paymentDueDate}`);
+  doc.fontSize(12).text(`Address: ${invoiceData.address}`);
+  doc.text(`Phone: +1 (555) 123-4567`);
+  doc.text(`Email: ${invoiceData.contact}}`);
+  doc.text(`Website: https://rve.ca`);
   doc.moveDown();
 
   // --- Station Info
-  doc.fontSize(14).text("Station:", { underline: true });
-  doc.fontSize(12).text(invoiceData.stationName || "N/A");
-  doc.text(invoiceData.stationLocation || "N/A");
+  doc.fontSize(20).text("Invoice Details", { align: "left" });
+  doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber);
+  doc.text("Date: " + invoiceData.invoiceDate);
+  doc.text("Billing Period: " + invoiceData.billingPeriodStart + " to " + invoiceData.billingPeriodEnd);
+  doc.text("Due Date: " + invoiceData.paymentDueDate);
   doc.moveDown();
 
   // --- Bordered and aligned table
+  doc.fontSize(20).text("Electric Vehicle Charging details", {align:"left"}); 
+  doc.moveDown();
   const left = doc.page.margins.left;
   let y = doc.y;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
@@ -96,11 +100,14 @@ function generateInvoicePDF(invoiceData) {
   }
 
   // Header row
-  drawRow(["Date", "Energy (kWh)", "Unit Price", "Amount"], true);
+  drawRow(["Date", "Start Time","End time","Duratiom","Energy (kWh)", "Unit Price", "Amount"], true);
 
   // Data rows
   let totalCost = 0;
   let totalConsumption = 0;
+  const StartTime = setHours(0,0,0,0);
+  const EndTime = setHours(23,59,59,999);
+  const Duration = EndTime - StartTime;
   const unitPriceNum = parseFloat(invoiceData.unitPrice);
   invoiceData.daily.forEach(item => {
     const amount = item.kWh * unitPriceNum;
@@ -111,29 +118,37 @@ function generateInvoicePDF(invoiceData) {
     if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
       y = doc.page.margins.top;
-      drawRow(["Date", "Energy (kWh)", "Unit Price", "Amount"], true);
+      drawRow(["Date","Start Time","End Time","Duration","Energy (kWh)", "Unit Price", "Amount"], true);
     }
 
     drawRow([
       item.date,
+      item.StartTime,
+      item.EndTime,
+      item.Duration,
       item.kWh.toFixed(2),
       `${unitPriceNum.toFixed(2)}`,
       `${amount.toFixed(2)}`,
     ]);
   });
+  doc.moveDown();
 
   // --- Totals summary lines
+  doc.fontSize(20).text("Summary", {align:'left'});
+  doc.moveDown();
   y += 10;
-  doc.font("Helvetica-Bold").fontSize(12);
-  doc.text(`Total cost:$ ${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
+  doc.fontSize(12);
+  doc.text(`Total amount:     $${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
   y += 18;
-  doc.text(`Total consumption: ${totalConsumption.toFixed(2)} kWh`, left, y, { width: contentWidth, align: "left" });
-
+  doc.text(`Total kwh consumed: ${totalConsumption.toFixed(2)} kWh`, left, y, { width: contentWidth, align: "left" });
+  doc.text(`Rate per kwh:   $${invoiceData.untiPrice}`);
+  doc.moveDown();
   // --- Environmental Impact
   y += 24;
-  doc.font("Helvetica").fontSize(10).text(invoiceData.environmentalImpactText, left, y, { width: contentWidth, align: "left" });
-
-  doc.end();
+  doc.fontSize(20).text("Payment Instructions",{align:"left"});
+  doc.fontSize(12);
+  doc.text(`Please make the payment before ${invoiceData.paymentDueDate}.  For questions regarding this invoice, please contact us at
+smp@microbms.com or call our customer service at +1 (555) 123-4567.`)
   return filePath;
 }
 
