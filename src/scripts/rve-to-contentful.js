@@ -81,7 +81,13 @@ function generateInvoicePDF(invoiceData) {
   const left = doc.page.margins.left;
   let y = doc.y;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const colWidths = [contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.25, contentWidth * 0.25];
+  const colWidths = [contentWidth * 0.15, // Date
+  contentWidth * 0.15, // Start Time
+  contentWidth * 0.15, // End Time
+  contentWidth * 0.15, // Duration
+  contentWidth * 0.15, // Energy (kWh)
+  contentWidth * 0.15, // Unit Price
+  contentWidth * 0.15] // Amount;
   const rowHeight = 24;
 
   function drawRow(cells, isHeader = false) {
