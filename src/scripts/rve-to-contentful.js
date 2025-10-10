@@ -59,19 +59,25 @@ function generateInvoicePDF(invoiceData) {
   // --- Header ---
   doc.fontSize(20).text("EV Station Invoice Statement", { align: "left" });
   doc.moveDown(1);
-  doc.fontSize(12).text(`Syndicate Name: ${invoiceData.syndicateName || "RVE CLOUD OCEAN"}`)
-  doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`);
-  doc.text(`Phone: +1 (555) 123-4567`);
-  doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`);
-  doc.text(`Website: https://rve.ca`);
+  doc.fontSize(12).text(`Syndicate Name: ${invoiceData.syndicateName || "RVE CLOUD OCEAN"}`,indent)
+  doc.moveDown(1);
+  doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`, indent);
+  doc.moveDown(1);
+  doc.text(`Phone: +1 (555) 123-4567`, indent);
+  doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`,indent);
+  doc.moveDown(1);
+  doc.text(`Website: https://rve.ca`, indent);
   doc.moveDown();
 
   // --- Station Info ---
   doc.fontSize(20).text("Invoice Details", { align: "left" });
-  doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber);
-  doc.text("Date: " + invoiceData.invoiceDate);
-  doc.text("Billing Period: " + invoiceData.billingPeriodStart + " to " + invoiceData.billingPeriodEnd);
-  doc.text("Due Date: " + invoiceData.paymentDueDate);
+  doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, indent);
+  doc.moveDown(1);
+  doc.text("Date: " + invoiceData.invoiceDate, indent);
+  doc.moveDown(1);
+  doc.text("Billing Period: " + invoiceData.billingPeriodStart + " to " + invoiceData.billingPeriodEnd , indent);
+  doc.moveDown(1);
+  doc.text("Due Date: " + invoiceData.paymentDueDate, indent);
   doc.moveDown();
 
   // --- Table Header ---
