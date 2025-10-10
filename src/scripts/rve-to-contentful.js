@@ -143,22 +143,36 @@ function generateInvoicePDF(invoiceData) {
 
   // --- Move below table before summary ---
   doc.moveDown(2);
-  y = doc.y; // reset y to current text position
+  y = doc.y;
 
   // --- Totals Summary ---
-  doc.fontSize(20).text("Summary", { align: "left" });
+  doc.fontSize(20)
+    .text("Summary", left, y, { align: "left", width: contentWidth / 2 });
   doc.moveDown(0.5);
   doc.fontSize(12);
-  doc.text(`Total amount: $${totalCost.toFixed(2)}`, { align: "left" });
-  doc.text(`Total kWh consumed: ${totalConsumption.toFixed(2)} kWh`, { align: "left" });
-  doc.text(`Rate per kWh: $${invoiceData.unitPrice}`, { align: "left" });
+  doc.text(`Total amount: $${totalCost.toFixed(2)}`, left, doc.y, {
+    align: "left",
+    width: contentWidth / 2,
+  });
+  doc.text(`Total kWh consumed: ${totalConsumption.toFixed(2)} kWh`, left, doc.y, {
+    align: "left",
+    width: contentWidth / 2,
+  });
+  doc.text(`Rate per kWh: $${invoiceData.unitPrice}`, left, doc.y, {
+    align: "left",
+    width: contentWidth / 2,
+  });
   doc.moveDown(2);
 
   // --- Payment Instructions ---
-  doc.fontSize(20).text("Payment Instructions", { align: "left" });
+  doc.fontSize(20)
+    .text("Payment Instructions", left, doc.y, { align: "left", width: contentWidth });
   doc.fontSize(12).text(
     `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
-please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`
+please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
+    left,
+    doc.y,
+    { align: "left", width: contentWidth }
   );
 
   // --- Finalize PDF ---
@@ -247,7 +261,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
     for (const station of devices) {
       const invoiceData = {
-        invoiceNumber: `fac-${station.uuid}-${Date.now()}`,
+        invoiceNumber: `fac-${station.uuid}`,
         invoiceDate: new Date().toISOString().split("T")[0],
         chargerSerialNumber: "CHG-001",
         billingPeriodStart: startDate,
