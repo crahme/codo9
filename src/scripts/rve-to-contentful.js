@@ -132,9 +132,9 @@ function generateInvoicePDF(invoiceData) {
 
     drawRow([
       item.date,
-      item.StartTime || "",
-      item.EndTime || "",
-      item.Duration || "",
+      item.StartTime || "00:00:00",
+      item.EndTime || "23:59:59",
+      item.Duration || "24:00:00",
       item.kWh.toFixed(2),
       `${unitPriceNum.toFixed(2)}`,
       `${amount.toFixed(2)}`,
