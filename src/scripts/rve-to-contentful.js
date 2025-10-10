@@ -143,7 +143,6 @@ function generateInvoicePDF(invoiceData) {
 
   // --- Totals summary lines
   doc.fontSize(20).text("Summary", {align:'left'});
-  doc.moveDown();
   doc.fontSize(12);
   doc.text(`Total amount:     $${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
   doc.text(`Total kwh consumed: ${totalConsumption.toFixed(2)} kWh`, left, y, { width: contentWidth, align: "left" });
