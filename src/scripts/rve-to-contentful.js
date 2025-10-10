@@ -58,7 +58,7 @@ function generateInvoicePDF(invoiceData) {
 
   // --- Header ---
   doc.fontSize(20).text("EV Station Invoice Statement", { align: "left" });
-  doc.moveDown();
+  doc.moveDown(1);
   doc.fontSize(12).text(`Syndicate Name: ${invoiceData.syndicateName || "RVE CLOUD OCEAN"}`)
   doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`);
   doc.text(`Phone: +1 (555) 123-4567`);
@@ -76,7 +76,7 @@ function generateInvoicePDF(invoiceData) {
 
   // --- Table Header ---
   doc.fontSize(20).text("Electric Vehicle Charging Details", { align: "left" });
-  doc.moveDown();
+  doc.moveDown(1);
 
   const left = doc.page.margins.left;
   let y = doc.y;
