@@ -151,17 +151,17 @@ function generateInvoicePDF(invoiceData) {
     .text("Summary", left, y, { align: "left", width: contentWidth / 2 });
   doc.moveDown(0.5);
   doc.fontSize(12);
-  doc.text(`Total amount: $${totalCost.toFixed(2)}`, left, doc.y, {
+  doc.text(`Total amount: $${totalCost.toFixed(2)}`, center, doc.y, {
     align: "center",
-    width: contentWidth / 2,
+    width: contentWidth,
   });
-  doc.text(`Total kWh consumed: ${totalConsumption.toFixed(2)} kWh`, left, doc.y, {
+  doc.text(`Total kWh consumed: ${totalConsumption.toFixed(2)} kWh`, center, doc.y, {
     align: "center",
-    width: contentWidth / 2,
+    width: contentWidth,
   });
-  doc.text(`Rate per kWh: $${invoiceData.unitPrice}`, left, doc.y, {
+  doc.text(`Rate per kWh: $${invoiceData.unitPrice}`, center, doc.y, {
     align: "center",
-    width: contentWidth / 2,
+    width: contentWidth,
   });
   doc.moveDown(2);
 
