@@ -134,7 +134,6 @@ function generateInvoicePDF(invoiceData) {
     ]);
   });
   doc.moveDown();
-  doc.moveDown();
 
   // --- Totals summary lines
   doc.fontSize(20).text("Summary", {align:'left'});
