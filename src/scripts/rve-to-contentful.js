@@ -57,12 +57,12 @@ function generateInvoicePDF(invoiceData) {
   doc.pipe(stream);
 
   // --- Header
-  doc.fontSize(20).text("EV Station Invoice Statement", { align: "Left" });
+  doc.fontSize(20).text("EV Station Invoice Statement", { align: "left" });
   doc.moveDown();
-  doc.fontSize(12).text(`Address: ${invoiceData.address}`);
-  doc.text(`Phone: +1 (555) 123-4567`);
-  doc.text(`Email: ${invoiceData.contact}}`);
-  doc.text(`Website: https://rve.ca`);
+  doc.fontSize(12).text("Address: 123 EV Way, Montreal, QC");
+  doc.text("Phone: +1 (555) 123-4567");
+  doc.text("Email: contact@rve.ca");
+  doc.text("Website: https://rve.ca");
   doc.moveDown();
 
   // --- Station Info
@@ -100,14 +100,11 @@ function generateInvoicePDF(invoiceData) {
   }
 
   // Header row
-  drawRow(["Date", "Start Time","End time","Duratiom","Energy (kWh)", "Unit Price", "Amount"], true);
+  drawRow(["Date", "Energy (kWh)", "Unit Price", "Amount"], true);
 
   // Data rows
   let totalCost = 0;
   let totalConsumption = 0;
-  const StartTime = setHours(0,0,0,0);
-  const EndTime = setHours(23,59,59,999);
-  const Duration = EndTime - StartTime;
   const unitPriceNum = parseFloat(invoiceData.unitPrice);
   invoiceData.daily.forEach(item => {
     const amount = item.kWh * unitPriceNum;
@@ -118,14 +115,11 @@ function generateInvoicePDF(invoiceData) {
     if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
       y = doc.page.margins.top;
-      drawRow(["Date","Start Time","End Time","Duration","Energy (kWh)", "Unit Price", "Amount"], true);
+      drawRow(["Date", "Energy (kWh)", "Unit Price", "Amount"], true);
     }
 
     drawRow([
       item.date,
-      item.StartTime,
-      item.EndTime,
-      item.Duration,
       item.kWh.toFixed(2),
       `${unitPriceNum.toFixed(2)}`,
       `${amount.toFixed(2)}`,
@@ -141,7 +135,7 @@ function generateInvoicePDF(invoiceData) {
   doc.text(`Total amount:     $${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
   y += 18;
   doc.text(`Total kwh consumed: ${totalConsumption.toFixed(2)} kWh`, left, y, { width: contentWidth, align: "left" });
-  doc.text(`Rate per kwh:   $${invoiceData.untiPrice}`);
+  doc.text(`Rate per kwh:   ${invoiceData.unitPrice}`);
   doc.moveDown();
   // --- Environmental Impact
   y += 24;
@@ -149,6 +143,7 @@ function generateInvoicePDF(invoiceData) {
   doc.fontSize(12);
   doc.text(`Please make the payment before ${invoiceData.paymentDueDate}.  For questions regarding this invoice, please contact us at
 smp@microbms.com or call our customer service at +1 (555) 123-4567.`)
+  doc.end();
   return filePath;
 }
 
