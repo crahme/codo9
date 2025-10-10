@@ -100,7 +100,7 @@ function generateInvoicePDF(invoiceData) {
   }
 
   // Header row
-  drawRow(["Date", "Start Time","End time","Duratiom","Energy (kWh)", "Unit Price", "Amount"], true);
+  drawRow(["Date", "Start Time","End time","Duration","Energy (kWh)", "Unit Price", "Amount"], true);
 
   // Data rows
   let totalCost = 0;
