@@ -85,7 +85,7 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown();
 
   // --- Table Header ---
-  doc.fontSize(20).text("Electric Vehicle Charging Details", { align: "left" },{indent});
+  doc.fontSize(20).text("Electric Vehicle Charging Details", { align: "left" });
   doc.moveDown(1);
 
  
