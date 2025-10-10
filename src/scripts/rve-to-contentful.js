@@ -67,6 +67,7 @@ function generateInvoicePDF(invoiceData) {
   doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`, indent);
   doc.moveDown(1);
   doc.text(`Phone: +1 (555) 123-4567`, indent);
+  doc.moveDown(1);
   doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`,indent);
   doc.moveDown(1);
   doc.text(`Website: https://rve.ca`, indent);
