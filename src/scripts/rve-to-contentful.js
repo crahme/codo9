@@ -59,6 +59,7 @@ function generateInvoicePDF(invoiceData) {
   // --- Header ---
   doc.fontSize(20).text("EV Station Invoice Statement", { align: "left" });
   doc.moveDown();
+  doc.fontSize(12).text(`Syndicate Name: ${invoiceData.syndicateName || "RVE CLOUD OCEAB"}`)
   doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`);
   doc.text(`Phone: +1 (555) 123-4567`);
   doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`);
@@ -151,15 +152,15 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown(0.5);
   doc.fontSize(12);
   doc.text(`Total amount: $${totalCost.toFixed(2)}`, left, doc.y, {
-    align: "left",
+    align: "center",
     width: contentWidth / 2,
   });
   doc.text(`Total kWh consumed: ${totalConsumption.toFixed(2)} kWh`, left, doc.y, {
-    align: "left",
+    align: "center",
     width: contentWidth / 2,
   });
   doc.text(`Rate per kWh: $${invoiceData.unitPrice}`, left, doc.y, {
-    align: "left",
+    align: "center",
     width: contentWidth / 2,
   });
   doc.moveDown(2);
