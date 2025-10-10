@@ -153,6 +153,8 @@ function generateInvoicePDF(invoiceData) {
   doc.fontSize(12);
   doc.text(`Please make the payment before ${invoiceData.paymentDueDate}.  For questions regarding this invoice, please contact us at
 smp@microbms.com or call our customer service at +1 (555) 123-4567.`)
+
+  doc.end();
   return filePath;
 }
 
