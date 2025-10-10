@@ -147,7 +147,9 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown();
   doc.fontSize(12);
   doc.text(`Total amount:     $${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
+  doc.moveDown();
   doc.text(`Total kwh consumed: ${totalConsumption.toFixed(2)} kWh`, left, y, { width: contentWidth, align: "left" });
+  doc.moveDown();
   doc.text(`Rate per kwh:   $${invoiceData.untiPrice}`);
   doc.moveDown();
   // --- Environmental Impact
