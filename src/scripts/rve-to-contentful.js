@@ -73,7 +73,7 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown();
 
   // --- Station Info ---
-  doc.fontSize(20).text("Invoice Details", { align: "left" });
+  doc.fontSize(20).text("Invoice Details", { align: "left" }, indent-20);
   doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, indent);
   doc.moveDown(1);
   doc.text("Date: " + invoiceData.invoiceDate, indent);
