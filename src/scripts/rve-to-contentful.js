@@ -71,9 +71,9 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown(1);
   doc.text(`Website: https://rve.ca`, indent);
   doc.moveDown();
-  const unindent =left;
+  const unindent = indent-10;
   // --- Station Info ---
-  doc.fontSize(20).text("Invoice Details", { align: "left" }, unindent);
+  doc.fontSize(20).text("Invoice Details", { align: "left" }, unindent );
   doc.moveDown(1);
   doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, indent);
   doc.moveDown(1);
