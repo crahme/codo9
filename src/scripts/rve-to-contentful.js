@@ -100,7 +100,7 @@ function generateInvoicePDF(invoiceData) {
   }
 
   // Header row
-  drawRow(["Date", "Start Time","End time","Duration","Energy (kWh)", "Unit Price", "Amount"], true);
+  drawRow(["Date","Energy (kWh)", "Unit Price", "Amount"], true);
 
   // Data rows
   let totalCost = 0;
@@ -118,14 +118,11 @@ function generateInvoicePDF(invoiceData) {
     if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
       y = doc.page.margins.top;
-      drawRow(["Date","Start Time","End Time","Duration","Energy (kWh)", "Unit Price", "Amount"], true);
+      drawRow(["Date","Energy (kWh)", "Unit Price", "Amount"], true);
     }
 
     drawRow([
       item.date,
-      item.StartTime,
-      item.EndTime,
-      item.Duration,
       item.kWh.toFixed(2),
       `${unitPriceNum.toFixed(2)}`,
       `${amount.toFixed(2)}`,
