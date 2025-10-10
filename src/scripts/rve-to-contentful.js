@@ -70,10 +70,9 @@ function generateInvoicePDF(invoiceData) {
   doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`,indent);
   doc.moveDown(1);
   doc.text(`Website: https://rve.ca`, indent);
-  doc.moveDown();
-  const unindent = indent-10;
+  doc.moveDown(1);
   // --- Station Info ---
-  doc.fontSize(20).text("Invoice Details", { align: "left" }, unindent );
+  doc.fontSize(20).text("Invoice Details", { align: "left" });
   doc.moveDown(1);
   doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, indent);
   doc.moveDown(1);
