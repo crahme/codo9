@@ -105,15 +105,15 @@ function generateInvoicePDF(invoiceData) {
   // Data rows
   let totalCost = 0;
   let totalConsumption = 0;
-  const StartTime = setHours(0,0,0,0);
-  const EndTime = setHours(23,59,59,999);
-  const Duration = EndTime - StartTime;
+  
   const unitPriceNum = parseFloat(invoiceData.unitPrice);
   invoiceData.daily.forEach(item => {
     const amount = item.kWh * unitPriceNum;
     totalCost += amount;
     totalConsumption += item.kWh;
-
+    const StartTime = setHours(0,0,0,0);
+    const EndTime = setHours(23,59,59,999);
+    const Duration = EndTime - StartTime;
     // Page break with header re-draw
     if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
