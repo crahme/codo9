@@ -135,7 +135,6 @@ function generateInvoicePDF(invoiceData) {
 
   // --- Totals summary lines
   doc.fontSize(20).text("Summary", {align:'left'});
-  y += 10;
   doc.moveDown();
 
   doc.fontSize(12);
