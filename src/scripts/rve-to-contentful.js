@@ -55,6 +55,9 @@ function generateInvoicePDF(invoiceData) {
   const doc = new PDFDocument({ margin: 50 });
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
+  const left = doc.page.margins.left;
+  const indent = left + 20;
+  const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
   // --- Header ---
   doc.fontSize(20).text("EV Station Invoice Statement", { align: "left" });
@@ -84,10 +87,9 @@ function generateInvoicePDF(invoiceData) {
   doc.fontSize(20).text("Electric Vehicle Charging Details", { align: "left" });
   doc.moveDown(1);
 
-  const left = doc.page.margins.left;
-  const indent = left + 20;
+ 
   let y = doc.y;
-  const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  
 
   // 7-column widths (add up to ~100%)
   const colWidths = [
