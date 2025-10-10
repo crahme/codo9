@@ -143,7 +143,7 @@ function generateInvoicePDF(invoiceData) {
   });
 
   // --- Move below table before summary ---
-  doc.moveDown(2);
+  doc.moveDown(1);
   y = doc.y;
 
   // --- Totals Summary ---
