@@ -100,11 +100,14 @@ function generateInvoicePDF(invoiceData) {
   }
 
   // Header row
-  drawRow(["Date","Energy (kWh)", "Unit Price", "Amount"], true);
+  drawRow(["Date", "Start Time","End time","Duratiom","Energy (kWh)", "Unit Price", "Amount"], true);
 
   // Data rows
   let totalCost = 0;
   let totalConsumption = 0;
+  const StartTime = setHours(0,0,0,0);
+  const EndTime = setHours(23,59,59,999);
+  const Duration = EndTime - StartTime;
   const unitPriceNum = parseFloat(invoiceData.unitPrice);
   invoiceData.daily.forEach(item => {
     const amount = item.kWh * unitPriceNum;
@@ -115,11 +118,14 @@ function generateInvoicePDF(invoiceData) {
     if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
       y = doc.page.margins.top;
-      drawRow(["Date","Energy (kWh)", "Unit Price", "Amount"], true);
+      drawRow(["Date","Start Time","End Time","Duration","Energy (kWh)", "Unit Price", "Amount"], true);
     }
 
     drawRow([
       item.date,
+      item.StartTime,
+      item.EndTime,
+      item.Duration,
       item.kWh.toFixed(2),
       `${unitPriceNum.toFixed(2)}`,
       `${amount.toFixed(2)}`,
@@ -130,7 +136,7 @@ function generateInvoicePDF(invoiceData) {
   // --- Totals summary lines
   doc.fontSize(20).text("Summary", {align:'left'});
   doc.moveDown();
-
+  y += 10;
   doc.fontSize(12);
   doc.text(`Total amount:     $${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
   y += 18;
