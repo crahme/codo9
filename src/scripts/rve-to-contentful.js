@@ -83,13 +83,13 @@ function generateInvoicePDF(invoiceData) {
 
   // 7-column widths (add up to ~100%)
   const colWidths = [
-    contentWidth * 0.25, // Date
-    contentWidth * 0.25, // Start Time
-    contentWidth * 0.25, // End Time
-    contentWidth * 0.25, // Duration
+    contentWidth * 0.125, // Date
+    contentWidth * 0.125, // Start Time
+    contentWidth * 0.125, // End Time
+    contentWidth * 0.125, // Duration
     contentWidth * 0.25, // Energy (kWh)
     contentWidth * 0.25, // Unit Price
-    contentWidth * 0.25, // Amount
+    contentWidth * 0.125, // Amount
   ];
   const rowHeight = 24;
 
