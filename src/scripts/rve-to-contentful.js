@@ -62,32 +62,30 @@ function generateInvoicePDF(invoiceData) {
   // --- Header ---
   doc.fontSize(20).text("EV Station Invoice Statement", { align: "left" });
   doc.moveDown(1);
-  doc.fontSize(12).text(`Syndicate Name: ${invoiceData.syndicateName || "RVE CLOUD OCEAN"}`,indent)
+  doc.fontSize(12).text(`Syndicate Name: ${invoiceData.syndicateName || "RVE CLOUD OCEAN"}`,{indent})
   doc.moveDown(1);
-  doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`, indent);
+  doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`, {indent});
   doc.moveDown(1);
-  doc.text(`Phone: +1 (555) 123-4567`, indent);
+  doc.text(`Phone: +1 (555) 123-4567`, {indent});
   doc.moveDown(1);
-  doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`,indent);
+  doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`,{indent});
   doc.moveDown(1);
-  doc.text(`Website: https://rve.ca`, indent);
-  doc.moveDown(1);
-  doc.moveTo(left, doc.y).lineTo(left + contentWidth, doc.y).stroke();
+  doc.text(`Website: https://rve.ca`, {indent});
   doc.moveDown(1);
   // --- Station Info ---
   doc.fontSize(20).text("Invoice Details", { align: "left" });
   doc.moveDown(1);
-  doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, indent);
+  doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, {indent});
   doc.moveDown(1);
-  doc.text("Date: " + invoiceData.invoiceDate, indent);
+  doc.text("Date: " + invoiceData.invoiceDate, {indent});
   doc.moveDown(1);
-  doc.text("Billing Period: " + invoiceData.billingPeriodStart + " to " + invoiceData.billingPeriodEnd , indent);
+  doc.text("Billing Period: " + invoiceData.billingPeriodStart + " to " + invoiceData.billingPeriodEnd , {indent});
   doc.moveDown(1);
-  doc.text("Due Date: " + invoiceData.paymentDueDate, indent);
+  doc.text("Due Date: " + invoiceData.paymentDueDate, {indent});
   doc.moveDown();
 
   // --- Table Header ---
-  doc.fontSize(20).text("Electric Vehicle Charging Details", { align: "left" });
+  doc.fontSize(20).text("Electric Vehicle Charging Details", { align: "left" },{indent});
   doc.moveDown(1);
 
  
