@@ -136,7 +136,6 @@ function generateInvoicePDF(invoiceData) {
 
   // --- Totals summary lines
   doc.fontSize(20).text("Summary", {align:'left'});
-  y += 10;
   doc.moveDown();
   doc.fontSize(12);
   doc.text(`Total amount:     $${totalCost.toFixed(2)}`, left, y, { width: contentWidth, align: "left" });
@@ -144,7 +143,6 @@ function generateInvoicePDF(invoiceData) {
   doc.text(`Rate per kwh:   $${invoiceData.untiPrice}`);
   doc.moveDown();
   // --- Environmental Impact
-  y += 24;
   doc.fontSize(20).text("Payment Instructions",{align:"left"});
   doc.fontSize(12);
   doc.text(`Please make the payment before ${invoiceData.paymentDueDate}.  For questions regarding this invoice, please contact us at
