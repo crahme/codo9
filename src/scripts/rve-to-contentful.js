@@ -87,8 +87,8 @@ function generateInvoicePDF(invoiceData) {
     contentWidth * 0.15, // Start Time
     contentWidth * 0.15, // End Time
     contentWidth * 0.15, // Duration
-    contentWidth * 0.25, // Energy (kWh)
-    contentWidth * 0.25, // Unit Price
+    contentWidth * 0.18, // Energy (kWh)
+    contentWidth * 0.18, // Unit Price
     contentWidth * 0.125, // Amount
   ];
   const rowHeight = 24;
