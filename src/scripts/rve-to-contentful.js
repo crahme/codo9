@@ -56,7 +56,7 @@ function generateInvoicePDF(invoiceData) {
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
   const left = doc.page.margins.left;
-  const indent = left + 15;
+  const indent = left + 10;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
   // --- Header ---
@@ -180,7 +180,7 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown(2);
   
  // --- Payment Instructions ---
-  doc.fontSize(20)
+  doc.fontSize(14)
     .font("Helvetica-Oblique")
     .text("Payment Instructions", left, doc.y, {
       align: "left",
