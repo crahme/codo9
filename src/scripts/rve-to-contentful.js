@@ -168,10 +168,11 @@ function generateInvoicePDF(invoiceData) {
   y = doc.y;
   function drawSummary(label, value) {
     const lineY = doc.y;
-    doc.text(label, left, lineY, { align: "left", width: contentWidth / 2 });
-    doc.text(value, left, lineY, { align: "right", width: contentWidth });
+    doc.fontSize(12).text(label, left, lineY, { align: "left", width: contentWidth / 2 });
+    doc.fontSize(12).text(value, left, lineY, { align: "right", width: contentWidth });
     doc.moveDown(1);
   }
+
 
   drawSummary("Total amount:", `$${totalCost.toFixed(2)}`);
   drawSummary("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
