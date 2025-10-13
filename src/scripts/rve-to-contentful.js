@@ -55,44 +55,57 @@ function generateInvoicePDF(invoiceData) {
   const doc = new PDFDocument({ margin: 50 });
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
+
   const left = doc.page.margins.left;
-  const indent = left + 5;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
-  // --- Header ---
-  doc.fontSize(20).text("EV Station Invoice Statement", { align: "left" });
-  doc.moveDown(1);
-  doc.fontSize(12).text(`Syndicate Name: ${invoiceData.syndicateName || "RVE CLOUD OCEAN"}`,{indent})
-  doc.moveDown(1);
-  doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`, {indent});
-  doc.moveDown(1);
-  doc.text(`Phone: +1 (555) 123-4567`, {indent});
-  doc.moveDown(1);
-  doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`,{indent});
-  doc.moveDown(1);
-  doc.text(`Website: https://rve.ca`, {indent});
-  doc.moveDown(1);
-  // --- Station Info ---
-  doc.fontSize(15).text("Invoice Details", { align: "left" });
-  doc.moveDown(1);
-  doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, {indent});
-  doc.moveDown(1);
-  doc.text("Date: " + invoiceData.invoiceDate, {indent});
-  doc.moveDown(1);
-  doc.text("Billing Period: " + invoiceData.billingPeriodStart + " to " + invoiceData.billingPeriodEnd , {indent});
-  doc.moveDown(1);
-  doc.text("Due Date: " + invoiceData.paymentDueDate, {indent});
-  doc.moveDown();
+  // Utility to draw aligned key-value rows (used for all sections)
+  function drawKeyValue(label, value) {
+    const y = doc.y;
+    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth / 2 });
+    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth });
+    doc.moveDown(1);
+  }
+
+  // --- Header Section ---
+  doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", {
+    align: "center",
+  });
+
+  doc.moveDown(1.5);
+  doc.font("Helvetica-Bold").fontSize(14).text("Syndicate Information", { align: "left" });
+  doc.moveDown(0.8);
+
+  doc.font("Helvetica").fontSize(12);
+  drawKeyValue("Syndicate Name", invoiceData.syndicateName || "RVE CLOUD OCEAN");
+  drawKeyValue("Address", invoiceData.address || "123 EV Way, Montreal, QC");
+  drawKeyValue("Phone", "+1 (555) 123-4567");
+  drawKeyValue("Email", invoiceData.contact || "contact@rve.ca");
+  drawKeyValue("Website", "https://rve.ca");
+  doc.moveDown(1.5);
+
+  // --- Invoice Details Section (formatted like Summary) ---
+  doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
+  doc.moveDown(0.8);
+
+  doc.font("Helvetica").fontSize(12);
+  drawKeyValue("Invoice Number", invoiceData.invoiceNumber);
+  drawKeyValue("Invoice Date", invoiceData.invoiceDate);
+  drawKeyValue(
+    "Billing Period",
+    `${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`
+  );
+  drawKeyValue("Due Date", invoiceData.paymentDueDate);
+  doc.moveDown(1.5);
 
   // --- Table Header ---
-  doc.fontSize(15).text("Electric Vehicle Charging Details", { align: "left" });
+  doc.font("Helvetica-Bold").fontSize(15).text("Electric Vehicle Charging Details", {
+    align: "left",
+  });
   doc.moveDown(1);
 
- 
   let y = doc.y;
-  
 
-  // 7-column widths (add up to ~100%)
   const colWidths = [
     contentWidth * 0.15, // Date
     contentWidth * 0.15, // Start Time
@@ -107,8 +120,7 @@ function generateInvoicePDF(invoiceData) {
   function drawRow(cells, isHeader = false) {
     let x = left;
     doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(12);
-     if (isHeader) {
-      // Grey background for header row
+    if (isHeader) {
       doc.save();
       doc.rect(x, y, contentWidth, rowHeight).fill("#e0e0e0");
       doc.restore();
@@ -128,23 +140,28 @@ function generateInvoicePDF(invoiceData) {
   }
 
   // --- Header Row ---
-  drawRow(["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"], true);
+  drawRow(
+    ["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"],
+    true
+  );
 
   // --- Data Rows ---
   let totalCost = 0;
   let totalConsumption = 0;
   const unitPriceNum = parseFloat(invoiceData.unitPrice);
 
-  invoiceData.daily.forEach(item => {
+  invoiceData.daily.forEach((item) => {
     const amount = item.kWh * unitPriceNum;
     totalCost += amount;
     totalConsumption += item.kWh;
 
-    // Handle page break
     if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
       y = doc.page.margins.top;
-      drawRow(["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"], true);
+      drawRow(
+        ["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"],
+        true
+      );
     }
 
     drawRow([
@@ -162,42 +179,38 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown(1);
   y = doc.y;
 
-  // --- Totals Summary ---
-  doc.fontSize(14).text("Summary", left, y, { align: "left", width: contentWidth });
+  // --- Summary Section ---
+  doc.font("Helvetica-Bold").fontSize(14).text("Summary", left, y, {
+    align: "left",
+    width: contentWidth,
+  });
   doc.moveDown(1);
-  y = doc.y;
-  function drawSummary(label, value) {
-    const lineY = doc.y;
-    doc.fontSize(12).text(label, left, lineY, { align: "left", width: contentWidth / 2, indent });
-    doc.fontSize(12).text(value, left, lineY, { align: "right", width: contentWidth, indent });
-    doc.moveDown(1);
-  }
-  
-  
-  drawSummary("Total amount:", `$${totalCost.toFixed(2)}`);
-  drawSummary("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
-  drawSummary("Rate per kWh:", `$${invoiceData.unitPrice}`);
-  doc.moveDown(2);
-  
- // --- Payment Instructions ---
-  doc.fontSize(14)
-    .font("Helvetica-Oblique")
-    .text("Payment Instructions", left, doc.y, {
-      align: "left",
-      width: contentWidth,
-    });
-  doc.fontSize(12).text(
-    `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
-please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
-    left,
-    doc.y,
-    { align: "left", width: contentWidth }
-  );
 
-  // --- Finalize PDF ---
+  drawKeyValue("Total amount", `$${totalCost.toFixed(2)}`);
+  drawKeyValue("Total kWh consumed", `${totalConsumption.toFixed(2)} kWh`);
+  drawKeyValue("Rate per kWh", `$${invoiceData.unitPrice}`);
+
+  doc.moveDown(2);
+
+  // --- Payment Instructions (italic header) ---
+  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", left, doc.y, {
+    align: "left",
+    width: contentWidth,
+  });
+
+  doc
+    .font("Helvetica")
+    .fontSize(12)
+    .text(
+      `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
+please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
+      left,
+      doc.y,
+      { align: "left", width: contentWidth }
+    );
+
   doc.end();
 
-  // Ensure stream finishes before returning
   return new Promise((resolve, reject) => {
     stream.on("finish", () => resolve(filePath));
     stream.on("error", reject);
@@ -207,9 +220,8 @@ please contact us at smp@microbms.com or call our customer service at +1 (555) 1
 // --- Create or update invoice entry safely ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
-
   const contentType = await env.getContentType("invoice");
-  const allowedFields = contentType.fields.map(f => f.id);
+  const allowedFields = contentType.fields.map((f) => f.id);
 
   let entry;
   try {
@@ -220,7 +232,6 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  // Build daily line items
   const lineItemIds = [];
   for (const d of invoiceData.daily) {
     const id = await createLineItem(env, {
@@ -232,7 +243,6 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
   }
 
-  // Safe field assignment
   function setField(field, value) {
     if (allowedFields.includes(field)) {
       entry.fields[field] = { "en-US": value };
@@ -294,7 +304,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         stationName: station.name,
         stationLocation: station.location,
         unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        daily: station.dailyData.map(d => ({
+        daily: station.dailyData.map((d) => ({
           date: d.date,
           kWh: d.reads_kwh,
         })),
