@@ -1,262 +1,314 @@
-import "dotenv/config";
-import fs from "fs";
-import path from "path";
-import PDFDocument from "pdfkit";
-import contentful from "contentful-management";
-import fetch from "node-fetch";
+// src/scripts/rve-to-contentful.js
+import dotenv from "dotenv";
+dotenv.config();
 
-// --- CONFIG ---
+import { CloudOceanService } from "../services/CloudOceanService.js";
+import contentful from "contentful-management";
+import fs from "fs";
+import PDFDocument from "pdfkit";
+
+// --- Contentful setup ---
 const client = contentful.createClient({
   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
 });
 
-const SPACE_ID = process.env.CONTENTFUL_SPACE_ID;
-const ENV_ID = process.env.CONTENTFUL_ENVIRONMENT_ID || "master";
-
-// --- FETCH STATION DATA MOCK (replace with your API logic) ---
-async function fetchStationData() {
-  console.log("[INFO] Fetching station consumption data...");
-  return [
-    {
-      stationId: "EVS01",
-      stationName: "EV Charger Station 01",
-      stationLocation: "Building A - Level 1",
-      totalConsumption: 341.2,
-      unitPrice: 0.35,
-      totalCost: 119.42,
-      billingPeriodStart: "2025-09-01",
-      billingPeriodEnd: "2025-09-30",
-      paymentDueDate: "2025-10-15",
-      invoiceNumber: "FAC-001",
-      invoiceDate: "2025-10-01",
-    },
-    {
-      stationId: "EVS02",
-      stationName: "EV Charger Station 02",
-      stationLocation: "Building A - Level 2",
-      totalConsumption: 415.5,
-      unitPrice: 0.35,
-      totalCost: 145.43,
-      billingPeriodStart: "2025-09-01",
-      billingPeriodEnd: "2025-09-30",
-      paymentDueDate: "2025-10-15",
-      invoiceNumber: "FAC-002",
-      invoiceDate: "2025-10-01",
-    },
-  ];
+async function getEnvironment() {
+  const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
+  return await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
 }
 
-// --- PDF GENERATION ---
-async function generateInvoicePDF(invoiceData) {
-  const fileName = `invoice_${invoiceData.stationId}.pdf`;
-  const pdfPath = path.join("invoices", fileName);
-  fs.mkdirSync("invoices", { recursive: true });
+// --- Convert string to Rich Text ---
+function toRichText(text) {
+  return {
+    nodeType: "document",
+    data: {},
+    content: [
+      {
+        nodeType: "paragraph",
+        data: {},
+        content: [{ nodeType: "text", value: text, marks: [], data: {} }],
+      },
+    ],
+  };
+}
 
+// --- Create a line item entry and publish it ---
+async function createLineItem(env, itemData) {
+  const entry = await env.createEntry("lineItem", {
+    fields: {
+      date: { "en-US": itemData.date },
+      energyConsumed: { "en-US": itemData.energyConsumed },
+      unitPrice: { "en-US": itemData.unitPrice },
+      amount: { "en-US": itemData.amount },
+    },
+  });
+  await entry.publish();
+  return entry.sys.id;
+}
+
+// --- Generate PDF invoice ---
+function generateInvoicePDF(invoiceData) {
+  const outputDir = "./invoices";
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+
+  const filePath = `${outputDir}/${invoiceData.invoiceNumber}.pdf`;
   const doc = new PDFDocument({ margin: 50 });
+  const stream = fs.createWriteStream(filePath);
+  doc.pipe(stream);
+  const left = doc.page.margins.left;
+  const indent = left + 5;
+  const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
-  // --- Font Fallback ---
-  try {
-    const fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-    if (fs.existsSync(fontPath)) {
-      doc.registerFont("BodyFont", fontPath);
-    } else {
-      doc.font("Helvetica");
+  // --- Header ---
+  doc.fontSize(20).text("EV Station Invoice Statement", { align: "left" });
+  doc.moveDown(1);
+  doc.fontSize(12).text(`Syndicate Name: ${invoiceData.syndicateName || "RVE CLOUD OCEAN"}`,{indent})
+  doc.moveDown(1);
+  doc.fontSize(12).text(`Address: ${invoiceData.address || "123 EV Way, Montreal, QC"}`, {indent});
+  doc.moveDown(1);
+  doc.text(`Phone: +1 (555) 123-4567`, {indent});
+  doc.moveDown(1);
+  doc.text(`Email: ${invoiceData.contact || "contact@rve.ca"}`,{indent});
+  doc.moveDown(1);
+  doc.text(`Website: https://rve.ca`, {indent});
+  doc.moveDown(1);
+  // --- Station Info ---
+  doc.fontSize(15).text("Invoice Details", { align: "left" });
+  doc.moveDown(1);
+  doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, {indent});
+  doc.moveDown(1);
+  doc.text("Date: " + invoiceData.invoiceDate, {indent});
+  doc.moveDown(1);
+  doc.text("Billing Period: " + invoiceData.billingPeriodStart + " to " + invoiceData.billingPeriodEnd , {indent});
+  doc.moveDown(1);
+  doc.text("Due Date: " + invoiceData.paymentDueDate, {indent});
+  doc.moveDown();
+
+  // --- Table Header ---
+  doc.fontSize(15).text("Electric Vehicle Charging Details", { align: "left" });
+  doc.moveDown(1);
+
+ 
+  let y = doc.y;
+  
+
+  // 7-column widths (add up to ~100%)
+  const colWidths = [
+    contentWidth * 0.15, // Date
+    contentWidth * 0.15, // Start Time
+    contentWidth * 0.15, // End Time
+    contentWidth * 0.15, // Duration
+    contentWidth * 0.18, // Energy (kWh)
+    contentWidth * 0.18, // Unit Price
+    contentWidth * 0.125, // Amount
+  ];
+  const rowHeight = 24;
+
+  function drawRow(cells, isHeader = false) {
+    let x = left;
+    doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(12);
+     if (isHeader) {
+      // Grey background for header row
+      doc.save();
+      doc.rect(x, y, contentWidth, rowHeight).fill("#e0e0e0");
+      doc.restore();
     }
-  } catch {
-    doc.font("Helvetica");
+    for (let i = 0; i < cells.length; i++) {
+      const width = colWidths[i];
+      if (typeof width !== "number") continue;
+      doc.rect(x, y, width, rowHeight).stroke();
+      const align = i === 0 ? "left" : "right";
+      doc.text(String(cells[i] ?? ""), x + 6, y + 6, {
+        width: width - 12,
+        align,
+      });
+      x += width;
+    }
+    y += rowHeight;
   }
 
-  doc.pipe(fs.createWriteStream(pdfPath));
+  // --- Header Row ---
+  drawRow(["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"], true);
 
-  // --- HEADER ---
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(22)
-    .fillColor("#1a1a1a")
-    .text("EV Station Invoice Statement", { align: "center" });
+  // --- Data Rows ---
+  let totalCost = 0;
+  let totalConsumption = 0;
+  const unitPriceNum = parseFloat(invoiceData.unitPrice);
 
-  doc.moveDown(1);
-  doc
-    .moveTo(50, doc.y)
-    .lineTo(550, doc.y)
-    .strokeColor("#999")
-    .lineWidth(1)
-    .stroke();
+  invoiceData.daily.forEach(item => {
+    const amount = item.kWh * unitPriceNum;
+    totalCost += amount;
+    totalConsumption += item.kWh;
 
-  doc.moveDown(1.5);
+    // Handle page break
+    if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+      y = doc.page.margins.top;
+      drawRow(["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"], true);
+    }
 
-  // --- STATION INFO ---
-  doc.font("Helvetica-Bold").fontSize(14).fillColor("#000").text("Station Information");
-  doc.moveDown(0.5);
-  doc.font("Helvetica").fontSize(12);
-  doc.text(`Station Name: ${invoiceData.stationName}`);
-  doc.text(`Location: ${invoiceData.stationLocation}`);
-  doc.text(`Invoice Date: ${invoiceData.invoiceDate}`);
-  doc.moveDown(1);
-
-  // --- INVOICE DETAILS (Improved layout) ---
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(14)
-    .fillColor("#000")
-    .text("Invoice Details", { align: "left" });
-
-  doc.moveDown(0.5);
-
-  const startY = doc.y;
-  const labelX = 60;
-  const valueX = 300;
-  const lineHeight = 18;
-
-  const rows = [
-    ["Invoice Number", invoiceData.invoiceNumber],
-    ["Billing Period", `${invoiceData.billingPeriodStart} → ${invoiceData.billingPeriodEnd}`],
-    ["Payment Due Date", invoiceData.paymentDueDate],
-  ];
-
-  doc.font("Helvetica").fontSize(12).fillColor("#000");
-  rows.forEach(([label, value], i) => {
-    const y = startY + i * lineHeight;
-    doc.text(label + ":", labelX, y);
-    doc.text(value, valueX, y);
+    drawRow([
+      item.date,
+      item.StartTime || "00:00:00",
+      item.EndTime || "23:59:59",
+      item.Duration || "24:00:00",
+      item.kWh.toFixed(2),
+      `${unitPriceNum.toFixed(2)}`,
+      `${amount.toFixed(2)}`,
+    ]);
   });
 
+  // --- Move below table before summary ---
+  doc.moveDown(1);
+  y = doc.y;
+
+  // --- Totals Summary ---
+  doc.fontSize(14).text("Summary", left, y, { align: "left", width: contentWidth });
+  doc.moveDown(1);
+  y = doc.y;
+  function drawSummary(label, value) {
+    const lineY = doc.y;
+    doc.fontSize(12).text(label, left, lineY, { align: "left", width: contentWidth / 2, indent });
+    doc.fontSize(12).text(value, left, lineY, { align: "right", width: contentWidth, indent });
+    doc.moveDown(1);
+  }
+  
+  
+  drawSummary("Total amount:", `$${totalCost.toFixed(2)}`);
+  drawSummary("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
+  drawSummary("Rate per kWh:", `$${invoiceData.unitPrice}`);
   doc.moveDown(2);
+  
+ // --- Payment Instructions ---
+  doc.fontSize(14)
+    .font("Helvetica-Oblique")
+    .text("Payment Instructions", left, doc.y, {
+      align: "left",
+      width: contentWidth,
+    });
+  doc.fontSize(12).text(
+    `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
+please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
+    left,
+    doc.y,
+    { align: "left", width: contentWidth }
+  );
 
-  // --- SUMMARY BOX ---
-  const boxTop = doc.y;
-  const boxHeight = 100;
-  const boxLeft = 50;
-  const boxWidth = 500;
-
-  doc
-    .roundedRect(boxLeft, boxTop, boxWidth, boxHeight, 8)
-    .strokeColor("#444")
-    .lineWidth(1)
-    .stroke();
-
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(14)
-    .fillColor("#000")
-    .text("Summary", boxLeft + 10, boxTop + 10);
-
-  const summaryData = [
-    ["Total Amount", `$${invoiceData.totalCost.toFixed(2)}`],
-    ["Total kWh Consumed", `${invoiceData.totalConsumption.toFixed(2)} kWh`],
-    ["Rate per kWh", `$${invoiceData.unitPrice.toFixed(2)}`],
-  ];
-
-  doc.font("Helvetica").fontSize(12);
-  const summaryStartY = boxTop + 35;
-  summaryData.forEach(([label, value], i) => {
-    const y = summaryStartY + i * 20;
-    doc.text(label + ":", boxLeft + 20, y);
-    doc.text(value, boxLeft + 320, y, { align: "right" });
-  });
-
-  doc.moveDown(6);
-
-  // --- PAYMENT INSTRUCTIONS ---
-  doc.font("Helvetica-Oblique").fontSize(13).fillColor("#000").text("Payment Instructions");
-  doc.moveDown(0.5);
-  doc
-    .font("Helvetica")
-    .fontSize(12)
-    .fillColor("#333")
-    .text(
-      "Please remit payment to the account details provided in your service agreement. Late payments may incur additional fees.",
-      { align: "justify" }
-    );
-
-  // --- FOOTER ---
-  doc.moveDown(3);
-  doc
-    .fontSize(10)
-    .fillColor("#666")
-    .text("Thank you for using RVE Cloud EV Charging Services.", { align: "center" });
-
+  // --- Finalize PDF ---
   doc.end();
-  return pdfPath;
+
+  // Ensure stream finishes before returning
+  return new Promise((resolve, reject) => {
+    stream.on("finish", () => resolve(filePath));
+    stream.on("error", reject);
+  });
 }
 
-// --- UPLOAD TO CONTENTFUL ---
-async function uploadInvoiceToContentful(invoiceData, pdfPath) {
-  console.log(`[INFO] Writing invoice for ${invoiceData.stationName} to Contentful...`);
-  const space = await client.getSpace(SPACE_ID);
-  const env = await space.getEnvironment(ENV_ID);
+// --- Create or update invoice entry safely ---
+async function createOrUpdateInvoice(invoiceId, invoiceData) {
+  const env = await getEnvironment();
 
-  const pdfFile = await env.createUpload({
-    file: fs.createReadStream(pdfPath),
-  });
-
-  const asset = await env.createAsset({
-    fields: {
-      title: { "en-US": `Invoice ${invoiceData.invoiceNumber}` },
-      file: {
-        "en-US": {
-          fileName: path.basename(pdfPath),
-          contentType: "application/pdf",
-          uploadFrom: {
-            sys: { type: "Link", linkType: "Upload", id: pdfFile.sys.id },
-          },
-        },
-      },
-    },
-  });
-
-  await asset.processForAllLocales();
-  await asset.publish();
-
-  console.log(`[INFO] Uploaded invoice PDF as asset: ${asset.sys.id}`);
-
-  const entries = await env.getEntries({
-    content_type: "invoice",
-    "fields.invoiceNumber": invoiceData.invoiceNumber,
-  });
+  const contentType = await env.getContentType("invoice");
+  const allowedFields = contentType.fields.map(f => f.id);
 
   let entry;
-  if (entries.items.length > 0) {
-    entry = entries.items[0];
-    console.log(`[INFO] Updating invoice ${entry.sys.id}`);
-    entry.fields.pdfFile = {
-      "en-US": { sys: { type: "Link", linkType: "Asset", id: asset.sys.id } },
-    };
-  } else {
-    console.log(`[INFO] Creating new invoice entry for ${invoiceData.stationName}`);
-    entry = await env.createEntry("invoice", {
-      fields: {
-        invoiceNumber: { "en-US": invoiceData.invoiceNumber },
-        stationId: { "en-US": invoiceData.stationId },
-        invoiceDate: { "en-US": invoiceData.invoiceDate },
-        totalCost: { "en-US": invoiceData.totalCost },
-        totalConsumption: { "en-US": invoiceData.totalConsumption },
-        unitPrice: { "en-US": invoiceData.unitPrice },
-        pdfFile: {
-          "en-US": { sys: { type: "Link", linkType: "Asset", id: asset.sys.id } },
-        },
-      },
-    });
+  try {
+    entry = await env.getEntry(invoiceId);
+    console.log(`[INFO] Updating invoice ${invoiceId}`);
+  } catch {
+    entry = await env.createEntryWithId("invoice", invoiceId, { fields: {} });
+    console.log(`[INFO] Creating invoice ${invoiceId}`);
   }
 
-  await entry.update();
-  await entry.publish();
+  // Build daily line items
+  const lineItemIds = [];
+  for (const d of invoiceData.daily) {
+    const id = await createLineItem(env, {
+      date: d.date,
+      energyConsumed: d.kWh.toFixed(2),
+      unitPrice: invoiceData.unitPrice,
+      amount: (d.kWh * parseFloat(invoiceData.unitPrice)).toFixed(2),
+    });
+    lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
+  }
 
-  console.log(`[INFO] Invoice ${entry.sys.id} published successfully`);
+  // Safe field assignment
+  function setField(field, value) {
+    if (allowedFields.includes(field)) {
+      entry.fields[field] = { "en-US": value };
+    } else {
+      console.warn(`[WARN] Skipping unknown field "${field}"`);
+    }
+  }
+
+  setField("syndicateName", "RVE CLOUD OCEAN");
+  setField("slug", `/${invoiceData.invoiceNumber}`);
+  setField("address", "123 EV Way, Montreal, QC");
+  setField("contact", "contact@rve.ca");
+  setField("invoiceNumber", invoiceData.invoiceNumber);
+  setField("invoiceDate", invoiceData.invoiceDate);
+  setField("clientName", invoiceData.clientName);
+  setField("clientEmail", invoiceData.clientEmail);
+  setField("chargerSerialNumber", invoiceData.chargerSerialNumber);
+  setField("stationName", invoiceData.stationName);
+  setField("stationLocation", invoiceData.stationLocation);
+  setField("billingPeriodStart", invoiceData.billingPeriodStart);
+  setField("billingPeriodEnd", invoiceData.billingPeriodEnd);
+  setField("environmentalImpactText", toRichText(invoiceData.environmentalImpactText));
+  setField("paymentDueDate", invoiceData.paymentDueDate);
+  setField("lineItems", lineItemIds);
+
+  const updatedEntry = await entry.update();
+  await updatedEntry.publish();
+  console.log(`[INFO] Invoice ${invoiceId} published successfully`);
 }
 
-// --- MAIN ---
+// --- Main Runner ---
 (async () => {
-  try {
-    const stations = await fetchStationData();
-    console.log(`[INFO] Processing ${stations.length} station(s)...`);
+  const service = new CloudOceanService();
 
-    for (const station of stations) {
-      const pdfPath = await generateInvoicePDF(station);
-      await uploadInvoiceToContentful(station, pdfPath);
+  try {
+    const startDate = "2024-10-16";
+    const endDate = "2024-11-25";
+
+    console.log("[INFO] Fetching station consumption data...");
+    const { devices } = await service.getConsumptionData(startDate, endDate);
+
+    if (!devices || devices.length === 0) {
+      throw new Error("No station data returned from CloudOceanService.");
     }
 
-    console.log("[INFO] ✅ All invoices processed successfully.");
+    for (const station of devices) {
+      const invoiceData = {
+        invoiceNumber: `fac-${station.uuid}`,
+        invoiceDate: new Date().toISOString().split("T")[0],
+        chargerSerialNumber: "CHG-001",
+        billingPeriodStart: startDate,
+        billingPeriodEnd: endDate,
+        environmentalImpactText: "CO2 emissions reduced thanks to EV usage.",
+        paymentDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+        clientName: "John Doe",
+        clientEmail: "john.doe@example.com",
+        stationName: station.name,
+        stationLocation: station.location,
+        unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
+        daily: station.dailyData.map(d => ({
+          date: d.date,
+          kWh: d.reads_kwh,
+        })),
+      };
+
+      console.log(`[INFO] Writing invoice for ${station.name} to Contentful...`);
+      await createOrUpdateInvoice(invoiceData.invoiceNumber, invoiceData);
+
+      console.log(`[INFO] Generating PDF for ${station.name}...`);
+      const pdfPath = await generateInvoicePDF(invoiceData);
+      console.log(`[INFO] PDF generated: ${pdfPath}`);
+    }
+
+    console.log("[INFO] Done ✅");
   } catch (err) {
     console.error("❌ Error:", err);
   }
