@@ -56,7 +56,7 @@ function generateInvoicePDF(invoiceData) {
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
   const left = doc.page.margins.left;
-  const indent = left + 10;
+  const indent = left + 5;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
   // --- Header ---
