@@ -168,12 +168,12 @@ function generateInvoicePDF(invoiceData) {
   y = doc.y;
   function drawSummary(label, value) {
     const lineY = doc.y;
-    doc.fontSize(12).text(label, left, lineY, { align: "left", width: contentWidth / 2 });
-    doc.fontSize(12).text(value, left, lineY, { align: "right", width: contentWidth });
+    doc.fontSize(12).text(label, left, lineY, { align: "left", width: contentWidth / 2, indent });
+    doc.fontSize(12).text(value, left, lineY, { align: "right", width: contentWidth, indent });
     doc.moveDown(1);
   }
-  doc.text({align:"center"});
-
+  
+  
   drawSummary("Total amount:", `$${totalCost.toFixed(2)}`);
   drawSummary("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
   drawSummary("Rate per kWh:", `$${invoiceData.unitPrice}`);
