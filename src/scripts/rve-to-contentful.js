@@ -62,20 +62,17 @@ function generateInvoicePDF(invoiceData) {
   // Utility to draw aligned key-value rows (used for all sections)
   function drawKeyValue(label, value) {
     const y = doc.y;
-    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth / 2 });
-    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth });
+    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth / 2 ,indent:10});
+    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth, indent:10 });
     doc.moveDown(1);
   }
 
   // --- Header Section ---
   doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", {
-    align: "center",
+    align: "lef",
   });
 
   doc.moveDown(1.5);
-  doc.font("Helvetica-Bold").fontSize(14).text("Syndicate Information", { align: "left" });
-  doc.moveDown(0.8);
-
   doc.font("Helvetica").fontSize(12);
   drawKeyValue("Syndicate Name", invoiceData.syndicateName || "RVE CLOUD OCEAN");
   drawKeyValue("Address", invoiceData.address || "123 EV Way, Montreal, QC");
@@ -180,7 +177,7 @@ function generateInvoicePDF(invoiceData) {
   y = doc.y;
 
   // --- Summary Section ---
-  doc.font("Helvetica-Bold").fontSize(14).text("Summary", left, y, {
+  doc.font("Helvetica-Bold").fontSize(15).text("Summary", left, y, {
     align: "left",
     width: contentWidth,
   });
