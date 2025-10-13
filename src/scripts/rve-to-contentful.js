@@ -56,7 +56,7 @@ function generateInvoicePDF(invoiceData) {
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
   const left = doc.page.margins.left;
-  const indent = left + 20;
+  const indent = left + 15;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
   // --- Header ---
@@ -107,6 +107,12 @@ function generateInvoicePDF(invoiceData) {
   function drawRow(cells, isHeader = false) {
     let x = left;
     doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(12);
+     if (isHeader) {
+      // Grey background for header row
+      doc.save();
+      doc.rect(x, y, contentWidth, rowHeight).fill("#e0e0e0");
+      doc.restore();
+    }
     for (let i = 0; i < cells.length; i++) {
       const width = colWidths[i];
       if (typeof width !== "number") continue;
@@ -157,27 +163,28 @@ function generateInvoicePDF(invoiceData) {
   y = doc.y;
 
   // --- Totals Summary ---
-  doc.fontSize(20)
-    .text("Summary", left, y, { align: "left", width: contentWidth / 2 });
-  doc.moveDown(0.5);
-  doc.fontSize(12);
-  doc.text(`Total amount: $${totalCost.toFixed(2)}`, left, doc.y, {
-    align: "center",
-    width: contentWidth,
-  });
-  doc.text(`Total kWh consumed: ${totalConsumption.toFixed(2)} kWh`, left, doc.y, {
-    align: "center",
-    width: contentWidth,
-  });
-  doc.text(`Rate per kWh: $${invoiceData.unitPrice}`, left, doc.y, {
-    align: "center",
-    width: contentWidth,
-  });
-  doc.moveDown(2);
+  doc.fontSize(14).text("Summary", left, y, { align: "left", width: contentWidth });
+  doc.moveDown(1);
+  y = doc.y;
+  function drawSummary(label, value) {
+    const lineY = doc.y;
+    doc.text(label, left, lineY, { align: "left", width: contentWidth / 2 });
+    doc.text(value, left, lineY, { align: "right", width: contentWidth });
+    doc.moveDown(1);
+  }
 
-  // --- Payment Instructions ---
+  drawSummary("Total amount:", `$${totalCost.toFixed(2)}`);
+  drawSummary("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
+  drawSummary("Rate per kWh:", `$${invoiceData.unitPrice}`);
+  doc.moveDown(2);
+  
+ // --- Payment Instructions ---
   doc.fontSize(20)
-    .text("Payment Instructions", left, doc.y, { align: "left", width: contentWidth });
+    .font("Helvetica-Oblique")
+    .text("Payment Instructions", left, doc.y, {
+      align: "left",
+      width: contentWidth,
+    });
   doc.fontSize(12).text(
     `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
 please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
