@@ -74,11 +74,11 @@ function generateInvoicePDF(invoiceData) {
 
   doc.moveDown(1.5);
   doc.font("Helvetica").fontSize(12);
-  drawKeyValue("Syndicate Name", invoiceData.syndicateName || "RVE CLOUD OCEAN");
-  drawKeyValue("Address", invoiceData.address || "123 EV Way, Montreal, QC");
-  drawKeyValue("Phone", "+1 (555) 123-4567");
-  drawKeyValue("Email", invoiceData.contact || "contact@rve.ca");
-  drawKeyValue("Website", "https://rve.ca");
+  drawKeyValue("Syndicate Name:", invoiceData.syndicateName || "RVE CLOUD OCEAN");
+  drawKeyValue("Address:", invoiceData.address || "123 EV Way, Montreal, QC");
+  drawKeyValue("Phone:", "+1 (555) 123-4567");
+  drawKeyValue("Email:", invoiceData.contact || "contact@rve.ca");
+  drawKeyValue("Website:", "https://rve.ca");
   doc.moveDown(1.5);
 
   // --- Invoice Details Section (formatted like Summary) ---
@@ -86,13 +86,13 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown(0.8);
 
   doc.font("Helvetica").fontSize(12);
-  drawKeyValue("Invoice Number", invoiceData.invoiceNumber);
-  drawKeyValue("Invoice Date", invoiceData.invoiceDate);
+  drawKeyValue("Invoice Number:", invoiceData.invoiceNumber);
+  drawKeyValue("Invoice Date:", invoiceData.invoiceDate);
   drawKeyValue(
-    "Billing Period",
+    "Billing Period:",
     `${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`
   );
-  drawKeyValue("Due Date", invoiceData.paymentDueDate);
+  drawKeyValue("Due Date:", invoiceData.paymentDueDate);
   doc.moveDown(1.5);
 
   // --- Table Header ---
@@ -183,9 +183,9 @@ function generateInvoicePDF(invoiceData) {
   });
   doc.moveDown(1);
 
-  drawKeyValue("Total amount", `$${totalCost.toFixed(2)}`);
-  drawKeyValue("Total kWh consumed", `${totalConsumption.toFixed(2)} kWh`);
-  drawKeyValue("Rate per kWh", `$${invoiceData.unitPrice}`);
+  drawKeyValue("Total amount:", `$${totalCost.toFixed(2)}`);
+  drawKeyValue("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
+  drawKeyValue("Rate per kWh:", `$${invoiceData.unitPrice}`);
 
   doc.moveDown(2);
 
