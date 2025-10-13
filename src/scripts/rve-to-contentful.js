@@ -172,7 +172,7 @@ function generateInvoicePDF(invoiceData) {
     doc.fontSize(12).text(value, left, lineY, { align: "right", width: contentWidth });
     doc.moveDown(1);
   }
-
+  doc.text({align:"center"});
 
   drawSummary("Total amount:", `$${totalCost.toFixed(2)}`);
   drawSummary("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
