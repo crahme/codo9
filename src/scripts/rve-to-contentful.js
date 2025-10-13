@@ -73,7 +73,7 @@ function generateInvoicePDF(invoiceData) {
   doc.text(`Website: https://rve.ca`, {indent});
   doc.moveDown(1);
   // --- Station Info ---
-  doc.fontSize(20).text("Invoice Details", { align: "left" });
+  doc.fontSize(15).text("Invoice Details", { align: "left" });
   doc.moveDown(1);
   doc.fontSize(12).text("Invoice: " + invoiceData.invoiceNumber, {indent});
   doc.moveDown(1);
@@ -85,7 +85,7 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown();
 
   // --- Table Header ---
-  doc.fontSize(20).text("Electric Vehicle Charging Details", { align: "left" });
+  doc.fontSize(15).text("Electric Vehicle Charging Details", { align: "left" });
   doc.moveDown(1);
 
  
