@@ -32,7 +32,7 @@ function toRichText(text) {
   };
 }
 
-// --- Create line item entries ---
+// --- Create a line item entry and publish it ---
 async function createLineItem(env, itemData) {
   const entry = await env.createEntry("lineItem", {
     fields: {
@@ -58,62 +58,43 @@ function generateInvoicePDF(invoiceData) {
 
   const left = doc.page.margins.left;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const labelWidth = contentWidth * 0.35;
-  const valueWidth = contentWidth * 0.6;
 
-  // --- Transparent table-style key-value rows ---
-  function drawTableRows(rows) {
-    const startY = doc.y;
-    const rowHeight = 20;
-
-    rows.forEach(([label, value]) => {
-      const y = doc.y;
-      doc.font("Helvetica").fontSize(12);
-
-      // Label (left cell)
-      doc.text(label, left, y, { width: labelWidth, align: "left" });
-
-      // Value (right cell)
-      doc.text(String(value || ""), left + labelWidth + 10, y, {
-        width: valueWidth - 10,
-        align: "left",
-      });
-
-      doc.moveDown(1);
-    });
-
-    doc.y = startY + rows.length * rowHeight * 0.8;
+  // Utility to draw aligned key-value rows
+  function drawKeyValue(label, value) {
+    const y = doc.y;
+    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth, indent: 10 });
+    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth });
+    doc.moveDown(1);
   }
 
   // --- Header Section ---
-  doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", { align: "left" });
-  doc.moveDown(1);
+  doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", {
+    align: "left",
+  });
 
-  drawTableRows([
-    ["Syndicate Name:", invoiceData.syndicateName || "RVE CLOUD OCEAN"],
-    ["Address:", invoiceData.address || "123 EV Way, Montreal, QC"],
-    ["Phone:", "+1 (555) 123-4567"],
-    ["Email:", invoiceData.contact || "contact@rve.ca"],
-    ["Website:", "https://rve.ca"],
-  ]);
-  doc.moveDown(2);
+  doc.moveDown(1.5);
+  doc.font("Helvetica").fontSize(12);
+  drawKeyValue("Syndicate Name:", invoiceData.syndicateName || "RVE CLOUD OCEAN");
+  drawKeyValue("Address:", invoiceData.address || "123 EV Way, Montreal, QC");
+  drawKeyValue("Phone:", "+1 (555) 123-4567");
+  drawKeyValue("Email:", invoiceData.contact || "contact@rve.ca");
+  drawKeyValue("Website:", "https://rve.ca");
+  doc.moveDown(1.5);
 
   // --- Invoice Details Section ---
   doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
   doc.moveDown(0.8);
+  doc.font("Helvetica").fontSize(12);
+  drawKeyValue("Invoice Number:", invoiceData.invoiceNumber);
+  drawKeyValue("Invoice Date:", invoiceData.invoiceDate);
+  drawKeyValue(
+    "Billing Period:",
+    `${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`
+  );
+  drawKeyValue("Due Date:", invoiceData.paymentDueDate);
+  doc.moveDown(1.5);
 
-  drawTableRows([
-    ["Invoice Number:", invoiceData.invoiceNumber],
-    ["Invoice Date:", invoiceData.invoiceDate],
-    [
-      "Billing Period:",
-      `${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`,
-    ],
-    ["Due Date:", invoiceData.paymentDueDate],
-  ]);
-  doc.moveDown(2);
-
-  // --- Charging Details Table ---
+  // --- Table Header ---
   doc.font("Helvetica-Bold").fontSize(15).text("Electric Vehicle Charging Details", {
     align: "left",
   });
@@ -132,6 +113,7 @@ function generateInvoicePDF(invoiceData) {
   ];
   const rowHeight = 24;
 
+  // --- Fixed drawRow function ---
   function drawRow(cells, isHeader = false) {
     let x = left;
     const totalTableWidth = colWidths.reduce((a, b) => a + b, 0);
@@ -141,26 +123,30 @@ function generateInvoicePDF(invoiceData) {
       doc.save();
       doc.rect(x, y, totalTableWidth, rowHeight).fill("#808080");
       doc.restore();
-    }
+      
+    } 
 
     for (let i = 0; i < cells.length; i++) {
       const width = colWidths[i];
       if (typeof width !== "number") continue;
       doc.rect(x, y, width, rowHeight).stroke();
       const align = i === 0 ? "left" : "right";
-      doc.text(String(cells[i] ?? ""), x + 6, y + 6, { width: width - 12, align });
+      doc.text(String(cells[i] ?? ""), x + 6, y + 6, {
+        width: width - 12,
+        align,
+      });
       x += width;
     }
     y += rowHeight;
   }
 
-  // Header Row
+  // --- Header Row ---
   drawRow(
     ["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"],
     true
   );
 
-  // Data Rows
+  // --- Data Rows ---
   let totalCost = 0;
   let totalConsumption = 0;
   const unitPriceNum = parseFloat(invoiceData.unitPrice);
@@ -190,28 +176,37 @@ function generateInvoicePDF(invoiceData) {
     ]);
   });
 
-  // --- Summary Section ---
+  // --- Move below table before summary ---
   doc.moveDown(2);
-  doc.font("Helvetica-Bold").fontSize(15).text("Summary", { align: "left" });
-  doc.moveDown(0.8);
+  y = doc.y;
 
-  drawTableRows([
-    ["Total amount:", `$${totalCost.toFixed(2)}`],
-    ["Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`],
-    ["Rate per kWh:", `$${invoiceData.unitPrice}`],
-  ]);
-
-  // --- Payment Instructions ---
-  doc.moveDown(1.5);
-  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", {
+  // --- Summary Section ---
+  doc.font("Helvetica-Bold").fontSize(15).text("Summary", left, y, {
     align: "left",
+    width: contentWidth,
+  });
+  doc.moveDown(1);
+
+  drawKeyValue("Total amount:", `$${totalCost.toFixed(2)}`);
+  drawKeyValue("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
+  drawKeyValue("Rate per kWh:", `$${invoiceData.unitPrice}`);
+
+  doc.moveDown(2);
+
+  // --- Payment Instructions (italic heading) ---
+  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", left, doc.y, {
+    align: "left",
+    width: contentWidth,
   });
 
   doc
     .font("Helvetica")
     .fontSize(12)
     .text(
-      `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
+      `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
+please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
+      left,
+      doc.y,
       { align: "left", width: contentWidth }
     );
 
@@ -223,7 +218,7 @@ function generateInvoicePDF(invoiceData) {
   });
 }
 
-// --- Create or update invoice entry ---
+// --- Create or update invoice entry safely ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
   const contentType = await env.getContentType("invoice");
