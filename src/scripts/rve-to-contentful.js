@@ -96,7 +96,7 @@ function generateInvoicePDF(invoiceData) {
     ["Email:", invoiceData.contact || "contact@rve.ca"],
     ["Website:", "https://rve.ca"],
   ]);
-  doc.moveDown(1.5);
+  doc.moveDown(2);
 
   // --- Invoice Details Section ---
   doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
@@ -111,7 +111,7 @@ function generateInvoicePDF(invoiceData) {
     ],
     ["Due Date:", invoiceData.paymentDueDate],
   ]);
-  doc.moveDown(1.5);
+  doc.moveDown(2);
 
   // --- Charging Details Table ---
   doc.font("Helvetica-Bold").fontSize(15).text("Electric Vehicle Charging Details", {
