@@ -61,42 +61,33 @@ function generateInvoicePDF(invoiceData) {
   const labelWidth = contentWidth * 0.4;
   const valueWidth = contentWidth * 0.55;
 
-  // --- Transparent table-style key-value rows (fixed for overlaps) ---
+  // --- Transparent table-style key-value rows (improved alignment) ---
   function drawTableRows(rows) {
     const fontSize = 12;
-    const lineSpacing = 6;
+    const rowGap = 8;
+
     for (const [label, value] of rows) {
-      const yStart = doc.y;
+      const startY = doc.y;
       doc.font("Helvetica").fontSize(fontSize);
 
-      const labelHeight = doc.heightOfString(label, {
-        width: labelWidth,
-        align: "left",
-      });
-      const valueHeight = doc.heightOfString(String(value || ""), {
-        width: valueWidth,
-        align: "left",
-      });
-      const rowHeight = Math.max(labelHeight, valueHeight) + lineSpacing;
-
       // Draw label
-      doc.text(label, left, yStart, {
+      doc.text(label, left, startY, {
         width: labelWidth,
         align: "left",
       });
 
-      // Draw value
-      doc.text(String(value || ""), left + labelWidth + 10, yStart, {
+      // Draw value (same baseline)
+      doc.text(String(value || ""), left + labelWidth + 15, startY, {
         width: valueWidth - 10,
         align: "left",
       });
 
-      // Move Y down manually
-      doc.y = yStart + rowHeight;
+      // Move down for next row
+      doc.moveDown(0.7);
     }
   }
 
-  // --- Section: Header / Company Info ---
+  // --- Header Section ---
   doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", {
     align: "left",
   });
@@ -110,10 +101,12 @@ function generateInvoicePDF(invoiceData) {
     ["Website:", "https://rve.ca"],
   ]);
 
-  doc.moveDown(1.2);
+  doc.moveDown(1.5);
 
-  // --- Section: Invoice Details ---
-  doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
+  // --- Invoice Details Section ---
+  doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", {
+    align: "left",
+  });
   doc.moveDown(0.8);
 
   drawTableRows([
@@ -128,7 +121,7 @@ function generateInvoicePDF(invoiceData) {
 
   doc.moveDown(1.5);
 
-  // --- Section: Table Header ---
+  // --- EV Charging Details Table ---
   doc.font("Helvetica-Bold").fontSize(15).text("Electric Vehicle Charging Details", {
     align: "left",
   });
@@ -136,17 +129,17 @@ function generateInvoicePDF(invoiceData) {
 
   let y = doc.y;
   const colWidths = [
-    contentWidth * 0.15,
-    contentWidth * 0.15,
-    contentWidth * 0.15,
-    contentWidth * 0.15,
-    contentWidth * 0.18,
-    contentWidth * 0.18,
-    contentWidth * 0.125,
+    contentWidth * 0.15, // Date
+    contentWidth * 0.15, // Start Time
+    contentWidth * 0.15, // End Time
+    contentWidth * 0.15, // Duration
+    contentWidth * 0.18, // Energy (kWh)
+    contentWidth * 0.18, // Unit Price
+    contentWidth * 0.125, // Amount
   ];
   const rowHeight = 24;
 
-  // --- Fixed drawRow function for table ---
+  // --- Table drawing helper ---
   function drawRow(cells, isHeader = false) {
     let x = left;
     const totalTableWidth = colWidths.reduce((a, b) => a + b, 0);
@@ -156,6 +149,9 @@ function generateInvoicePDF(invoiceData) {
       doc.save();
       doc.rect(x, y, totalTableWidth, rowHeight).fill("#808080");
       doc.restore();
+      doc.fillColor("white");
+    } else {
+      doc.fillColor("black");
     }
 
     for (let i = 0; i < cells.length; i++) {
@@ -168,10 +164,11 @@ function generateInvoicePDF(invoiceData) {
       });
       x += width;
     }
+
     y += rowHeight;
   }
 
-  // --- Table Header Row ---
+  // --- Table Header ---
   drawRow(
     ["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"],
     true
@@ -210,9 +207,8 @@ function generateInvoicePDF(invoiceData) {
   // --- Summary Section ---
   doc.moveDown(2);
   y = doc.y;
-  doc.font("Helvetica-Bold").fontSize(15).text("Summary", left, y, {
+  doc.font("Helvetica-Bold").fontSize(15).text("Summary", {
     align: "left",
-    width: contentWidth,
   });
   doc.moveDown(1);
 
@@ -225,17 +221,20 @@ function generateInvoicePDF(invoiceData) {
   doc.moveDown(2);
 
   // --- Payment Instructions ---
-  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", left, doc.y, {
+  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", {
     align: "left",
-    width: contentWidth,
   });
-  doc.font("Helvetica").fontSize(12).text(
-    `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
+  doc
+    .font("Helvetica")
+    .fontSize(12)
+    .text(
+      `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
 please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
-    left,
-    doc.y,
-    { align: "left", width: contentWidth }
-  );
+      {
+        align: "left",
+        width: contentWidth,
+      }
+    );
 
   doc.end();
 
