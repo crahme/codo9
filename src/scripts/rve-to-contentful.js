@@ -17,7 +17,7 @@ async function getEnvironment() {
   return await space.getEnvironment(process.env.CONTENTFUL_ENVIRONMENT || "master");
 }
 
-// --- Convert string to Rich Text ---
+// --- Convert plain text to Rich Text ---
 function toRichText(text) {
   return {
     nodeType: "document",
@@ -32,7 +32,7 @@ function toRichText(text) {
   };
 }
 
-// --- Create a line item entry and publish it ---
+// --- Create line item entry ---
 async function createLineItem(env, itemData) {
   const entry = await env.createEntry("lineItem", {
     fields: {
@@ -59,46 +59,61 @@ function generateInvoicePDF(invoiceData) {
   const left = doc.page.margins.left;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
-  // Utility to draw aligned key-value rows
-  function drawKeyValue(label, value) {
-    const y = doc.y;
-    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth, indent: 10 });
-    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth });
+  // Draw transparent 2-column table for key-value sections
+  function drawTable(rows, columnWidths = [contentWidth * 0.4, contentWidth * 0.6]) {
+    const startY = doc.y;
+    const cellHeight = 18;
+    let y = startY;
+
+    for (const [key, value] of rows) {
+      const [w1, w2] = columnWidths;
+      const x1 = left;
+      const x2 = left + w1;
+
+      // Transparent borders (stroke but no fill)
+      doc.font("Helvetica").fontSize(12).fillColor("black");
+      doc.text(key, x1 + 4, y, { width: w1 - 8, align: "left" });
+      doc.text(value, x2 + 4, y, { width: w2 - 8, align: "left" });
+
+      y += cellHeight;
+    }
     doc.moveDown(1);
+    doc.y = y;
   }
 
-  // --- Header Section ---
-  doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", {
-    align: "left",
-  });
+  // --- Header ---
+  doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", { align: "left" });
+  doc.moveDown(1.2);
 
-  doc.moveDown(1.5);
-  doc.font("Helvetica").fontSize(12);
-  drawKeyValue("Syndicate Name:", invoiceData.syndicateName || "RVE CLOUD OCEAN");
-  drawKeyValue("Address:", invoiceData.address || "123 EV Way, Montreal, QC");
-  drawKeyValue("Phone:", "+1 (555) 123-4567");
-  drawKeyValue("Email:", invoiceData.contact || "contact@rve.ca");
-  drawKeyValue("Website:", "https://rve.ca");
-  doc.moveDown(1.5);
+  drawTable([
+    ["Syndicate Name:", invoiceData.syndicateName || "RVE CLOUD OCEAN"],
+    ["Address:", invoiceData.address || "123 EV Way, Montreal, QC"],
+    ["Phone:", "+1 (555) 123-4567"],
+    ["Email:", invoiceData.contact || "contact@rve.ca"],
+    ["Website:", "https://rve.ca"],
+  ]);
 
-  // --- Invoice Details Section ---
-  doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
+  // --- Invoice Details ---
   doc.moveDown(0.8);
-  doc.font("Helvetica").fontSize(12);
-  drawKeyValue("Invoice Number:", invoiceData.invoiceNumber);
-  drawKeyValue("Invoice Date:", invoiceData.invoiceDate);
-  drawKeyValue(
-    "Billing Period:",
-    `${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`
-  );
-  drawKeyValue("Due Date:", invoiceData.paymentDueDate);
-  doc.moveDown(1.5);
+  doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
+  doc.moveDown(0.6);
+
+  drawTable([
+    ["Invoice Number:", invoiceData.invoiceNumber],
+    ["Invoice Date:", invoiceData.invoiceDate],
+    [
+      "Billing Period:",
+      `${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`,
+    ],
+    ["Due Date:", invoiceData.paymentDueDate],
+  ]);
 
   // --- Table Header ---
+  doc.moveDown(1);
   doc.font("Helvetica-Bold").fontSize(15).text("Electric Vehicle Charging Details", {
     align: "left",
   });
-  doc.moveDown(1);
+  doc.moveDown(0.8);
 
   let y = doc.y;
 
@@ -131,12 +146,9 @@ function generateInvoicePDF(invoiceData) {
     for (let i = 0; i < cells.length; i++) {
       const width = colWidths[i];
       if (typeof width !== "number") continue;
-      doc.rect(x, y, width, rowHeight).stroke();
+      doc.rect(x, y, width, rowHeight).strokeOpacity(0); // transparent
       const align = i === 0 ? "left" : "right";
-      doc.text(String(cells[i] ?? ""), x + 6, y + 6, {
-        width: width - 12,
-        align,
-      });
+      doc.text(String(cells[i] ?? ""), x + 6, y + 6, { width: width - 12, align });
       x += width;
     }
     y += rowHeight;
@@ -178,37 +190,27 @@ function generateInvoicePDF(invoiceData) {
     ]);
   });
 
-  // --- Move below table before summary ---
+  // --- Summary ---
   doc.moveDown(2);
-  y = doc.y;
+  doc.font("Helvetica-Bold").fontSize(15).text("Summary", { align: "left" });
+  doc.moveDown(0.6);
 
-  // --- Summary Section ---
-  doc.font("Helvetica-Bold").fontSize(15).text("Summary", left, y, {
-    align: "left",
-    width: contentWidth,
-  });
-  doc.moveDown(1);
+  drawTable([
+    ["Total amount:", `$${totalCost.toFixed(2)}`],
+    ["Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`],
+    ["Rate per kWh:", `$${invoiceData.unitPrice}`],
+  ]);
 
-  drawKeyValue("Total amount:", `$${totalCost.toFixed(2)}`);
-  drawKeyValue("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
-  drawKeyValue("Rate per kWh:", `$${invoiceData.unitPrice}`);
-
-  doc.moveDown(2);
-
-  // --- Payment Instructions (italic heading) ---
-  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", left, doc.y, {
-    align: "left",
-    width: contentWidth,
-  });
-
+  // --- Payment Instructions ---
+  doc.moveDown(1.5);
+  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", { align: "left" });
+  doc.moveDown(0.5);
   doc
     .font("Helvetica")
     .fontSize(12)
     .text(
       `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
 please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
-      left,
-      doc.y,
       { align: "left", width: contentWidth }
     );
 
@@ -220,7 +222,7 @@ please contact us at smp@microbms.com or call our customer service at +1 (555) 1
   });
 }
 
-// --- Create or update invoice entry safely ---
+// --- Create or update invoice entry ---
 async function createOrUpdateInvoice(invoiceId, invoiceData) {
   const env = await getEnvironment();
   const contentType = await env.getContentType("invoice");
