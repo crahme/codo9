@@ -59,11 +59,11 @@ function generateInvoicePDF(invoiceData) {
   const left = doc.page.margins.left;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
-  // Utility to draw aligned key-value rows (used for all sections)
+  // Utility to draw aligned key-value rows
   function drawKeyValue(label, value) {
     const y = doc.y;
-    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth ,indent:10});
-    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth});
+    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth, indent: 10 });
+    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth });
     doc.moveDown(1);
   }
 
@@ -81,10 +81,9 @@ function generateInvoicePDF(invoiceData) {
   drawKeyValue("Website:", "https://rve.ca");
   doc.moveDown(1.5);
 
-  // --- Invoice Details Section (formatted like Summary) ---
+  // --- Invoice Details Section ---
   doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
   doc.moveDown(0.8);
-
   doc.font("Helvetica").fontSize(12);
   drawKeyValue("Invoice Number:", invoiceData.invoiceNumber);
   drawKeyValue("Invoice Date:", invoiceData.invoiceDate);
@@ -114,14 +113,21 @@ function generateInvoicePDF(invoiceData) {
   ];
   const rowHeight = 24;
 
+  // --- Fixed drawRow function ---
   function drawRow(cells, isHeader = false) {
     let x = left;
+    const totalTableWidth = colWidths.reduce((a, b) => a + b, 0);
     doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(12);
+
     if (isHeader) {
       doc.save();
-      doc.rect(x, y, contentWidth, rowHeight).fill("#808080");
+      doc.rect(x, y, totalTableWidth, rowHeight).fill("#808080");
       doc.restore();
+      doc.fillColor("white");
+    } else {
+      doc.fillColor("black");
     }
+
     for (let i = 0; i < cells.length; i++) {
       const width = colWidths[i];
       if (typeof width !== "number") continue;
@@ -189,7 +195,7 @@ function generateInvoicePDF(invoiceData) {
 
   doc.moveDown(2);
 
-  // --- Payment Instructions (italic header) ---
+  // --- Payment Instructions (italic heading) ---
   doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", left, doc.y, {
     align: "left",
     width: contentWidth,
