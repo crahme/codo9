@@ -62,8 +62,8 @@ function generateInvoicePDF(invoiceData) {
   // Utility to draw aligned key-value rows (used for all sections)
   function drawKeyValue(label, value) {
     const y = doc.y;
-    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth / 2 ,indent:10});
-    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth/2, indent:10 });
+    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth ,indent:10});
+    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth, indent:10 });
     doc.moveDown(1);
   }
 
