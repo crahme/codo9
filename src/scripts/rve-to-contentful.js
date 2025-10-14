@@ -69,7 +69,7 @@ function generateInvoicePDF(invoiceData) {
 
   // --- Header Section ---
   doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", {
-    align: "lef",
+    align: "left",
   });
 
   doc.moveDown(1.5);
@@ -173,7 +173,7 @@ function generateInvoicePDF(invoiceData) {
   });
 
   // --- Move below table before summary ---
-  doc.moveDown(1);
+  doc.moveDown(2);
   y = doc.y;
 
   // --- Summary Section ---
