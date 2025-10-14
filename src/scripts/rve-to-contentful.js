@@ -119,7 +119,7 @@ function generateInvoicePDF(invoiceData) {
     doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(12);
     if (isHeader) {
       doc.save();
-      doc.rect(x, y, contentWidth, rowHeight).fill("#ffffff");
+      doc.rect(x, y, contentWidth, rowHeight).fill("#808080");
       doc.restore();
     }
     for (let i = 0; i < cells.length; i++) {
