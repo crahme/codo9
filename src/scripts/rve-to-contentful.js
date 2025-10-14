@@ -156,9 +156,6 @@ function generateInvoicePDF(invoiceData) {
       doc.save();
       doc.rect(x, y, totalTableWidth, rowHeight).fill("#808080");
       doc.restore();
-      doc.fillColor("white");
-    } else {
-      doc.fillColor("black");
     }
 
     for (let i = 0; i < cells.length; i++) {
