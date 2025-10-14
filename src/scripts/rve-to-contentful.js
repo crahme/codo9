@@ -61,33 +61,35 @@ function generateInvoicePDF(invoiceData) {
   const labelWidth = contentWidth * 0.4;
   const valueWidth = contentWidth * 0.55;
 
-  // --- Transparent table-style key-value rows (improved alignment) ---
+  // --- Helper: draw subtle section separator line ---
+  function drawSectionSeparator() {
+    doc.moveDown(0.5);
+    doc.strokeColor("#cccccc").lineWidth(0.5);
+    doc.moveTo(left, doc.y).lineTo(left + contentWidth, doc.y).stroke();
+    doc.moveDown(1);
+  }
+
+  // --- Transparent table-style key-value rows ---
   function drawTableRows(rows) {
     const fontSize = 12;
     const rowGap = 8;
-
     for (const [label, value] of rows) {
       const startY = doc.y;
       doc.font("Helvetica").fontSize(fontSize);
 
-      // Draw label
-      doc.text(label, left, startY, {
-        width: labelWidth,
-        align: "left",
-      });
-
-      // Draw value (same baseline)
+      // Label
+      doc.text(label, left, startY, { width: labelWidth, align: "left" });
+      // Value
       doc.text(String(value || ""), left + labelWidth + 15, startY, {
         width: valueWidth - 10,
         align: "left",
       });
 
-      // Move down for next row
       doc.moveDown(0.7);
     }
   }
 
-  // --- Header Section ---
+  // --- SECTION 1: Header ---
   doc.font("Helvetica-Bold").fontSize(20).text("EV Station Invoice Statement", {
     align: "left",
   });
@@ -101,12 +103,11 @@ function generateInvoicePDF(invoiceData) {
     ["Website:", "https://rve.ca"],
   ]);
 
-  doc.moveDown(1.5);
-  doc .text({align:"left"});
-  // --- Invoice Details Section ---
-  doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", {
-    align: "left",
-  });
+  // --- Separator between sections ---
+  drawSectionSeparator();
+
+  // --- SECTION 2: Invoice Details ---
+  doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
   doc.moveDown(0.8);
 
   drawTableRows([
@@ -119,9 +120,10 @@ function generateInvoicePDF(invoiceData) {
     ["Due Date:", invoiceData.paymentDueDate],
   ]);
 
-  doc.moveDown(1.5);
+  // --- Separator ---
+  drawSectionSeparator();
 
-  // --- EV Charging Details Table ---
+  // --- SECTION 3: Electric Vehicle Charging Details ---
   doc.font("Helvetica-Bold").fontSize(15).text("Electric Vehicle Charging Details", {
     align: "left",
   });
@@ -139,7 +141,7 @@ function generateInvoicePDF(invoiceData) {
   ];
   const rowHeight = 24;
 
-  // --- Table drawing helper ---
+  // --- Helper: draw table rows ---
   function drawRow(cells, isHeader = false) {
     let x = left;
     const totalTableWidth = colWidths.reduce((a, b) => a + b, 0);
@@ -158,13 +160,9 @@ function generateInvoicePDF(invoiceData) {
       const width = colWidths[i];
       doc.rect(x, y, width, rowHeight).stroke();
       const align = i === 0 ? "left" : "right";
-      doc.text(String(cells[i] ?? ""), x + 6, y + 6, {
-        width: width - 12,
-        align,
-      });
+      doc.text(String(cells[i] ?? ""), x + 6, y + 6, { width: width - 12, align });
       x += width;
     }
-
     y += rowHeight;
   }
 
@@ -174,7 +172,7 @@ function generateInvoicePDF(invoiceData) {
     true
   );
 
-  // --- Table Data Rows ---
+  // --- Table Data ---
   let totalCost = 0;
   let totalConsumption = 0;
   const unitPriceNum = parseFloat(invoiceData.unitPrice);
@@ -204,12 +202,11 @@ function generateInvoicePDF(invoiceData) {
     ]);
   });
 
-  // --- Summary Section ---
+  // --- SECTION 4: Summary ---
   doc.moveDown(2);
-  y = doc.y;
-  doc.font("Helvetica-Bold").fontSize(15).text("Summary", {
-    align: "left",
-  });
+  drawSectionSeparator();
+
+  doc.font("Helvetica-Bold").fontSize(15).text("Summary", { align: "left" });
   doc.moveDown(1);
 
   drawTableRows([
@@ -218,23 +215,14 @@ function generateInvoicePDF(invoiceData) {
     ["Rate per kWh:", `$${invoiceData.unitPrice}`],
   ]);
 
-  doc.moveDown(2);
-
-  // --- Payment Instructions ---
-  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", {
-    align: "left",
-  });
-  doc
-    .font("Helvetica")
-    .fontSize(12)
-    .text(
-      `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
+  // --- SECTION 5: Payment Instructions ---
+  drawSectionSeparator();
+  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", { align: "left" });
+  doc.font("Helvetica").fontSize(12).text(
+    `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice,
 please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
-      {
-        align: "left",
-        width: contentWidth,
-      }
-    );
+    { align: "left", width: contentWidth }
+  );
 
   doc.end();
 
