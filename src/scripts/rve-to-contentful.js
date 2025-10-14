@@ -102,7 +102,7 @@ function generateInvoicePDF(invoiceData) {
   ]);
 
   doc.moveDown(1.5);
-
+  doc .text({align:"left"});
   // --- Invoice Details Section ---
   doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", {
     align: "left",
