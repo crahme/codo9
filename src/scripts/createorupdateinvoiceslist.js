@@ -10,18 +10,15 @@ const client = contentful.createClient({
   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
 });
 
-const INVOICES_FOLDER = path.resolve("invoices"); // your local invoices folder
-const CONTENT_TYPE = "invoicesList"; // must match your Contentful content type
-const ENTRY_SLUG = "invoiceslist";  // unique slug
+const INVOICES_FOLDER = path.resolve("invoices");
+const CONTENT_TYPE = "invoicesList";
+const ENTRY_SLUG = "invoiceslist";
 
-// Upload a PDF file to Contentful and return the published asset
+// --- Upload a single PDF as an Asset in Contentful ---
 async function uploadAsset(env, filePath, fileName) {
   const buffer = fs.readFileSync(filePath);
-
-  // Upload raw file to Contentful
   const upload = await env.createUpload({ file: buffer });
 
-  // Create the asset linking to the upload
   let asset = await env.createAsset({
     fields: {
       title: { "en-US": fileName },
@@ -44,54 +41,91 @@ async function uploadAsset(env, filePath, fileName) {
   return published;
 }
 
-// Create or update the invoicesList entry
+// --- Helper: Get field type by ID ---
+function getFieldType(contentType, idVariants) {
+  const field = contentType.fields.find(f =>
+    idVariants.includes(f.id)
+  );
+  return field ? field.type : null;
+}
+
+// --- Create or update invoicesList entry safely ---
 async function getOrCreateInvoicesList(env, assetList) {
+  const contentType = await env.getContentType(CONTENT_TYPE);
+  const validFields = contentType.fields.map(f => f.id);
+
+  const invoiceNumbers = assetList.map(a => a.fields.title["en-US"]);
+  const invoiceFiles = assetList.map(a => ({
+    sys: { type: "Link", linkType: "Asset", id: a.sys.id },
+  }));
+
+  // Detect correct date handling
+  const dateFieldType = getFieldType(contentType, ["invoiceDate", "invoice_date"]);
+  let invoiceDateValue;
+
+  if (dateFieldType === "Array") {
+    // Array of dates
+    invoiceDateValue = assetList.map(() => new Date().toISOString());
+  } else if (dateFieldType === "Date") {
+    // Single date
+    invoiceDateValue = new Date().toISOString();
+  } else {
+    invoiceDateValue = null;
+  }
+
+  const fields = { slug: { "en-US": ENTRY_SLUG } };
+
+  // invoiceNumbers
+  if (validFields.includes("invoiceNumbers"))
+    fields.invoiceNumbers = { "en-US": invoiceNumbers };
+  else if (validFields.includes("invoice_numbers"))
+    fields.invoice_numbers = { "en-US": invoiceNumbers };
+
+  // invoiceDate / invoiceDates (dynamic type-aware)
+  if (invoiceDateValue) {
+    if (validFields.includes("invoiceDate"))
+      fields.invoiceDate = { "en-US": invoiceDateValue };
+    else if (validFields.includes("invoice_date"))
+      fields.invoice_date = { "en-US": invoiceDateValue };
+    else if (validFields.includes("invoiceDates"))
+      fields.invoiceDates = { "en-US": invoiceDateValue };
+    else if (validFields.includes("invoice_dates"))
+      fields.invoice_dates = { "en-US": invoiceDateValue };
+  }
+
+  // invoiceFiles
+  if (validFields.includes("invoiceFiles"))
+    fields.invoiceFiles = { "en-US": invoiceFiles };
+  else if (validFields.includes("invoice_files"))
+    fields.invoice_files = { "en-US": invoiceFiles };
+
+  // Check for existing entry
   const existing = await env.getEntries({
     content_type: CONTENT_TYPE,
     "fields.slug": ENTRY_SLUG,
   });
 
-  const invoiceNumbers = assetList.map(a => a.fields.title["en-US"]);
-  const invoiceDate = assetList.map(() => new Date().toISOString());
-  const invoiceFiles = assetList.map(a => ({
-    sys: { type: "Link", linkType: "Asset", id: a.sys.id },
-  }));
-
   if (existing.items.length > 0) {
     const entry = existing.items[0];
     console.log(`ℹ️ Updating existing entry: ${entry.sys.id}`);
-
-    entry.fields = {
-      ...entry.fields,
-      slug: { "en-US": ENTRY_SLUG },
-      invoiceNumbers: { "en-US": invoiceNumbers },
-      invoiceDate: { "en-US": invoiceDate },
-      invoiceFiles: { "en-US": invoiceFiles },
-    };
+    entry.fields = { ...entry.fields, ...fields };
 
     const updated = await entry.update();
     const published = await updated.publish();
+
     console.log(`✅ Updated entry: ${published.sys.id}`);
     return published;
   } else {
     console.log("ℹ️ Creating new invoicesList entry");
-
-    const entry = await env.createEntry(CONTENT_TYPE, {
-      fields: {
-        slug: { "en-US": ENTRY_SLUG },
-        invoiceNumbers: { "en-US": invoiceNumbers },
-        invoiceDate: { "en-US": invoiceDate },
-        invoiceFiles: { "en-US": invoiceFiles },
-      },
-    });
-
+    const entry = await env.createEntry(CONTENT_TYPE, { fields });
     const published = await entry.publish();
+
     console.log(`✅ Created entry: ${published.sys.id}`);
     return published;
   }
 }
 
-// Main
+// --- Main ---
 async function main() {
   try {
     const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
@@ -123,9 +157,7 @@ async function main() {
       assetList.push(asset);
     }
 
-    // Create or update the invoicesList entry
     await getOrCreateInvoicesList(env, assetList);
-
   } catch (err) {
     console.error("❌ Error running script:", err);
   }
