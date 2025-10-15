@@ -52,7 +52,7 @@ async function getOrCreateInvoicesList(env, assetList) {
   });
 
   const invoiceNumbers = assetList.map(a => a.fields.title["en-US"]);
-  const invoiceDates = assetList.map(() => new Date().toISOString());
+  const invoiceDate = assetList.map(() => new Date().toISOString());
   const invoiceFiles = assetList.map(a => ({
     sys: { type: "Link", linkType: "Asset", id: a.sys.id },
   }));
@@ -65,7 +65,7 @@ async function getOrCreateInvoicesList(env, assetList) {
       ...entry.fields,
       slug: { "en-US": ENTRY_SLUG },
       invoiceNumbers: { "en-US": invoiceNumbers },
-      invoiceDates: { "en-US": invoiceDates },
+      invoiceDate: { "en-US": invoiceDate },
       invoiceFiles: { "en-US": invoiceFiles },
     };
 
