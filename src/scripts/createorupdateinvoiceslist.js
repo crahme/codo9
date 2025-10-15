@@ -80,7 +80,7 @@ async function getOrCreateInvoicesList(env, assetList) {
       fields: {
         slug: { "en-US": ENTRY_SLUG },
         invoiceNumbers: { "en-US": invoiceNumbers },
-        invoiceDates: { "en-US": invoiceDates },
+        invoiceDate: { "en-US": invoiceDate },
         invoiceFiles: { "en-US": invoiceFiles },
       },
     });
