@@ -63,7 +63,7 @@ function generateInvoicePDF(invoiceData) {
   function drawKeyValue(label, value) {
     const y = doc.y;
     doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth, indent: 10 });
-    doc.fontSize(12).text(value, left, y, { align: "right", width: contentWidth });
+    doc.fontSize(12).text(value, left, y, { align: "left", width: contentWidth });
     doc.moveDown(1);
   }
 
@@ -186,10 +186,14 @@ function generateInvoicePDF(invoiceData) {
     width: contentWidth,
   });
   doc.moveDown(1);
-
-  drawKeyValue("Total amount:", `$${totalCost.toFixed(2)}`);
-  drawKeyValue("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
-  drawKeyValue("Rate per kWh:", `$${invoiceData.unitPrice}`);
+  doc.fontSize(12).text("Total amount:", {align:left}, {indent:10});
+  doc.fontSize(12).text(`$${totalCost.toFixed(2)}`, {align:right});
+  doc.moveDown(0.5);
+  doc.fontSize(12).text("Total kWh consumed:", {align:left}, {indent:10});
+  doc.fontSize(12).text(`${totalConsumption.toFixed(2)} kWh`, {align:right});
+  doc.moveDown(0.5);
+  doc.fontSize(12).text("Rate per kWh:", {align:left}, {indent:10});
+  doc.fontSize(12).text(`$${invoiceData.unitPrice}`, {align:right});
 
   doc.moveDown(2);
 
