@@ -59,12 +59,17 @@ function generateInvoicePDF(invoiceData) {
   const left = doc.page.margins.left;
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
-  // Utility to draw aligned key-value rows
+  // --- Utility: draw aligned key-value pairs with table-like spacing ---
   function drawKeyValue(label, value) {
+    const labelWidth = 180;
     const y = doc.y;
-    doc.fontSize(12).text(label, left, y, { align: "left", width: contentWidth, indent: 10 });
-    doc.fontSize(12).text(value, left, y, { align: "left", width: contentWidth });
-    doc.moveDown(1);
+    doc.font("Helvetica").fontSize(12);
+    doc.text(label, left, y, { width: labelWidth, align: "left" });
+    doc.text(String(value || ""), left + labelWidth + 10, y, {
+      width: contentWidth - labelWidth - 10,
+      align: "left",
+    });
+    doc.moveDown(0.6);
   }
 
   // --- Header Section ---
@@ -73,18 +78,17 @@ function generateInvoicePDF(invoiceData) {
   });
 
   doc.moveDown(1.5);
-  doc.font("Helvetica").fontSize(12);
   drawKeyValue("Syndicate Name:", invoiceData.syndicateName || "RVE CLOUD OCEAN");
   drawKeyValue("Address:", invoiceData.address || "123 EV Way, Montreal, QC");
   drawKeyValue("Phone:", "+1 (555) 123-4567");
   drawKeyValue("Email:", invoiceData.contact || "contact@rve.ca");
   drawKeyValue("Website:", "https://rve.ca");
+
   doc.moveDown(1.5);
 
   // --- Invoice Details Section ---
   doc.font("Helvetica-Bold").fontSize(15).text("Invoice Details", { align: "left" });
   doc.moveDown(0.8);
-  doc.font("Helvetica").fontSize(12);
   drawKeyValue("Invoice Number:", invoiceData.invoiceNumber);
   drawKeyValue("Invoice Date:", invoiceData.invoiceDate);
   drawKeyValue(
@@ -92,28 +96,27 @@ function generateInvoicePDF(invoiceData) {
     `${invoiceData.billingPeriodStart} to ${invoiceData.billingPeriodEnd}`
   );
   drawKeyValue("Due Date:", invoiceData.paymentDueDate);
+
   doc.moveDown(1.5);
 
-  // --- Table Header ---
+  // --- Charging Details Table ---
   doc.font("Helvetica-Bold").fontSize(15).text("Electric Vehicle Charging Details", {
     align: "left",
   });
   doc.moveDown(1);
 
   let y = doc.y;
-
   const colWidths = [
-    contentWidth * 0.15, // Date
-    contentWidth * 0.15, // Start Time
-    contentWidth * 0.15, // End Time
-    contentWidth * 0.15, // Duration
-    contentWidth * 0.18, // Energy (kWh)
-    contentWidth * 0.18, // Unit Price
-    contentWidth * 0.125, // Amount
+    contentWidth * 0.15,
+    contentWidth * 0.15,
+    contentWidth * 0.15,
+    contentWidth * 0.15,
+    contentWidth * 0.18,
+    contentWidth * 0.18,
+    contentWidth * 0.125,
   ];
   const rowHeight = 24;
 
-  // --- Fixed drawRow function ---
   function drawRow(cells, isHeader = false) {
     let x = left;
     const totalTableWidth = colWidths.reduce((a, b) => a + b, 0);
@@ -123,13 +126,13 @@ function generateInvoicePDF(invoiceData) {
       doc.save();
       doc.rect(x, y, totalTableWidth, rowHeight).fill("#808080");
       doc.restore();
-      
-    } 
+      doc.fillColor("white");
+    } else {
+      doc.fillColor("black");
+    }
 
     for (let i = 0; i < cells.length; i++) {
       const width = colWidths[i];
-      if (typeof width !== "number") continue;
-      doc.rect(x, y, width, rowHeight).stroke();
       const align = i === 0 ? "left" : "right";
       doc.text(String(cells[i] ?? ""), x + 6, y + 6, {
         width: width - 12,
@@ -137,24 +140,24 @@ function generateInvoicePDF(invoiceData) {
       });
       x += width;
     }
+
     y += rowHeight;
   }
 
-  // --- Header Row ---
   drawRow(
     ["Date", "Start Time", "End Time", "Duration", "Energy (kWh)", "Unit Price", "Amount"],
     true
   );
 
-  // --- Data Rows ---
   let totalCost = 0;
   let totalConsumption = 0;
-  const unitPriceNum = parseFloat(invoiceData.unitPrice);
+  const unitPriceNum = parseFloat(invoiceData.unitPrice) || 0;
 
-  invoiceData.daily.forEach((item) => {
-    const amount = item.kWh * unitPriceNum;
+  invoiceData.daily.forEach((item, i) => {
+    const kWh = parseFloat(item.kWh) || 0;
+    const amount = kWh * unitPriceNum;
     totalCost += amount;
-    totalConsumption += item.kWh;
+    totalConsumption += kWh;
 
     if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
@@ -170,52 +173,34 @@ function generateInvoicePDF(invoiceData) {
       item.StartTime || "00:00:00",
       item.EndTime || "23:59:59",
       item.Duration || "24:00:00",
-      item.kWh.toFixed(2),
-      `${unitPriceNum.toFixed(2)}`,
-      `${amount.toFixed(2)}`,
+      kWh.toFixed(2),
+      `$${unitPriceNum.toFixed(2)}`,
+      `$${amount.toFixed(2)}`,
     ]);
   });
 
-  // --- Move below table before summary ---
+  // --- Summary Section ---
   doc.moveDown(2);
   y = doc.y;
-
-  // --- Summary Section ---
-  doc.font("Helvetica-Bold").fontSize(15).text("Summary", left, y, {
-    align: "left",
-    width: contentWidth,
-  });
+  doc.font("Helvetica-Bold").fontSize(15).text("Summary", { align: "left" });
   doc.moveDown(1);
-  doc.fontSize(12).text("Total amount:", {align:left}, {indent:10});
-  doc.fontSize(12).text(`$${totalCost.toFixed(2)}`, {align:right});
-  doc.moveDown(0.5);
-  doc.fontSize(12).text("Total kWh consumed:", {align:left}, {indent:10});
-  doc.fontSize(12).text(`${totalConsumption.toFixed(2)} kWh`, {align:right});
-  doc.moveDown(0.5);
-  doc.fontSize(12).text("Rate per kWh:", {align:left}, {indent:10});
-  doc.fontSize(12).text(`$${invoiceData.unitPrice}`, {align:right});
+  drawKeyValue("Total amount:", `$${totalCost.toFixed(2)}`);
+  drawKeyValue("Total kWh consumed:", `${totalConsumption.toFixed(2)} kWh`);
+  drawKeyValue("Rate per kWh:", `$${invoiceData.unitPrice}`);
 
   doc.moveDown(2);
 
-  // --- Payment Instructions (italic heading) ---
-  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", left, doc.y, {
-    align: "left",
-    width: contentWidth,
-  });
-
-  doc
-    .font("Helvetica")
-    .fontSize(12)
-    .text(
-      `Please make the payment before ${invoiceData.paymentDueDate}. For questions regarding this invoice, 
-please contact us at smp@microbms.com or call our customer service at +1 (555) 123-4567.`,
-      left,
-      doc.y,
-      { align: "left", width: contentWidth }
-    );
+  // --- Payment Instructions ---
+  doc.font("Helvetica-Oblique").fontSize(14).text("Payment Instructions", { align: "left" });
+  doc.moveDown(0.5);
+  doc.font("Helvetica").fontSize(12).text(
+    `Please make the payment before ${invoiceData.paymentDueDate}. 
+For questions regarding this invoice, contact us at smp@microbms.com 
+or call our customer service at +1 (555) 123-4567.`,
+    { align: "left", width: contentWidth }
+  );
 
   doc.end();
-
   return new Promise((resolve, reject) => {
     stream.on("finish", () => resolve(filePath));
     stream.on("error", reject);
@@ -239,11 +224,13 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
 
   const lineItemIds = [];
   for (const d of invoiceData.daily) {
+    const kWh = parseFloat(d.kWh) || 0;
+    const amount = kWh * (parseFloat(invoiceData.unitPrice) || 0);
     const id = await createLineItem(env, {
       date: d.date,
-      energyConsumed: d.kWh.toFixed(2),
+      energyConsumed: kWh.toFixed(2),
       unitPrice: invoiceData.unitPrice,
-      amount: (d.kWh * parseFloat(invoiceData.unitPrice)).toFixed(2),
+      amount: amount.toFixed(2),
     });
     lineItemIds.push({ sys: { type: "Link", linkType: "Entry", id } });
   }
@@ -289,9 +276,7 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
     console.log("[INFO] Fetching station consumption data...");
     const { devices } = await service.getConsumptionData(startDate, endDate);
 
-    if (!devices || devices.length === 0) {
-      throw new Error("No station data returned from CloudOceanService.");
-    }
+    if (!devices || devices.length === 0) throw new Error("No station data returned.");
 
     for (const station of devices) {
       const invoiceData = {
@@ -309,9 +294,9 @@ async function createOrUpdateInvoice(invoiceId, invoiceData) {
         stationName: station.name,
         stationLocation: station.location,
         unitPrice: (process.env.RATE_PER_KWH || 0.15).toFixed(2),
-        daily: station.dailyData.map((d) => ({
+        daily: (station.dailyData || []).map((d) => ({
           date: d.date,
-          kWh: d.reads_kwh,
+          kWh: parseFloat(d.reads_kwh) || 0,
         })),
       };
 
