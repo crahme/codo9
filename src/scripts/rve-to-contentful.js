@@ -76,7 +76,7 @@ function generateInvoicePDF(invoiceData) {
     const yStart = doc.y;
 
     doc.font("Helvetica").fontSize(12);
-    doc.text(label, left, yStart, { width: labelWidth, align: "left" });
+    doc.text(label, left, yStart, { width: labelWidth, align: "left" , indent:10});
     doc.text(String(value ?? ""), left + labelWidth + 10, yStart, {
       width: valueWidth - 10,
       align: "left",
@@ -130,10 +130,7 @@ function generateInvoicePDF(invoiceData) {
       doc.save();
       doc.rect(x, y, totalTableWidth, rowHeight).fill("#808080");
       doc.restore();
-      doc.fillColor("white");
-    } else {
-      doc.fillColor("black");
-    }
+    } 
 
     for (let i = 0; i < cells.length; i++) {
       const width = colWidths[i];
