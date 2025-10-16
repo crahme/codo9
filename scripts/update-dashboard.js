@@ -1,51 +1,46 @@
-import contentful from 'contentful-management';
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
+import contentful from "contentful-management";
 
 const client = contentful.createClient({
-  accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN
+  accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
 });
 
 async function updateDashboard() {
   const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
-  const env = await space.getEnvironment('master');
+  const environment = await space.getEnvironment("master");
 
-  // Fetch all invoices
-  const invoices = await env.getEntries({ content_type: 'invoice' });
+  // Try to fetch the main dashboard entry
+  let dashboardEntry;
+  try {
+    dashboardEntry = await environment.getEntry("mainDashboard");
+  } catch (err) {
+    console.warn("⚠️ Dashboard entry not found. Creating a new one...");
+  }
 
-  let totalInvoices = invoices.items.length;
-  let totalRevenue = 0;
-  let paidInvoices = 0;
-  let pendingInvoices = 0;
+  if (!dashboardEntry) {
+    // Create it if it doesn’t exist
+    dashboardEntry = await environment.createEntryWithId("dashboard", "mainDashboard", {
+      fields: {
+        title: { "en-US": "Main Dashboard" },
+        totalInvoices: { "en-US": 0 },
+        totalRevenue: { "en-US": 0 },
+        paidInvoices: { "en-US": 0 },
+        pendingInvoices: { "en-US": 0 },
+        recentInvoices: { "en-US": [] },
+        lastUpdated: { "en-US": new Date().toISOString() },
+      },
+    });
+    console.log("✅ Created new dashboard entry");
+  } else {
+    // Update if it already exists
+    dashboardEntry.fields.lastUpdated = { "en-US": new Date().toISOString() };
+    console.log("🔄 Updating existing dashboard entry");
+  }
 
-  invoices.items.forEach((invoice) => {
-    const amount = invoice.fields.totalAmount?.['en-US'] || 0;
-    const status = invoice.fields.status?.['en-US'] || 'Pending';
-    totalRevenue += amount;
-    if (status === 'Paid') paidInvoices++;
-    else pendingInvoices++;
-  });
-
-  const recentInvoices = invoices.items.slice(0, 5).map((inv) => ({
-    sys: { type: 'Link', linkType: 'Entry', id: inv.sys.id }
-  }));
-
-  // Fetch the dashboard entry
-  const dashboards = await env.getEntries({ content_type: 'dashboard' });
-  const dashboard = dashboards.items[0];
-
-  // Update fields
-  dashboard.fields.totalInvoices = { 'en-US': totalInvoices };
-  dashboard.fields.totalRevenue = { 'en-US': totalRevenue };
-  dashboard.fields.paidInvoices = { 'en-US': paidInvoices };
-  dashboard.fields.pendingInvoices = { 'en-US': pendingInvoices };
-  dashboard.fields.recentInvoices = { 'en-US': recentInvoices };
-  dashboard.fields.lastUpdated = { 'en-US': new Date().toISOString() };
-
-  await dashboard.update();
-  await dashboard.publish();
-
-  console.log('✅ Dashboard updated successfully');
+  const updated = await dashboardEntry.update();
+  await updated.publish();
+  console.log("✅ Dashboard updated successfully!");
 }
 
 updateDashboard().catch(console.error);
