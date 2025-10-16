@@ -1,62 +1,64 @@
 {
-  "contentTypes": [
+  "name": "Dashboard",
+  "description": "Main dashboard layout that aggregates all widget sections and data visualizations.",
+  "displayField": "title",
+  "fields": [
     {
-      "sys": { "id": "dashboard", "type": "ContentType" },
-      "name": "Dashboard",
-      "description": "Dashboard content type to power the main dashboard view on your Netlify site.",
-      "displayField": "title",
-      "fields": [
+      "id": "title",
+      "name": "Title",
+      "type": "Symbol",
+      "required": true,
+      "localized": false
+    },
+    {
+      "id": "slug",
+      "name": "Slug",
+      "type": "Symbol",
+      "required": true,
+      "localized": false
+    },
+    {
+      "id": "heroSection",
+      "name": "Hero Section",
+      "type": "Link",
+      "linkType": "Entry",
+      "required": false,
+      "validations": [
         {
-          "id": "title",
-          "name": "Title",
-          "type": "Symbol",
-          "required": true,
-          "localized": false
-        },
-        {
-          "id": "heroSection",
-          "name": "Hero Section",
-          "type": "Link",
-          "linkType": "Entry",
-          "validations": [
-            { "linkContentType": ["heroSection"] }
-          ]
-        },
-        {
-          "id": "statsSection",
-          "name": "Stats Section",
-          "type": "Array",
-          "items": {
-            "type": "Link",
-            "linkType": "Entry",
-            "validations": [
-              { "linkContentType": ["statItem"] }
-            ]
-          }
-        },
-        {
-          "id": "invoiceSection",
-          "name": "Invoice Section",
-          "type": "Link",
-          "linkType": "Entry",
-          "validations": [
-            { "linkContentType": ["invoiceSection"] }
-          ]
-        },
-        
-        {
-          "id": "widgets",
-          "name": "Widgets",
-          "type": "Array",
-          "items": {
-            "type": "Link",
-            "linkType": "Entry",
-            "validations": [
-              { "linkContentType": ["widgetCard", "chartWidget", "activityFeed"] }
-            ]
-          }
+          "linkContentType": ["heroSection"]
         }
       ]
+    },
+    {
+      "id": "widgets",
+      "name": "Widgets",
+      "type": "Array",
+      "items": {
+        "type": "Link",
+        "linkType": "Entry",
+        "validations": [
+          {
+            "linkContentType": [
+              "statWidget",
+              "chartWidget",
+              "consumptionWidget",
+              "performanceWidget",
+              "trendWidget",
+              "comparisonWidget",
+              "usageWidget",
+              "customWidget"
+            ]
+          }
+        ]
+      },
+      "required": false
+    },
+    {
+      "id": "lastUpdated",
+      "name": "Last Updated",
+      "type": "Date",
+      "required": false,
+      "localized": false
     }
   ]
 }
