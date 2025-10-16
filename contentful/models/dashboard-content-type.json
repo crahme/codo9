@@ -1,62 +1,52 @@
 {
-  "contentTypes": [
+  "name": "Dashboard",
+  "fields": [
     {
-      "sys": { "id": "dashboard", "type": "ContentType" },
-      "name": "Dashboard",
-      "description": "Dashboard content type to power the main dashboard view on your Netlify site.",
-      "displayField": "title",
-      "fields": [
+      "id": "title",
+      "name": "Title",
+      "type": "Symbol",
+      "required": true
+    },
+    {
+      "id": "totalInvoices",
+      "name": "Total Invoices",
+      "type": "Number"
+    },
+    {
+      "id": "totalRevenue",
+      "name": "Total Revenue",
+      "type": "Number"
+    },
+    {
+      "id": "pendingInvoices",
+      "name": "Pending Invoices",
+      "type": "Number"
+    },
+    {
+      "id": "paidInvoices",
+      "name": "Paid Invoices",
+      "type": "Number"
+    },
+    {
+      "id": "recentInvoices",
+      "name": "Recent Invoices",
+      "type": "Array",
+      "items": {
+        "type": "Link",
+        "linkType": "Entry"
+      },
+      "validations": [
         {
-          "id": "title",
-          "name": "Title",
-          "type": "Symbol",
-          "required": true,
-          "localized": false
-        },
-        {
-          "id": "heroSection",
-          "name": "Hero Section",
-          "type": "Link",
-          "linkType": "Entry",
-          "validations": [
-            { "linkContentType": ["heroSection"] }
-          ]
-        },
-        {
-          "id": "statsSection",
-          "name": "Stats Section",
-          "type": "Array",
-          "items": {
-            "type": "Link",
-            "linkType": "Entry",
-            "validations": [
-              { "linkContentType": ["statItem"] }
-            ]
-          }
-        },
-        {
-          "id": "invoiceSection",
-          "name": "Invoice Section",
-          "type": "Link",
-          "linkType": "Entry",
-          "validations": [
-            { "linkContentType": ["invoiceSection"] }
-          ]
-        },
-        
-        {
-          "id": "widgets",
-          "name": "Widgets",
-          "type": "Array",
-          "items": {
-            "type": "Link",
-            "linkType": "Entry",
-            "validations": [
-              { "linkContentType": ["widgetCard", "chartWidget", "activityFeed"] }
-            ]
-          }
+          "linkContentType": ["invoice"]
         }
       ]
+    },
+    {
+      "id": "lastUpdated",
+      "name": "Last Updated",
+      "type": "Date"
     }
-  ]
+  ],
+  "displayField": "title",
+  "description": "Dashboard aggregating data from Invoice entries"
 }
