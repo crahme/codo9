@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 dotenv.config();
 import contentful from "contentful-management";
 
-// Initialize Contentful client
 const client = contentful.createClient({
   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
 });
@@ -40,17 +39,21 @@ async function updateDashboard() {
     inv => inv.fields?.status?.["en-US"]?.toLowerCase() === "pending"
   ).length;
 
-  // Sort by date descending and take 5 most recent
+  // Sort by date descending and get 5 most recent
   const recentInvoices = invoices
     .filter(inv => inv.fields?.invoiceDate?.["en-US"])
-    .sort((a, b) => new Date(b.fields.invoiceDate["en-US"]) - new Date(a.fields.invoiceDate["en-US"]))
+    .sort(
+      (a, b) =>
+        new Date(b.fields.invoiceDate["en-US"]) -
+        new Date(a.fields.invoiceDate["en-US"])
+    )
     .slice(0, 5)
     .map(inv => ({
-      id: inv.sys.id,
-      client: inv.fields?.clientName?.["en-US"] ?? "Unknown",
-      amount: inv.fields?.totalAmount?.["en-US"] ?? 0,
-      status: inv.fields?.status?.["en-US"] ?? "unknown",
-      date: inv.fields?.invoiceDate?.["en-US"] ?? null,
+      sys: {
+        type: "Link",
+        linkType: "Entry",
+        id: inv.sys.id,
+      },
     }));
 
   console.log("📈 Stats computed successfully.");
@@ -74,7 +77,11 @@ async function updateDashboard() {
   };
 
   if (!dashboardEntry) {
-    dashboardEntry = await environment.createEntryWithId("dashboard", "mainDashboard", { fields });
+    dashboardEntry = await environment.createEntryWithId(
+      "dashboard",
+      "mainDashboard",
+      { fields }
+    );
     console.log("✅ Created new dashboard entry");
   } else {
     dashboardEntry.fields = fields;
