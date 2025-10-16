@@ -68,6 +68,7 @@ async function updateDashboard() {
 
   const fields = {
     title: { "en-US": "Main Dashboard" },
+    slug: { "en-US": "main-dashboard" },  // Added required slug field
     totalInvoices: { "en-US": totalInvoices },
     totalRevenue: { "en-US": totalRevenue },
     paidInvoices: { "en-US": paidInvoices },
@@ -88,11 +89,19 @@ async function updateDashboard() {
     const updated = await dashboardEntry.update();
     await updated.publish();
     console.log("✅ Dashboard updated successfully with live data!");
+    console.log(`   Total Invoices: ${totalInvoices}`);
+    console.log(`   Total Revenue: $${totalRevenue.toFixed(2)}`);
+    console.log(`   Paid: ${paidInvoices}`);
+    console.log(`   Pending: ${pendingInvoices}`);
     return;
   }
 
   await dashboardEntry.publish();
   console.log("✅ Dashboard created and published successfully!");
+  console.log(`   Total Invoices: ${totalInvoices}`);
+  console.log(`   Total Revenue: $${totalRevenue.toFixed(2)}`);
+  console.log(`   Paid: ${paidInvoices}`);
+  console.log(`   Pending: ${pendingInvoices}`);
 }
 
 updateDashboard().catch(console.error);
