@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "contentTypes": [
+    {
+      "sys": { "id": "dashboard" },
+      "name": "Dashboard",
+      "displayField": "title",
+      "fields": [
+        { "id": "title", "name": "Title", "type": "Symbol", "required": true },
+        { "id": "description", "name": "Description", "type": "Text" },
+        {
+          "id": "stats",
+          "name": "Statistics",
+          "type": "Array",
+          "items": { "type": "Link", "linkType": "Entry", "validations": [{ "linkContentType": ["statItem"] }] }
+        },
+        {
+          "id": "deviceOverview",
+          "name": "Device Overview",
+          "type": "Link",
+          "linkType": "Entry",
+          "validations": [{ "linkContentType": ["deviceOverview"] }]
+        },
+        {
+          "id": "consumptionTrend",
+          "name": "Consumption Trend",
+          "type": "Link",
+          "linkType": "Entry",
+          "validations": [{ "linkContentType": ["consumptionTrend"] }]
+        },
+        {
+          "id": "recentInvoices",
+          "name": "Recent Invoices",
+          "type": "Link",
+          "linkType": "Entry",
+          "validations": [{ "linkContentType": ["recentInvoices"] }]
+        },
+        {
+          "id": "energyRecommendations",
+          "name": "Energy Recommendations",
+          "type": "Link",
+          "linkType": "Entry",
+          "validations": [{ "linkContentType": ["energyRecommendation"] }]
+        }
+      ]
+    },
+    {
+      "sys": { "id": "statItem" },
+      "name": "Stat Item",
+      "displayField": "label",
+      "fields": [
+        { "id": "label", "name": "Label", "type": "Symbol", "required": true },
+        { "id": "value", "name": "Value", "type": "Symbol" },
+        { "id": "unit", "name": "Unit", "type": "Symbol" },
+        { "id": "icon", "name": "Icon", "type": "Symbol" },
+        { "id": "color", "name": "Color", "type": "Symbol" }
+      ]
+    },
+    {
+      "sys": { "id": "deviceOverview" },
+      "name": "Device Overview",
+      "displayField": "title",
+      "fields": [
+        { "id": "title", "name": "Title", "type": "Symbol" },
+        {
+          "id": "devices",
+          "name": "Devices",
+          "type": "Array",
+          "items": { "type": "Link", "linkType": "Entry", "validations": [{ "linkContentType": ["deviceStat"] }] }
+        }
+      ]
+    },
+    {
+      "sys": { "id": "deviceStat" },
+      "name": "Device Stat",
+      "displayField": "deviceId",
+      "fields": [
+        { "id": "deviceId", "name": "Device ID", "type": "Symbol", "required": true },
+        { "id": "consumption", "name": "Consumption (kWh)", "type": "Number" }
+      ]
+    },
+    {
+      "sys": { "id": "consumptionTrend" },
+      "name": "Consumption Trend",
+      "displayField": "title",
+      "fields": [
+        { "id": "title", "name": "Title", "type": "Symbol" },
+        {
+          "id": "dataPoints",
+          "name": "Data Points",
+          "type": "Array",
+          "items": { "type": "Link", "linkType": "Entry", "validations": [{ "linkContentType": ["trendPoint"] }] }
+        }
+      ]
+    },
+    {
+      "sys": { "id": "trendPoint" },
+      "name": "Trend Point",
+      "displayField": "date",
+      "fields": [
+        { "id": "date", "name": "Date", "type": "Date", "required": true },
+        { "id": "value", "name": "Value", "type": "Number", "required": true }
+      ]
+    },
+    {
+      "sys": { "id": "recentInvoices" },
+      "name": "Recent Invoices",
+      "displayField": "title",
+      "fields": [
+        { "id": "title", "name": "Title", "type": "Symbol" },
+        {
+          "id": "invoices",
+          "name": "Invoices",
+          "type": "Array",
+          "items": { "type": "Link", "linkType": "Entry", "validations": [{ "linkContentType": ["invoiceSummary"] }] }
+        }
+      ]
+    },
+    {
+      "sys": { "id": "invoiceSummary" },
+      "name": "Invoice Summary",
+      "displayField": "invoiceId",
+      "fields": [
+        { "id": "invoiceId", "name": "Invoice ID", "type": "Symbol", "required": true },
+        { "id": "device", "name": "Device", "type": "Symbol" },
+        { "id": "amount", "name": "Amount", "type": "Number" },
+        { "id": "status", "name": "Status", "type": "Symbol" }
+      ]
+    },
+    {
+      "sys": { "id": "energyRecommendation" },
+      "name": "Energy Recommendation",
+      "displayField": "title",
+      "fields": [
+        { "id": "title", "name": "Title", "type": "Symbol", "required": true },
+        { "id": "description", "name": "Description", "type": "Text" },
+        { "id": "usageInfo", "name": "Usage Info", "type": "Text" },
+        { "id": "savings", "name": "Potential Monthly Savings", "type": "Number" },
+        { "id": "efficiencyScore", "name": "Efficiency Score", "type": "Number" },
+        {
+          "id": "recommendations",
+          "name": "Recommendations",
+          "type": "Array",
+          "items": { "type": "Symbol" }
+        }
+      ]
+    }
+  ]
+}
