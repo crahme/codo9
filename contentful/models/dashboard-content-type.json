@@ -1,52 +1,52 @@
 {
-  "name": "Dashboard",
-  "fields": [
+  "contentTypes": [
     {
-      "id": "title",
-      "name": "Title",
-      "type": "Symbol",
-      "required": true
-    },
-    {
-      "id": "totalInvoices",
-      "name": "Total Invoices",
-      "type": "Number"
-    },
-    {
-      "id": "totalRevenue",
-      "name": "Total Revenue",
-      "type": "Number"
-    },
-    {
-      "id": "pendingInvoices",
-      "name": "Pending Invoices",
-      "type": "Number"
-    },
-    {
-      "id": "paidInvoices",
-      "name": "Paid Invoices",
-      "type": "Number"
-    },
-    {
-      "id": "recentInvoices",
-      "name": "Recent Invoices",
-      "type": "Array",
-      "items": {
-        "type": "Link",
-        "linkType": "Entry"
-      },
-      "validations": [
+      "sys": { "id": "dashboard" },
+      "name": "Dashboard",
+      "fields": [
         {
-          "linkContentType": ["invoice"]
+          "id": "title",
+          "name": "Title",
+          "type": "Symbol",
+          "required": true
+        },
+        {
+          "id": "totalInvoices",
+          "name": "Total Invoices",
+          "type": "Integer"
+        },
+        {
+          "id": "totalRevenue",
+          "name": "Total Revenue",
+          "type": "Number"
+        },
+        {
+          "id": "paidInvoices",
+          "name": "Paid Invoices",
+          "type": "Integer"
+        },
+        {
+          "id": "pendingInvoices",
+          "name": "Pending Invoices",
+          "type": "Integer"
+        },
+        {
+          "id": "recentInvoices",
+          "name": "Recent Invoices",
+          "type": "Array",
+          "items": {
+            "type": "Link",
+            "linkType": "Entry"
+          }
+        },
+        {
+          "id": "lastUpdated",
+          "name": "Last Updated",
+          "type": "Date"
         }
-      ]
-    },
-    {
-      "id": "lastUpdated",
-      "name": "Last Updated",
-      "type": "Date"
+      ],
+      "displayField": "title",
+      "description": "Main dashboard summary showing invoice statistics"
     }
-  ],
-  "displayField": "title",
-  "description": "Dashboard aggregating data from Invoice entries"
+  ]
 }
