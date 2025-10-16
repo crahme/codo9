@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import contentful from "contentful-management";
 
+// Initialize Contentful client
 const client = contentful.createClient({
   accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN,
 });
@@ -10,37 +11,81 @@ async function updateDashboard() {
   const space = await client.getSpace(process.env.CONTENTFUL_SPACE_ID);
   const environment = await space.getEnvironment("master");
 
-  // Try to fetch the main dashboard entry
+  console.log("📊 Fetching invoice entries...");
+  const invoicesResponse = await environment.getEntries({
+    content_type: "invoice",
+    limit: 1000,
+  });
+
+  const invoices = invoicesResponse.items;
+  if (!invoices.length) {
+    console.log("⚠️ No invoices found — skipping update.");
+    return;
+  }
+
+  console.log(`📄 Found ${invoices.length} invoices.`);
+
+  // --- Compute stats ---
+  const totalInvoices = invoices.length;
+  const totalRevenue = invoices.reduce((sum, inv) => {
+    const amount = inv.fields?.totalAmount?.["en-US"] ?? 0;
+    return sum + Number(amount);
+  }, 0);
+
+  const paidInvoices = invoices.filter(
+    inv => inv.fields?.status?.["en-US"]?.toLowerCase() === "paid"
+  ).length;
+
+  const pendingInvoices = invoices.filter(
+    inv => inv.fields?.status?.["en-US"]?.toLowerCase() === "pending"
+  ).length;
+
+  // Sort by date descending and take 5 most recent
+  const recentInvoices = invoices
+    .filter(inv => inv.fields?.invoiceDate?.["en-US"])
+    .sort((a, b) => new Date(b.fields.invoiceDate["en-US"]) - new Date(a.fields.invoiceDate["en-US"]))
+    .slice(0, 5)
+    .map(inv => ({
+      id: inv.sys.id,
+      client: inv.fields?.clientName?.["en-US"] ?? "Unknown",
+      amount: inv.fields?.totalAmount?.["en-US"] ?? 0,
+      status: inv.fields?.status?.["en-US"] ?? "unknown",
+      date: inv.fields?.invoiceDate?.["en-US"] ?? null,
+    }));
+
+  console.log("📈 Stats computed successfully.");
+
+  // --- Fetch or create dashboard entry ---
   let dashboardEntry;
   try {
     dashboardEntry = await environment.getEntry("mainDashboard");
-  } catch (err) {
-    console.warn("⚠️ Dashboard entry not found. Creating a new one...");
+  } catch {
+    console.log("⚠️ Dashboard entry not found, creating one...");
   }
+
+  const fields = {
+    title: { "en-US": "Main Dashboard" },
+    totalInvoices: { "en-US": totalInvoices },
+    totalRevenue: { "en-US": totalRevenue },
+    paidInvoices: { "en-US": paidInvoices },
+    pendingInvoices: { "en-US": pendingInvoices },
+    recentInvoices: { "en-US": recentInvoices },
+    lastUpdated: { "en-US": new Date().toISOString() },
+  };
 
   if (!dashboardEntry) {
-    // Create it if it doesn’t exist
-    dashboardEntry = await environment.createEntryWithId("dashboard", "mainDashboard", {
-      fields: {
-        title: { "en-US": "Main Dashboard" },
-        totalInvoices: { "en-US": 0 },
-        totalRevenue: { "en-US": 0 },
-        paidInvoices: { "en-US": 0 },
-        pendingInvoices: { "en-US": 0 },
-        recentInvoices: { "en-US": [] },
-        lastUpdated: { "en-US": new Date().toISOString() },
-      },
-    });
+    dashboardEntry = await environment.createEntryWithId("dashboard", "mainDashboard", { fields });
     console.log("✅ Created new dashboard entry");
   } else {
-    // Update if it already exists
-    dashboardEntry.fields.lastUpdated = { "en-US": new Date().toISOString() };
-    console.log("🔄 Updating existing dashboard entry");
+    dashboardEntry.fields = fields;
+    const updated = await dashboardEntry.update();
+    await updated.publish();
+    console.log("✅ Dashboard updated successfully with live data!");
+    return;
   }
 
-  const updated = await dashboardEntry.update();
-  await updated.publish();
-  console.log("✅ Dashboard updated successfully!");
+  await dashboardEntry.publish();
+  console.log("✅ Dashboard created and published successfully!");
 }
 
 updateDashboard().catch(console.error);
