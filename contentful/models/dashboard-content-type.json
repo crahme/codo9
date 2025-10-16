@@ -1,4 +1,6 @@
-{
+{ "contentTypes": [
+  {
+   "sys":{"id":"dashboard"}, 
   "name": "Dashboard",
   "description": "Main dashboard layout that aggregates all widget sections and data visualizations.",
   "displayField": "title",
@@ -60,5 +62,6 @@
       "required": false,
       "localized": false
     }
-  ]
+  ] }
+]
 }
