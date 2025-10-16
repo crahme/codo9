@@ -1,67 +1,115 @@
-{ "contentTypes": [
-  {
-   "sys":{"id":"dashboard"}, 
-  "name": "Dashboard",
-  "description": "Main dashboard layout that aggregates all widget sections and data visualizations.",
-  "displayField": "title",
-  "fields": [
+{
+  "contentTypes": [
     {
-      "id": "title",
-      "name": "Title",
-      "type": "Symbol",
-      "required": true,
-      "localized": false
-    },
-    {
-      "id": "slug",
-      "name": "Slug",
-      "type": "Symbol",
-      "required": true,
-      "localized": false
-    },
-    {
-      "id": "heroSection",
-      "name": "Hero Section",
-      "type": "Link",
-      "linkType": "Entry",
-      "required": false,
-      "validations": [
+      "sys": {
+        "id": "dashboard",
+        "type": "ContentType"
+      },
+      "name": "Dashboard",
+      "description": "Main dashboard layout that aggregates all widget sections and data visualizations.",
+      "displayField": "title",
+      "fields": [
         {
-          "linkContentType": ["heroSection"]
+          "id": "title",
+          "name": "Title",
+          "type": "Symbol",
+          "required": true,
+          "localized": false
+        },
+        {
+          "id": "slug",
+          "name": "Slug",
+          "type": "Symbol",
+          "required": true,
+          "localized": false
+        },
+        {
+          "id": "totalInvoices",
+          "name": "Total Invoices",
+          "type": "Integer",
+          "required": false,
+          "localized": false
+        },
+        {
+          "id": "totalRevenue",
+          "name": "Total Revenue",
+          "type": "Number",
+          "required": false,
+          "localized": false
+        },
+        {
+          "id": "paidInvoices",
+          "name": "Paid Invoices",
+          "type": "Integer",
+          "required": false,
+          "localized": false
+        },
+        {
+          "id": "pendingInvoices",
+          "name": "Pending Invoices",
+          "type": "Integer",
+          "required": false,
+          "localized": false
+        },
+        {
+          "id": "recentInvoices",
+          "name": "Recent Invoices",
+          "type": "Array",
+          "items": {
+            "type": "Link",
+            "linkType": "Entry",
+            "validations": [
+              {
+                "linkContentType": ["invoice"]
+              }
+            ]
+          },
+          "required": false
+        },
+        {
+          "id": "heroSection",
+          "name": "Hero Section",
+          "type": "Link",
+          "linkType": "Entry",
+          "required": false,
+          "validations": [
+            {
+              "linkContentType": ["heroSection"]
+            }
+          ]
+        },
+        {
+          "id": "widgets",
+          "name": "Widgets",
+          "type": "Array",
+          "items": {
+            "type": "Link",
+            "linkType": "Entry",
+            "validations": [
+              {
+                "linkContentType": [
+                  "statWidget",
+                  "chartWidget",
+                  "consumptionWidget",
+                  "performanceWidget",
+                  "trendWidget",
+                  "comparisonWidget",
+                  "usageWidget",
+                  "customWidget"
+                ]
+              }
+            ]
+          },
+          "required": false
+        },
+        {
+          "id": "lastUpdated",
+          "name": "Last Updated",
+          "type": "Date",
+          "required": false,
+          "localized": false
         }
       ]
-    },
-    {
-      "id": "widgets",
-      "name": "Widgets",
-      "type": "Array",
-      "items": {
-        "type": "Link",
-        "linkType": "Entry",
-        "validations": [
-          {
-            "linkContentType": [
-              "statWidget",
-              "chartWidget",
-              "consumptionWidget",
-              "performanceWidget",
-              "trendWidget",
-              "comparisonWidget",
-              "usageWidget",
-              "customWidget"
-            ]
-          }
-        ]
-      },
-      "required": false
-    },
-    {
-      "id": "lastUpdated",
-      "name": "Last Updated",
-      "type": "Date",
-      "required": false,
-      "localized": false
     }
-  ] }
-]
+  ]
 }
