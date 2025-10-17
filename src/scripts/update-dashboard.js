@@ -43,10 +43,23 @@ async function updateDashboard() {
 
   for (const inv of invoices) {
     const slug = inv.fields?.slug?.["en-US"];
-    if (!slug || !slug.startsWith("fac-")) continue;
+    
+    // Debug: Check what slugs we have
+    if (!slug) {
+      console.log(`⚠️ Invoice ${inv.sys.id} has no slug`);
+      continue;
+    }
+    
+    console.log(`Processing invoice with slug: ${slug}`);
+    
+    if (!slug.startsWith("fac-")) {
+      console.log(`⚠️ Slug doesn't start with 'fac-': ${slug}`);
+      continue;
+    }
 
     // Extract device ID from slug (e.g., "fac-b7423cbc..." → "b7423cbc...")
     const deviceId = slug.replace(/^fac-/, "");
+    console.log(`✓ Extracted device ID: ${deviceId}`);
     const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
 
     // Initialize device entry if not exists
