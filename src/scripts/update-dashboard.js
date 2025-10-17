@@ -166,15 +166,14 @@ async function updateDashboard() {
     }))
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // --- Recent invoices (latest 10 by date) ---
-  const recentInvoices = invoices
+  // --- All invoices sorted by date (most recent first) ---
+  const allInvoices = invoices
     .filter((inv) => inv.fields?.invoiceDate?.["en-US"])
     .sort(
       (a, b) =>
         new Date(b.fields.invoiceDate["en-US"]) -
         new Date(a.fields.invoiceDate["en-US"])
     )
-    .slice(0, 10)
     .map((inv) => {
       const slug = inv.fields?.slug?.["en-US"];
       const deviceId = slug?.includes("fac-") ? slug.replace(/^\/fac-/, "") : slug;
@@ -260,7 +259,7 @@ async function updateDashboard() {
     },
     deviceTrends, // Per-device consumption with daily trends
     consumptionTimeline, // Overall daily consumption across all devices
-    recentInvoices,
+    recentInvoices: allInvoices, // All invoices sorted by date
     topClients,
   };
 
@@ -321,6 +320,8 @@ async function updateDashboard() {
     console.log(`      From: ${consumptionTimeline[0].date}`);
     console.log(`      To: ${consumptionTimeline[consumptionTimeline.length - 1].date}`);
   }
+
+  console.log(`\n   📋 All Invoices: ${allInvoices.length} invoices processed`);
 }
 
 updateDashboard().catch(console.error);
