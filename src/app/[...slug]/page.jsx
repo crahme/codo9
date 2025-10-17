@@ -1,13 +1,13 @@
 // app/[...slug]/page.jsx
 import { notFound } from "next/navigation";
-import { getPageFromSlug } from "../../utils/content.js";
+import { getPageFromSlug, getDashboardBySlug } from "../../utils/content.js";
 import { Hero } from "../../components/Hero.jsx";
 import { Stats } from "../../components/Stats.jsx";
 import { InvoiceSection } from "../../components/InvoiceSection.jsx";
 import { Invoice } from "../../components/Invoice.jsx";
 import { VisualEditorComponent } from "../../components/VisualEditorComponent.jsx";
 import InvoicesList from "../../components/InvoicesList.jsx";
-import Dashboard from "../../components/dashboard/Dashboard.jsx"; // Add this import
+import Dashboard from "../../components/dashboard/Dashboard.jsx";
 
 const componentMap = {
   hero: Hero,
@@ -16,7 +16,7 @@ const componentMap = {
   invoice: Invoice,
   VisualEditorComponent: VisualEditorComponent,
   invoicesList: InvoicesList,
-  dashboard: Dashboard, // Add this line
+  dashboard: Dashboard,
 };
 
 export default async function ComposablePage({ params }) {
@@ -50,14 +50,17 @@ export default async function ComposablePage({ params }) {
       return notFound();
     }
 
+    console.log(`🔍 Processing request for slug: ${fullPath}`);
+
     const page = await getPageFromSlug(fullPath);
 
     if (!page || !page.sys?.contentType?.sys?.id) {
-      console.log(`No content found for slug: ${fullPath}`);
+      console.log(`❌ No content found for slug: ${fullPath}`);
       return notFound();
     }
 
     const type = page.sys.contentType.sys.id;
+    console.log(`📄 Content type detected: ${type}`);
 
     // ✅ Handle "page"
     if (type === "page") {
@@ -68,6 +71,8 @@ export default async function ComposablePage({ params }) {
         );
         return notFound();
       }
+
+      console.log(`✅ Rendering page with ${page.fields.sections?.length || 0} sections`);
 
       return (
         <div data-sb-object-id={page.sys.id}>
@@ -108,19 +113,57 @@ export default async function ComposablePage({ params }) {
       );
     }
 
-    // ✅ Handle "dashboard" - ADD THIS SECTION
+    // ✅ Handle "dashboard"
     if (type === "dashboard") {
-      if (!page.fields) {
-        console.warn(
-          `Dashboard entry found for slug '${fullPath}', but missing fields.`,
-          page
+      console.log(`🎯 Handling dashboard content type for slug: ${fullPath}`);
+      
+      // Use the dedicated dashboard function for better data fetching
+      const dashboardData = await getDashboardBySlug(fullPath.replace(/^\//, ''));
+
+      if (!dashboardData?.fields) {
+        console.error(`❌ Dashboard data missing for slug: ${fullPath}`);
+        return (
+          <div style={{ padding: '20px', background: '#ffebee', fontFamily: 'Arial, sans-serif' }}>
+            <h2 style={{ color: '#d32f2f' }}>🚫 Dashboard Data Unavailable</h2>
+            <p>Could not load dashboard data for: <strong>{fullPath}</strong></p>
+            <div style={{ background: '#fce4ec', padding: '15px', borderRadius: '8px', margin: '15px 0' }}>
+              <p><strong>Please check:</strong></p>
+              <ul style={{ margin: '10px 0', paddingLeft: '20px' }}>
+                <li>Dashboard entry exists in Contentful</li>
+                <li>Dashboard is published</li>
+                <li>Slug matches exactly: <code>{fullPath.replace(/^\//, '')}</code></li>
+                <li>Contentful environment variables are configured</li>
+              </ul>
+            </div>
+            <details style={{ marginTop: '20px' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>Debug Information</summary>
+              <pre style={{ 
+                background: '#f5f5f5', 
+                padding: '15px', 
+                borderRadius: '8px', 
+                overflow: 'auto',
+                fontSize: '12px',
+                marginTop: '10px'
+              }}>
+                {JSON.stringify({
+                  slug: fullPath,
+                  pageData: page ? {
+                    id: page.sys?.id,
+                    contentType: page.sys?.contentType?.sys?.id,
+                    fields: page.fields ? Object.keys(page.fields) : 'none'
+                  } : 'no page data'
+                }, null, 2)}
+              </pre>
+            </details>
+          </div>
         );
-        return notFound();
       }
 
+      console.log('✅ Dashboard data loaded successfully, passing to Dashboard component');
+
       return (
-        <div data-sb-object-id={page.sys.id}>
-          <Dashboard entry={page} />
+        <div data-sb-object-id={dashboardData.sys.id}>
+          <Dashboard entry={dashboardData} />
         </div>
       );
     }
@@ -135,6 +178,8 @@ export default async function ComposablePage({ params }) {
         );
         return notFound();
       }
+
+      console.log(`✅ Rendering invoice: ${f.invoiceNumber || 'Unknown'}`);
 
       return (
         <div data-sb-object-id={page.sys.id}>
@@ -331,32 +376,35 @@ export default async function ComposablePage({ params }) {
       );
     }
 
-    if (type === "dashboard") {
-  if (!page.fields) {
-    console.warn(
-      `Dashboard entry found for slug '${fullPath}', but missing fields.`,
-      page
+    // ❌ fallback - unsupported content type
+    console.warn(`❌ Unsupported content type for slug '${fullPath}':`, type);
+    return (
+      <div style={{ padding: '20px', background: '#fff3cd', fontFamily: 'Arial, sans-serif' }}>
+        <h2 style={{ color: '#856404' }}>Unsupported Content Type</h2>
+        <p>No handler for content type: <strong>{type}</strong></p>
+        <p>Supported types: page, dashboard, invoice, invoicesList</p>
+        <div style={{ background: '#fff', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
+          <details>
+            <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>Page Data</summary>
+            <pre style={{ 
+              background: '#f8f9fa', 
+              padding: '15px', 
+              borderRadius: '4px', 
+              overflow: 'auto',
+              fontSize: '12px',
+              marginTop: '10px'
+            }}>
+              {JSON.stringify({
+                slug: fullPath,
+                contentType: type,
+                pageId: page.sys?.id,
+                availableFields: page.fields ? Object.keys(page.fields) : 'none'
+              }, null, 2)}
+            </pre>
+          </details>
+        </div>
+      </div>
     );
-    return notFound();
-  }
-
-  console.log('Page.jsx - Passing to Dashboard:', {
-    pageId: page.sys.id,
-    fields: Object.keys(page.fields),
-    hasRecentInvoices: !!page.fields.recentInvoices,
-    recentInvoicesCount: page.fields.recentInvoices?.length,
-    hasWidgets: !!page.fields.widgets
-  });
-
-  return (
-    <div data-sb-object-id={page.sys.id}>
-      <Dashboard entry={page} />
-    </div>
-  );
-}
-    // ❌ fallback
-    console.warn(`Unsupported content type for slug '${fullPath}':`, type);
-    return notFound();
   } catch (error) {
     const digest = error?.digest;
     if (
@@ -368,9 +416,98 @@ export default async function ComposablePage({ params }) {
     }
     const errorSlug = slugArray ? slugArray.join("/") : "unknown";
     console.error(
-      `Error fetching or rendering page for slug '${errorSlug}':`,
+      `❌ Error fetching or rendering page for slug '${errorSlug}':`,
       error
     );
-    return notFound();
+    
+    return (
+      <div style={{ padding: '20px', background: '#f8d7da', fontFamily: 'Arial, sans-serif' }}>
+        <h2 style={{ color: '#721c24' }}>Error Loading Page</h2>
+        <p>There was an error loading the page for: <strong>{errorSlug}</strong></p>
+        <div style={{ background: '#f5c6cb', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
+          <p><strong>Error details:</strong></p>
+          <pre style={{ 
+            background: '#fff', 
+            padding: '15px', 
+            borderRadius: '4px', 
+            overflow: 'auto',
+            fontSize: '12px'
+          }}>
+            {error.message}
+          </pre>
+        </div>
+      </div>
+    );
+  }
+}
+
+export async function generateStaticParams() {
+  // Generate static params for known content types
+  try {
+    console.log("🔧 Generating static params...");
+    
+    // You can add more content types here as needed
+    const contentTypes = ['page', 'dashboard', 'invoice', 'invoicesList'];
+    const params = [];
+
+    // Add main dashboard as a known route
+    params.push({
+      slug: ['main-dashboard'],
+    });
+
+    // Add other common routes if needed
+    params.push({
+      slug: ['dashboard'],
+    });
+
+    console.log(`✅ Generated ${params.length} static params`);
+    return params;
+  } catch (error) {
+    console.error("❌ Error generating static params:", error);
+    return [];
+  }
+}
+
+export async function generateMetadata({ params }) {
+  try {
+    const resolvedParams = await params;
+    const slugArray = resolvedParams.slug;
+    const pageSlug = slugArray.join("/").replace(/\/index\.html?$/i, "");
+    const fullPath = `/${pageSlug}`;
+
+    console.log(`🔍 Generating metadata for: ${fullPath}`);
+
+    const page = await getPageFromSlug(fullPath);
+
+    if (!page || !page.fields) {
+      return {
+        title: "Page Not Found",
+        description: "The requested page could not be found.",
+      };
+    }
+
+    const title = page.fields.title || 
+                 page.fields.invoiceNumber || 
+                 page.fields.clientName || 
+                 "EV Charging Dashboard";
+
+    let description = "EV Charging Management System";
+
+    if (page.sys.contentType.sys.id === "dashboard") {
+      description = "Comprehensive EV charging analytics and management dashboard";
+    } else if (page.sys.contentType.sys.id === "invoice") {
+      description = `Invoice details for ${page.fields.clientName || 'client'}`;
+    }
+
+    return {
+      title: `${title} | EV Charging`,
+      description,
+    };
+  } catch (error) {
+    console.error("❌ Error generating metadata:", error);
+    return {
+      title: "EV Charging Dashboard",
+      description: "EV Charging Management System",
+    };
   }
 }
