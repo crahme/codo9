@@ -81,26 +81,9 @@
         {
           "id": "widgets",
           "name": "Widgets",
-          "type": "Array",
-          "items": {
-            "type": "Link",
-            "linkType": "Entry",
-            "validations": [
-              {
-                "linkContentType": [
-                  "statWidget",
-                  "chartWidget",
-                  "consumptionWidget",
-                  "performanceWidget",
-                  "trendWidget",
-                  "comparisonWidget",
-                  "usageWidget",
-                  "customWidget"
-                ]
-              }
-            ]
-          },
-          "required": false
+          "type": "Object",
+          "required": false,
+          "localized": false
         },
         {
           "id": "lastUpdated",
