@@ -43,11 +43,10 @@ async function updateDashboard() {
 
   for (const inv of invoices) {
     const slug = inv.fields?.slug?.["en-US"];
-    
-    if (!slug || !slug.includes("fac-")) continue;
+    if (!slug || !slug.startsWith("fac-")) continue;
 
-    // Extract device ID from slug (e.g., "/fac-b7423cbc..." → "b7423cbc...")
-    const deviceId = slug.replace(/^\/fac-/, "");
+    // Extract device ID from slug (e.g., "fac-b7423cbc..." → "b7423cbc...")
+    const deviceId = slug.replace(/^fac-/, "");
     const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
 
     // Initialize device entry if not exists
@@ -166,17 +165,18 @@ async function updateDashboard() {
     }))
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // --- All invoices sorted by date (most recent first) ---
-  const allInvoices = invoices
+  // --- Recent invoices (latest 10 by date) ---
+  const recentInvoices = invoices
     .filter((inv) => inv.fields?.invoiceDate?.["en-US"])
     .sort(
       (a, b) =>
         new Date(b.fields.invoiceDate["en-US"]) -
         new Date(a.fields.invoiceDate["en-US"])
     )
+    .slice(0, 10)
     .map((inv) => {
       const slug = inv.fields?.slug?.["en-US"];
-      const deviceId = slug?.includes("fac-") ? slug.replace(/^\/fac-/, "") : slug;
+      const deviceId = slug?.startsWith("fac-") ? slug.replace(/^fac-/, "") : slug;
       const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
       
       let totalAmount = 0;
@@ -245,6 +245,7 @@ async function updateDashboard() {
   console.log("📈 Stats computed successfully.");
   console.log(`   Total Devices: ${totalDevices}`);
   console.log(`   Total Energy Consumed: ${totalConsumption.toFixed(2)} kWh`);
+  console.log(`   Total Revenue: $${totalRevenue.toFixed(2)}`);
   console.log(`   Total Invoices: ${invoices.length}`);
 
   // --- Dashboard widgets structure ---
@@ -259,21 +260,21 @@ async function updateDashboard() {
     },
     deviceTrends, // Per-device consumption with daily trends
     consumptionTimeline, // Overall daily consumption across all devices
-    recentInvoices: allInvoices, // All invoices sorted by date
+    recentInvoices,
     topClients,
   };
 
   // --- Fetch or create dashboard entry ---
   let dashboardEntry;
   try {
-    dashboardEntry = await environment.getEntry("EV Charging Dashboard");
+    dashboardEntry = await environment.getEntry("mainDashboard");
   } catch {
     console.log("⚠️ Dashboard entry not found, creating one...");
   }
 
   const fields = {
     title: { "en-US": "EV Charging Dashboard" },
-    slug: { "en-US": "/dashboard" },
+    slug: { "en-US": "main-dashboard" },
     widgets: { "en-US": widgets },
     lastUpdated: { "en-US": new Date().toISOString() },
   };
@@ -281,7 +282,7 @@ async function updateDashboard() {
   if (!dashboardEntry) {
     dashboardEntry = await environment.createEntryWithId(
       "dashboard",
-      "EV Charging Dashboard",
+      "mainDashboard",
       { fields }
     );
     await dashboardEntry.publish();
@@ -297,6 +298,7 @@ async function updateDashboard() {
   console.log("\n📊 Dashboard Summary:");
   console.log(`   🔌 Total Devices: ${totalDevices}`);
   console.log(`   ⚡ Total Energy: ${totalConsumption.toFixed(2)} kWh`);
+  console.log(`   💰 Total Revenue: $${totalRevenue.toFixed(2)}`);
   console.log(`   📄 Total Invoices: ${invoices.length}`);
   console.log(`   📈 Avg per Device: ${(totalDevices > 0 ? totalConsumption / totalDevices : 0).toFixed(2)} kWh`);
   
@@ -305,6 +307,7 @@ async function updateDashboard() {
     console.log(`      Charger: ${deviceTrends[0].chargerSerial}`);
     console.log(`      Client: ${deviceTrends[0].clientName}`);
     console.log(`      Consumption: ${deviceTrends[0].totalConsumption.toFixed(2)} kWh`);
+    console.log(`      Revenue: $${deviceTrends[0].totalRevenue.toFixed(2)}`);
     console.log(`      Daily Avg: ${deviceTrends[0].averageConsumptionPerDay.toFixed(2)} kWh`);
     console.log(`      Trend Data Points: ${deviceTrends[0].trend.length} days`);
   }
@@ -312,6 +315,7 @@ async function updateDashboard() {
   if (topClients.length > 0) {
     console.log(`\n   👤 Top Client: ${topClients[0].clientName}`);
     console.log(`      Consumption: ${topClients[0].totalConsumption.toFixed(2)} kWh`);
+    console.log(`      Revenue: $${topClients[0].totalRevenue.toFixed(2)}`);
     console.log(`      Invoices: ${topClients[0].invoiceCount}`);
   }
 
@@ -320,8 +324,6 @@ async function updateDashboard() {
     console.log(`      From: ${consumptionTimeline[0].date}`);
     console.log(`      To: ${consumptionTimeline[consumptionTimeline.length - 1].date}`);
   }
-
-  console.log(`\n   📋 All Invoices: ${allInvoices.length} invoices processed`);
 }
 
 updateDashboard().catch(console.error);
