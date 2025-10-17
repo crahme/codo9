@@ -44,22 +44,10 @@ async function updateDashboard() {
   for (const inv of invoices) {
     const slug = inv.fields?.slug?.["en-US"];
     
-    // Debug: Check what slugs we have
-    if (!slug) {
-      console.log(`⚠️ Invoice ${inv.sys.id} has no slug`);
-      continue;
-    }
-    
-    console.log(`Processing invoice with slug: ${slug}`);
-    
-    if (!slug.startsWith("fac-")) {
-      console.log(`⚠️ Slug doesn't start with 'fac-': ${slug}`);
-      continue;
-    }
+    if (!slug || !slug.includes("fac-")) continue;
 
-    // Extract device ID from slug (e.g., "fac-b7423cbc..." → "b7423cbc...")
-    const deviceId = slug.replace(/^fac-/, "");
-    console.log(`✓ Extracted device ID: ${deviceId}`);
+    // Extract device ID from slug (e.g., "/fac-b7423cbc..." → "b7423cbc...")
+    const deviceId = slug.replace(/^\/fac-/, "");
     const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
 
     // Initialize device entry if not exists
@@ -189,7 +177,7 @@ async function updateDashboard() {
     .slice(0, 10)
     .map((inv) => {
       const slug = inv.fields?.slug?.["en-US"];
-      const deviceId = slug?.startsWith("fac-") ? slug.replace(/^fac-/, "") : slug;
+      const deviceId = slug?.includes("fac-") ? slug.replace(/^\/fac-/, "") : slug;
       const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
       
       let totalAmount = 0;
@@ -258,7 +246,6 @@ async function updateDashboard() {
   console.log("📈 Stats computed successfully.");
   console.log(`   Total Devices: ${totalDevices}`);
   console.log(`   Total Energy Consumed: ${totalConsumption.toFixed(2)} kWh`);
-  console.log(`   Total Revenue: $${totalRevenue.toFixed(2)}`);
   console.log(`   Total Invoices: ${invoices.length}`);
 
   // --- Dashboard widgets structure ---
@@ -311,7 +298,6 @@ async function updateDashboard() {
   console.log("\n📊 Dashboard Summary:");
   console.log(`   🔌 Total Devices: ${totalDevices}`);
   console.log(`   ⚡ Total Energy: ${totalConsumption.toFixed(2)} kWh`);
-  console.log(`   💰 Total Revenue: $${totalRevenue.toFixed(2)}`);
   console.log(`   📄 Total Invoices: ${invoices.length}`);
   console.log(`   📈 Avg per Device: ${(totalDevices > 0 ? totalConsumption / totalDevices : 0).toFixed(2)} kWh`);
   
@@ -320,7 +306,6 @@ async function updateDashboard() {
     console.log(`      Charger: ${deviceTrends[0].chargerSerial}`);
     console.log(`      Client: ${deviceTrends[0].clientName}`);
     console.log(`      Consumption: ${deviceTrends[0].totalConsumption.toFixed(2)} kWh`);
-    console.log(`      Revenue: $${deviceTrends[0].totalRevenue.toFixed(2)}`);
     console.log(`      Daily Avg: ${deviceTrends[0].averageConsumptionPerDay.toFixed(2)} kWh`);
     console.log(`      Trend Data Points: ${deviceTrends[0].trend.length} days`);
   }
@@ -328,7 +313,6 @@ async function updateDashboard() {
   if (topClients.length > 0) {
     console.log(`\n   👤 Top Client: ${topClients[0].clientName}`);
     console.log(`      Consumption: ${topClients[0].totalConsumption.toFixed(2)} kWh`);
-    console.log(`      Revenue: $${topClients[0].totalRevenue.toFixed(2)}`);
     console.log(`      Invoices: ${topClients[0].invoiceCount}`);
   }
 
