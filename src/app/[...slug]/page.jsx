@@ -7,6 +7,7 @@ import { InvoiceSection } from "../../components/InvoiceSection.jsx";
 import { Invoice } from "../../components/Invoice.jsx";
 import { VisualEditorComponent } from "../../components/VisualEditorComponent.jsx";
 import InvoicesList from "../../components/InvoicesList.jsx";
+import Dashboard from "../../components/dashboard/Dashboard.jsx"; // Add this import
 
 const componentMap = {
   hero: Hero,
@@ -15,6 +16,7 @@ const componentMap = {
   invoice: Invoice,
   VisualEditorComponent: VisualEditorComponent,
   invoicesList: InvoicesList,
+  dashboard: Dashboard, // Add this line
 };
 
 export default async function ComposablePage({ params }) {
@@ -102,6 +104,23 @@ export default async function ComposablePage({ params }) {
                 />
               );
             })}
+        </div>
+      );
+    }
+
+    // ✅ Handle "dashboard" - ADD THIS SECTION
+    if (type === "dashboard") {
+      if (!page.fields) {
+        console.warn(
+          `Dashboard entry found for slug '${fullPath}', but missing fields.`,
+          page
+        );
+        return notFound();
+      }
+
+      return (
+        <div data-sb-object-id={page.sys.id}>
+          <Dashboard entry={page} />
         </div>
       );
     }
