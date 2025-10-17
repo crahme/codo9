@@ -166,7 +166,7 @@ async function updateDashboard() {
     }))
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // --- Recent invoices (latest 10 by date) ---
+  // --- Recent invoices (all invoices sorted by date, newest first) ---
   const recentInvoices = invoices
     .filter((inv) => inv.fields?.invoiceDate?.["en-US"])
     .sort(
@@ -174,7 +174,6 @@ async function updateDashboard() {
         new Date(b.fields.invoiceDate["en-US"]) -
         new Date(a.fields.invoiceDate["en-US"])
     )
-    .slice(0, 10)
     .map((inv) => {
       const slug = inv.fields?.slug?.["en-US"];
       const deviceId = slug?.startsWith("fac-") ? slug.replace(/^fac-/, "") : slug;
@@ -261,7 +260,7 @@ async function updateDashboard() {
     },
     deviceTrends, // Per-device consumption with daily trends
     consumptionTimeline, // Overall daily consumption across all devices
-    recentInvoices,
+    recentInvoices, // All invoices sorted by date (newest first)
     topClients,
   };
 
@@ -302,6 +301,7 @@ async function updateDashboard() {
   console.log(`   💰 Total Revenue: $${totalRevenue.toFixed(2)}`);
   console.log(`   📄 Total Invoices: ${invoices.length}`);
   console.log(`   📈 Avg per Device: ${(totalDevices > 0 ? totalConsumption / totalDevices : 0).toFixed(2)} kWh`);
+  console.log(`   📋 Recent Invoices: ${recentInvoices.length} (all invoices)`);
   
   if (deviceTrends.length > 0) {
     console.log(`\n   🏆 Top Device: ${deviceTrends[0].deviceId}`);
