@@ -167,44 +167,69 @@ async function updateDashboard() {
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   // --- Recent invoices (all invoices sorted by date, newest first) ---
-  const recentInvoices = invoices
-    .filter((inv) => inv.fields?.invoiceDate?.["en-US"])
+  console.log("🔄 Processing recent invoices...");
+  
+  // First, let's debug what we have
+  const invoicesWithDate = invoices.filter((inv) => inv.fields?.invoiceDate?.["en-US"]);
+  console.log(`   Invoices with date: ${invoicesWithDate.length}/${invoices.length}`);
+  
+  const recentInvoices = invoicesWithDate
     .sort(
       (a, b) =>
         new Date(b.fields.invoiceDate["en-US"]) -
         new Date(a.fields.invoiceDate["en-US"])
     )
-    .map((inv) => {
-      const slug = inv.fields?.slug?.["en-US"];
-      const deviceId = slug?.startsWith("fac-") ? slug.replace(/^fac-/, "") : slug;
-      const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
-      
-      let totalAmount = 0;
-      let totalKwh = 0;
+    .map((inv, index) => {
+      try {
+        const slug = inv.fields?.slug?.["en-US"] || '';
+        const deviceId = slug?.startsWith("fac-") ? slug.replace(/^fac-/, "") : slug;
+        const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
+        
+        let totalAmount = 0;
+        let totalKwh = 0;
 
-      for (const lineItemRef of lineItemRefs) {
-        const lineItem = lineItemsMap.get(lineItemRef.sys.id);
-        if (lineItem) {
-          totalKwh += Number(lineItem.fields?.energyConsumed?.["en-US"] ?? 0);
-          totalAmount += Number(lineItem.fields?.amount?.["en-US"] ?? 0);
+        for (const lineItemRef of lineItemRefs) {
+          const lineItem = lineItemsMap.get(lineItemRef.sys.id);
+          if (lineItem) {
+            totalKwh += Number(lineItem.fields?.energyConsumed?.["en-US"] ?? 0);
+            totalAmount += Number(lineItem.fields?.amount?.["en-US"] ?? 0);
+          }
         }
-      }
 
-      return {
-        id: inv.sys.id,
-        deviceId: deviceId,
-        invoiceNumber: inv.fields.invoiceNumber?.["en-US"],
-        invoiceDate: inv.fields.invoiceDate?.["en-US"],
-        clientName: inv.fields.clientName?.["en-US"],
-        chargerSerial: inv.fields.chargerSerialNumber?.["en-US"],
-        consumptionKwh: totalKwh,
-        totalAmount: totalAmount,
-        billingPeriod: {
-          start: inv.fields.billingPeriodStart?.["en-US"],
-          end: inv.fields.billingPeriodEnd?.["en-US"],
-        },
-      };
-    });
+        const invoiceData = {
+          id: inv.sys.id,
+          deviceId: deviceId,
+          invoiceNumber: inv.fields.invoiceNumber?.["en-US"] || 'N/A',
+          invoiceDate: inv.fields.invoiceDate?.["en-US"] || 'N/A',
+          clientName: inv.fields.clientName?.["en-US"] || 'N/A',
+          chargerSerial: inv.fields.chargerSerialNumber?.["en-US"] || 'N/A',
+          consumptionKwh: totalKwh,
+          totalAmount: totalAmount,
+          billingPeriod: {
+            start: inv.fields.billingPeriodStart?.["en-US"] || 'N/A',
+            end: inv.fields.billingPeriodEnd?.["en-US"] || 'N/A',
+          },
+        };
+
+        // Log first 3 invoices for debugging
+        if (index < 3) {
+          console.log(`   Sample invoice ${index + 1}:`, {
+            id: invoiceData.id,
+            invoiceNumber: invoiceData.invoiceNumber,
+            date: invoiceData.invoiceDate,
+            client: invoiceData.clientName
+          });
+        }
+
+        return invoiceData;
+      } catch (error) {
+        console.error(`   ❌ Error processing invoice ${inv.sys.id}:`, error.message);
+        return null;
+      }
+    })
+    .filter(invoice => invoice !== null); // Remove any null entries from failed processing
+
+  console.log(`   ✅ Successfully processed ${recentInvoices.length} invoices`);
 
   // --- Top clients by consumption ---
   const clientMap = {};
@@ -264,10 +289,30 @@ async function updateDashboard() {
     topClients,
   };
 
+  // Debug the widgets structure
+  console.log("🔍 Widgets structure debug:");
+  console.log(`   - summary: ${Object.keys(widgets.summary).length} properties`);
+  console.log(`   - deviceTrends: ${widgets.deviceTrends.length} devices`);
+  console.log(`   - consumptionTimeline: ${widgets.consumptionTimeline.length} days`);
+  console.log(`   - recentInvoices: ${widgets.recentInvoices.length} invoices`);
+  console.log(`   - topClients: ${widgets.topClients.length} clients`);
+
+  // Check if recentInvoices has data
+  if (widgets.recentInvoices.length > 0) {
+    console.log("   ✅ recentInvoices has data, first invoice:", {
+      id: widgets.recentInvoices[0].id,
+      invoiceNumber: widgets.recentInvoices[0].invoiceNumber,
+      date: widgets.recentInvoices[0].invoiceDate
+    });
+  } else {
+    console.log("   ❌ recentInvoices is empty!");
+  }
+
   // --- Fetch or create dashboard entry ---
   let dashboardEntry;
   try {
     dashboardEntry = await environment.getEntry("mainDashboard");
+    console.log("📝 Found existing dashboard entry");
   } catch {
     console.log("⚠️ Dashboard entry not found, creating one...");
   }
@@ -279,19 +324,28 @@ async function updateDashboard() {
     lastUpdated: { "en-US": new Date().toISOString() },
   };
 
-  if (!dashboardEntry) {
-    dashboardEntry = await environment.createEntryWithId(
-      "dashboard",
-      "mainDashboard",
-      { fields }
-    );
-    await dashboardEntry.publish();
-    console.log("✅ Dashboard created and published successfully!");
-  } else {
-    dashboardEntry.fields = fields;
-    const updated = await dashboardEntry.update();
-    await updated.publish();
-    console.log("✅ Dashboard updated successfully with live data!");
+  try {
+    if (!dashboardEntry) {
+      dashboardEntry = await environment.createEntryWithId(
+        "dashboard",
+        "mainDashboard",
+        { fields }
+      );
+      await dashboardEntry.publish();
+      console.log("✅ Dashboard created and published successfully!");
+    } else {
+      dashboardEntry.fields = fields;
+      const updated = await dashboardEntry.update();
+      await updated.publish();
+      console.log("✅ Dashboard updated successfully with live data!");
+    }
+  } catch (error) {
+    console.error("❌ Error updating dashboard:", error);
+    // Log more details about the error
+    if (error.message.includes("size")) {
+      console.error("   This might be a size limit issue. Try reducing data size.");
+    }
+    throw error;
   }
 
   // Display summary
