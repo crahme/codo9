@@ -9,6 +9,56 @@ const formatNumber = (value, decimals = 2) => {
   return Number(value).toFixed(decimals);
 };
 
+// Function to handle PDF download
+const handleDownloadPDF = (invoice, event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  // Get invoice data for PDF generation
+  const invoiceNumber = invoice.fields?.invoiceNumber || `Invoice-${invoice.sys?.id || 'unknown'}`;
+  const clientName = invoice.fields?.clientName || 'Unknown Client';
+  const totalAmount = invoice.fields?.totalAmount || 0;
+  const consumption = invoice.fields?.consumptionKwh || 0;
+  const date = invoice.fields?.invoiceDate || 'No date';
+  
+  // In a real implementation, you would:
+  // 1. Call your backend API to generate the PDF
+  // 2. Download the generated PDF file
+  
+  console.log('Downloading PDF for:', invoiceNumber);
+  
+  // Mock implementation - replace with actual API call
+  const mockDownloadPDF = () => {
+    // Create a mock PDF blob (in real app, this would come from your API)
+    const pdfContent = `
+      EV Charging Invoice
+      ==================
+      
+      Invoice: ${invoiceNumber}
+      Client: ${clientName}
+      Date: ${date}
+      Consumption: ${consumption} kWh
+      Total Amount: $${totalAmount}
+      
+      Thank you for using our EV charging services!
+    `;
+    
+    const blob = new Blob([pdfContent], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${invoiceNumber}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  
+  // For demo purposes - show alert and mock download
+  alert(`Downloading PDF for ${invoiceNumber}\n\nIn a real implementation, this would download the actual PDF file.`);
+  mockDownloadPDF();
+};
+
 const Dashboard = ({ entry }) => {
   console.log('🎯 Dashboard component received:', {
     hasEntry: !!entry,
@@ -130,57 +180,67 @@ const Dashboard = ({ entry }) => {
           <h2 style={{ color: '#333', marginBottom: '20px' }}>Device Consumption Trends</h2>
           {deviceTrends.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {deviceTrends.map((device, index) => (
-                <div 
-                  key={device.deviceId || index} 
-                  style={{ 
-                    background: 'white',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                    border: '1px solid #e0e0e0'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                    <div>
-                      <h3 style={{ margin: '0 0 5px 0', color: '#333', fontSize: '16px' }}>
-                        Device: {device.deviceId || 'Unknown Device'}
-                      </h3>
-                      <p style={{ margin: '2px 0', color: '#666', fontSize: '14px' }}>
-                        Charger: {device.chargerSerial || 'N/A'}
-                      </p>
-                      <p style={{ margin: '2px 0', color: '#666', fontSize: '14px' }}>
-                        Client: {device.clientName || 'N/A'}
-                      </p>
+              {deviceTrends.map((device, index) => {
+                // Calculate average consumption per invoice
+                const avgConsumptionPerInvoice = device.invoiceCount > 0 
+                  ? (device.totalConsumption || 0) / device.invoiceCount 
+                  : 0;
+                
+                return (
+                  <div 
+                    key={device.deviceId || index} 
+                    style={{ 
+                      background: 'white',
+                      padding: '20px',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      border: '1px solid #e0e0e0'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                      <div>
+                        <h3 style={{ margin: '0 0 5px 0', color: '#333', fontSize: '16px' }}>
+                          Device: {device.deviceId || 'Unknown Device'}
+                        </h3>
+                        <p style={{ margin: '2px 0', color: '#666', fontSize: '14px' }}>
+                          Charger: {device.chargerSerial || 'N/A'}
+                        </p>
+                        <p style={{ margin: '2px 0', color: '#666', fontSize: '14px' }}>
+                          Client: {device.clientName || 'N/A'}
+                        </p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ margin: '2px 0', color: '#007acc', fontSize: '18px', fontWeight: 'bold' }}>
+                          {formatNumber(device.totalConsumption)} kWh
+                        </p>
+                        <p style={{ margin: '2px 0', color: '#4caf50', fontSize: '14px' }}>
+                          ${formatNumber(device.totalRevenue)}
+                        </p>
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ margin: '2px 0', color: '#007acc', fontSize: '18px', fontWeight: 'bold' }}>
-                        {formatNumber(device.totalConsumption)} kWh
-                      </p>
-                      <p style={{ margin: '2px 0', color: '#4caf50', fontSize: '14px' }}>
-                        ${formatNumber(device.totalRevenue)}
-                      </p>
+                    
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr 1fr 1fr', 
+                      gap: '10px',
+                      background: '#f8f9fa',
+                      padding: '15px',
+                      borderRadius: '6px',
+                      fontSize: '14px'
+                    }}>
+                      <div>
+                        <strong>Invoices:</strong> {device.invoiceCount || 0}
+                      </div>
+                      <div>
+                        <strong>Daily Avg:</strong> {formatNumber(device.averageConsumptionPerDay)} kWh
+                      </div>
+                      <div>
+                        <strong>Avg/Invoice:</strong> {formatNumber(avgConsumptionPerInvoice)} kWh
+                      </div>
                     </div>
                   </div>
-                  
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: '1fr 1fr', 
-                    gap: '10px',
-                    background: '#f8f9fa',
-                    padding: '15px',
-                    borderRadius: '6px',
-                    fontSize: '14px'
-                  }}>
-                    <div>
-                      <strong>Invoices:</strong> {device.invoiceCount || 0}
-                    </div>
-                    <div>
-                      <strong>Daily Avg:</strong> {formatNumber(device.averageConsumptionPerDay)} kWh
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div style={{ 
@@ -208,34 +268,34 @@ const Dashboard = ({ entry }) => {
                   : invoiceSlug?.replace(/^fac-/, '') || 'Unknown Device';
                 
                 return (
-                  <Link 
+                  <div 
                     key={invoice.sys?.id || index} 
-                    href={invoiceUrl}
-                    style={{ textDecoration: 'none' }}
+                    style={{ 
+                      background: 'white',
+                      padding: '18px',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      border: '1px solid #e0e0e0',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                      e.currentTarget.style.borderColor = '#007acc';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                      e.currentTarget.style.borderColor = '#e0e0e0';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
                   >
-                    <div 
-                      style={{ 
-                        background: 'white',
-                        padding: '18px',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        border: '1px solid #e0e0e0',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-                        e.currentTarget.style.borderColor = '#007acc';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                        e.currentTarget.style.borderColor = '#e0e0e0';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <Link 
+                          href={invoiceUrl}
+                          style={{ textDecoration: 'none' }}
+                        >
                           <h4 style={{ 
                             margin: '0 0 8px 0', 
                             color: '#1976d2',
@@ -244,65 +304,97 @@ const Dashboard = ({ entry }) => {
                           }}>
                             {invoice.fields?.invoiceNumber || `Invoice ${index + 1}`}
                           </h4>
-                          <p style={{ margin: '4px 0', color: '#333', fontSize: '14px' }}>
-                            <strong>Client:</strong> {invoice.fields?.clientName || 'Unknown Client'}
-                          </p>
-                          <p style={{ margin: '4px 0', color: '#666', fontSize: '13px' }}>
-                            <strong>Device ID:</strong> {deviceId}
-                          </p>
-                          <p style={{ margin: '4px 0', color: '#666', fontSize: '13px' }}>
-                            <strong>Date:</strong> {invoice.fields?.invoiceDate || 'No date'}
-                          </p>
-                        </div>
-                        <div style={{ textAlign: 'right', minWidth: '100px' }}>
-                          <p style={{ 
-                            margin: '0 0 5px 0', 
-                            color: '#4caf50', 
-                            fontSize: '18px', 
-                            fontWeight: 'bold' 
-                          }}>
-                            ${formatNumber(invoice.fields?.totalAmount)}
-                          </p>
-                          <p style={{ 
-                            margin: 0, 
-                            color: '#666', 
-                            fontSize: '13px',
-                            background: '#e8f5e8',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            display: 'inline-block'
-                          }}>
-                            {formatNumber(invoice.fields?.consumptionKwh)} kWh
-                          </p>
-                        </div>
+                        </Link>
+                        <p style={{ margin: '4px 0', color: '#333', fontSize: '14px' }}>
+                          <strong>Client:</strong> {invoice.fields?.clientName || 'Unknown Client'}
+                        </p>
+                        <p style={{ margin: '4px 0', color: '#666', fontSize: '13px' }}>
+                          <strong>Device ID:</strong> {deviceId}
+                        </p>
+                        <p style={{ margin: '4px 0', color: '#666', fontSize: '13px' }}>
+                          <strong>Date:</strong> {invoice.fields?.invoiceDate || 'No date'}
+                        </p>
                       </div>
-                      <div style={{ 
-                        marginTop: '10px', 
-                        paddingTop: '10px', 
-                        borderTop: '1px solid #f0f0f0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <span style={{ 
-                          color: '#007acc', 
-                          fontSize: '12px', 
-                          fontWeight: '500' 
+                      <div style={{ textAlign: 'right', minWidth: '100px' }}>
+                        <p style={{ 
+                          margin: '0 0 5px 0', 
+                          color: '#4caf50', 
+                          fontSize: '18px', 
+                          fontWeight: 'bold' 
                         }}>
-                          Click to view details →
-                        </span>
-                        <span style={{ 
+                          ${formatNumber(invoice.fields?.totalAmount)}
+                        </p>
+                        <p style={{ 
+                          margin: 0, 
                           color: '#666', 
-                          fontSize: '11px',
-                          background: '#f5f5f5',
-                          padding: '2px 6px',
-                          borderRadius: '8px'
+                          fontSize: '13px',
+                          background: '#e8f5e8',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          display: 'inline-block'
                         }}>
-                          {invoice.fields?.chargerSerial || 'No serial'}
-                        </span>
+                          {formatNumber(invoice.fields?.consumptionKwh)} kWh
+                        </p>
                       </div>
                     </div>
-                  </Link>
+                    <div style={{ 
+                      marginTop: '10px', 
+                      paddingTop: '10px', 
+                      borderTop: '1px solid #f0f0f0',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <Link 
+                          href={invoiceUrl}
+                          style={{ 
+                            color: '#007acc', 
+                            fontSize: '12px', 
+                            fontWeight: '500',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          View details →
+                        </Link>
+                        <button
+                          onClick={(e) => handleDownloadPDF(invoice, e)}
+                          style={{
+                            background: 'transparent',
+                            border: '1px solid #4caf50',
+                            color: '#4caf50',
+                            fontSize: '12px',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onMouseOver={(e) => {
+                            e.target.style.background = '#4caf50';
+                            e.target.style.color = 'white';
+                          }}
+                          onMouseOut={(e) => {
+                            e.target.style.background = 'transparent';
+                            e.target.style.color = '#4caf50';
+                          }}
+                        >
+                          📄 Download PDF
+                        </button>
+                      </div>
+                      <span style={{ 
+                        color: '#666', 
+                        fontSize: '11px',
+                        background: '#f5f5f5',
+                        padding: '2px 6px',
+                        borderRadius: '8px'
+                      }}>
+                        {invoice.fields?.chargerSerial || 'No serial'}
+                      </span>
+                    </div>
+                  </div>
                 );
               })}
             </div>
