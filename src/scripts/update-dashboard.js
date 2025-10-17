@@ -266,7 +266,7 @@ async function updateDashboard() {
   // --- Fetch or create dashboard entry ---
   let dashboardEntry;
   try {
-    dashboardEntry = await environment.getEntry("mainDashboard");
+    dashboardEntry = await environment.getEntry("dashboard");
   } catch {
     console.log("⚠️ Dashboard entry not found, creating one...");
   }
