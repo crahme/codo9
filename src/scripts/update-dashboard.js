@@ -38,7 +38,6 @@ async function updateDashboard() {
   console.log(`✅ Found ${lineItemsMap.size} line items.`);
 
   // --- Build device consumption data ---
-  // Structure: { deviceId: { total: number, totalRevenue: number, dailyReadings: [{ date, consumption, amount }] } }
   const deviceMap = {};
 
   for (const inv of invoices) {
@@ -46,11 +45,9 @@ async function updateDashboard() {
     
     if (!slug || !slug.includes("fac-")) continue;
 
-    // Extract device ID from slug (e.g., "/fac-b7423cbc..." → "b7423cbc...")
     const deviceId = slug.replace(/^\/fac-/, "");
     const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
 
-    // Initialize device entry if not exists
     if (!deviceMap[deviceId]) {
       deviceMap[deviceId] = {
         total: 0,
@@ -66,7 +63,6 @@ async function updateDashboard() {
 
     deviceMap[deviceId].invoiceCount += 1;
 
-    // Process each line item for this invoice
     for (const lineItemRef of lineItemRefs) {
       const lineItem = lineItemsMap.get(lineItemRef.sys.id);
       if (!lineItem) continue;
@@ -75,11 +71,9 @@ async function updateDashboard() {
       const amount = Number(lineItem.fields?.amount?.["en-US"] ?? 0);
       const date = lineItem.fields?.date?.["en-US"];
 
-      // Add to device totals
       deviceMap[deviceId].total += energyConsumed;
       deviceMap[deviceId].totalRevenue += amount;
 
-      // Store daily reading for trend analysis
       if (date) {
         deviceMap[deviceId].dailyReadings.push({
           date,
@@ -97,7 +91,7 @@ async function updateDashboard() {
     );
   }
 
-  // --- Compute overall totals across all devices ---
+  // --- Compute overall totals ---
   const totalDevices = Object.keys(deviceMap).length;
   const totalConsumption = Object.values(deviceMap).reduce(
     (sum, device) => sum + device.total,
@@ -108,12 +102,11 @@ async function updateDashboard() {
     0
   );
 
-  // --- Build per-device consumption trends ---
+  // --- Build per-device consumption trends (simplified) ---
   const deviceTrends = Object.entries(deviceMap).map(([deviceId, data]) => {
-    // Aggregate daily readings (in case there are multiple readings per day)
     const dailyMap = {};
     for (const reading of data.dailyReadings) {
-      const dateKey = reading.date.split('T')[0]; // Get YYYY-MM-DD
+      const dateKey = reading.date.split('T')[0];
       if (!dailyMap[dateKey]) {
         dailyMap[dateKey] = { consumption: 0, amount: 0 };
       }
@@ -121,7 +114,6 @@ async function updateDashboard() {
       dailyMap[dateKey].amount += reading.amount;
     }
 
-    // Convert to sorted array
     const trend = Object.entries(dailyMap)
       .map(([date, values]) => ({
         date,
@@ -137,15 +129,12 @@ async function updateDashboard() {
       totalConsumption: data.total,
       totalRevenue: data.totalRevenue,
       invoiceCount: data.invoiceCount,
-      averageConsumptionPerDay: trend.length > 0 ? data.total / trend.length : 0,
-      trend, // Daily consumption trend for this device
     };
   });
 
-  // Sort devices by total consumption (highest first)
   deviceTrends.sort((a, b) => b.totalConsumption - a.totalConsumption);
 
-  // --- Build overall consumption timeline (aggregate all devices by date) ---
+  // --- Build overall consumption timeline (simplified) ---
   const dateMap = {};
   for (const deviceData of Object.values(deviceMap)) {
     for (const reading of deviceData.dailyReadings) {
@@ -166,70 +155,45 @@ async function updateDashboard() {
     }))
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // --- Recent invoices (all invoices sorted by date, newest first) ---
+  // --- SIMPLIFIED Recent invoices ---
   console.log("🔄 Processing recent invoices...");
   
-  // First, let's debug what we have
-  const invoicesWithDate = invoices.filter((inv) => inv.fields?.invoiceDate?.["en-US"]);
-  console.log(`   Invoices with date: ${invoicesWithDate.length}/${invoices.length}`);
-  
-  const recentInvoices = invoicesWithDate
+  const recentInvoices = invoices
+    .filter((inv) => inv.fields?.invoiceDate?.["en-US"])
     .sort(
       (a, b) =>
         new Date(b.fields.invoiceDate["en-US"]) -
         new Date(a.fields.invoiceDate["en-US"])
     )
-    .map((inv, index) => {
-      try {
-        const slug = inv.fields?.slug?.["en-US"] || '';
-        const deviceId = slug?.startsWith("fac-") ? slug.replace(/^fac-/, "") : slug;
-        const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
-        
-        let totalAmount = 0;
-        let totalKwh = 0;
+    .map((inv) => {
+      const slug = inv.fields?.slug?.["en-US"] || '';
+      const deviceId = slug?.startsWith("fac-") ? slug.replace(/^fac-/, "") : slug;
+      const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
+      
+      let totalAmount = 0;
+      let totalKwh = 0;
 
-        for (const lineItemRef of lineItemRefs) {
-          const lineItem = lineItemsMap.get(lineItemRef.sys.id);
-          if (lineItem) {
-            totalKwh += Number(lineItem.fields?.energyConsumed?.["en-US"] ?? 0);
-            totalAmount += Number(lineItem.fields?.amount?.["en-US"] ?? 0);
-          }
+      for (const lineItemRef of lineItemRefs) {
+        const lineItem = lineItemsMap.get(lineItemRef.sys.id);
+        if (lineItem) {
+          totalKwh += Number(lineItem.fields?.energyConsumed?.["en-US"] ?? 0);
+          totalAmount += Number(lineItem.fields?.amount?.["en-US"] ?? 0);
         }
-
-        const invoiceData = {
-          id: inv.sys.id,
-          deviceId: deviceId,
-          invoiceNumber: inv.fields.invoiceNumber?.["en-US"] || 'N/A',
-          invoiceDate: inv.fields.invoiceDate?.["en-US"] || 'N/A',
-          clientName: inv.fields.clientName?.["en-US"] || 'N/A',
-          chargerSerial: inv.fields.chargerSerialNumber?.["en-US"] || 'N/A',
-          consumptionKwh: totalKwh,
-          totalAmount: totalAmount,
-          billingPeriod: {
-            start: inv.fields.billingPeriodStart?.["en-US"] || 'N/A',
-            end: inv.fields.billingPeriodEnd?.["en-US"] || 'N/A',
-          },
-        };
-
-        // Log first 3 invoices for debugging
-        if (index < 3) {
-          console.log(`   Sample invoice ${index + 1}:`, {
-            id: invoiceData.id,
-            invoiceNumber: invoiceData.invoiceNumber,
-            date: invoiceData.invoiceDate,
-            client: invoiceData.clientName
-          });
-        }
-
-        return invoiceData;
-      } catch (error) {
-        console.error(`   ❌ Error processing invoice ${inv.sys.id}:`, error.message);
-        return null;
       }
-    })
-    .filter(invoice => invoice !== null); // Remove any null entries from failed processing
 
-  console.log(`   ✅ Successfully processed ${recentInvoices.length} invoices`);
+      // SIMPLIFIED structure to reduce size
+      return {
+        id: inv.sys.id,
+        deviceId: deviceId,
+        invoiceNumber: inv.fields.invoiceNumber?.["en-US"] || 'N/A',
+        invoiceDate: inv.fields.invoiceDate?.["en-US"] || 'N/A',
+        clientName: inv.fields.clientName?.["en-US"] || 'N/A',
+        consumptionKwh: Math.round(totalKwh * 100) / 100, // Round to 2 decimals
+        totalAmount: Math.round(totalAmount * 100) / 100, // Round to 2 decimals
+      };
+    });
+
+  console.log(`   ✅ Processed ${recentInvoices.length} invoices`);
 
   // --- Top clients by consumption ---
   const clientMap = {};
@@ -260,52 +224,45 @@ async function updateDashboard() {
   const topClients = Object.entries(clientMap)
     .map(([name, data]) => ({
       clientName: name,
-      totalConsumption: data.consumption,
-      totalRevenue: data.revenue,
+      totalConsumption: Math.round(data.consumption * 100) / 100,
+      totalRevenue: Math.round(data.revenue * 100) / 100,
       invoiceCount: data.invoiceCount,
     }))
     .sort((a, b) => b.totalConsumption - a.totalConsumption)
-    .slice(0, 10);
+    .slice(0, 5); // Limit to top 5
 
   console.log("📈 Stats computed successfully.");
-  console.log(`   Total Devices: ${totalDevices}`);
-  console.log(`   Total Energy Consumed: ${totalConsumption.toFixed(2)} kWh`);
-  console.log(`   Total Revenue: $${totalRevenue.toFixed(2)}`);
-  console.log(`   Total Invoices: ${invoices.length}`);
 
-  // --- Dashboard widgets structure ---
+  // --- SIMPLIFIED Dashboard widgets structure ---
   const widgets = {
     summary: {
       totalDevices,
       totalInvoices: invoices.length,
-      totalEnergyConsumed: totalConsumption,
-      totalRevenue: totalRevenue,
-      averageConsumptionPerDevice: totalDevices > 0 ? totalConsumption / totalDevices : 0,
-      averageRevenuePerInvoice: invoices.length > 0 ? totalRevenue / invoices.length : 0,
+      totalEnergyConsumed: Math.round(totalConsumption * 100) / 100,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      averageConsumptionPerDevice: totalDevices > 0 ? Math.round((totalConsumption / totalDevices) * 100) / 100 : 0,
+      averageRevenuePerInvoice: invoices.length > 0 ? Math.round((totalRevenue / invoices.length) * 100) / 100 : 0,
     },
-    deviceTrends, // Per-device consumption with daily trends
-    consumptionTimeline, // Overall daily consumption across all devices
-    recentInvoices, // All invoices sorted by date (newest first)
-    topClients,
+    deviceTrends: deviceTrends.slice(0, 10), // Limit to top 10 devices
+    consumptionTimeline: consumptionTimeline.slice(-30), // Last 30 days only
+    recentInvoices: recentInvoices.slice(0, 20), // Limit to 20 most recent
+    topClients, // Already limited to top 5
   };
 
-  // Debug the widgets structure
-  console.log("🔍 Widgets structure debug:");
+  // Debug the final structure size
+  const widgetsString = JSON.stringify(widgets);
+  console.log(`📦 Widgets data size: ${Math.round(widgetsString.length / 1024)} KB`);
+  console.log("🔍 Widgets structure:");
   console.log(`   - summary: ${Object.keys(widgets.summary).length} properties`);
   console.log(`   - deviceTrends: ${widgets.deviceTrends.length} devices`);
   console.log(`   - consumptionTimeline: ${widgets.consumptionTimeline.length} days`);
   console.log(`   - recentInvoices: ${widgets.recentInvoices.length} invoices`);
   console.log(`   - topClients: ${widgets.topClients.length} clients`);
 
-  // Check if recentInvoices has data
+  // Check if recentInvoices is properly included
   if (widgets.recentInvoices.length > 0) {
-    console.log("   ✅ recentInvoices has data, first invoice:", {
-      id: widgets.recentInvoices[0].id,
-      invoiceNumber: widgets.recentInvoices[0].invoiceNumber,
-      date: widgets.recentInvoices[0].invoiceDate
-    });
-  } else {
-    console.log("   ❌ recentInvoices is empty!");
+    console.log("✅ recentInvoices included in widgets");
+    console.log("   Sample:", widgets.recentInvoices[0]);
   }
 
   // --- Fetch or create dashboard entry ---
@@ -339,46 +296,21 @@ async function updateDashboard() {
       await updated.publish();
       console.log("✅ Dashboard updated successfully with live data!");
     }
+
+    // Verify the update worked
+    const verifiedEntry = await environment.getEntry("mainDashboard");
+    const savedWidgets = verifiedEntry.fields.widgets?.["en-US"];
+    console.log("🔍 Verification - Saved recentInvoices count:", savedWidgets?.recentInvoices?.length || 0);
+    
   } catch (error) {
     console.error("❌ Error updating dashboard:", error);
-    // Log more details about the error
-    if (error.message.includes("size")) {
-      console.error("   This might be a size limit issue. Try reducing data size.");
+    if (error.message.includes("size") || error.message.includes("too large")) {
+      console.error("💡 Contentful size limit exceeded. Try reducing data further.");
     }
     throw error;
   }
 
-  // Display summary
-  console.log("\n📊 Dashboard Summary:");
-  console.log(`   🔌 Total Devices: ${totalDevices}`);
-  console.log(`   ⚡ Total Energy: ${totalConsumption.toFixed(2)} kWh`);
-  console.log(`   💰 Total Revenue: $${totalRevenue.toFixed(2)}`);
-  console.log(`   📄 Total Invoices: ${invoices.length}`);
-  console.log(`   📈 Avg per Device: ${(totalDevices > 0 ? totalConsumption / totalDevices : 0).toFixed(2)} kWh`);
-  console.log(`   📋 Recent Invoices: ${recentInvoices.length} (all invoices)`);
-  
-  if (deviceTrends.length > 0) {
-    console.log(`\n   🏆 Top Device: ${deviceTrends[0].deviceId}`);
-    console.log(`      Charger: ${deviceTrends[0].chargerSerial}`);
-    console.log(`      Client: ${deviceTrends[0].clientName}`);
-    console.log(`      Consumption: ${deviceTrends[0].totalConsumption.toFixed(2)} kWh`);
-    console.log(`      Revenue: $${deviceTrends[0].totalRevenue.toFixed(2)}`);
-    console.log(`      Daily Avg: ${deviceTrends[0].averageConsumptionPerDay.toFixed(2)} kWh`);
-    console.log(`      Trend Data Points: ${deviceTrends[0].trend.length} days`);
-  }
-
-  if (topClients.length > 0) {
-    console.log(`\n   👤 Top Client: ${topClients[0].clientName}`);
-    console.log(`      Consumption: ${topClients[0].totalConsumption.toFixed(2)} kWh`);
-    console.log(`      Revenue: $${topClients[0].totalRevenue.toFixed(2)}`);
-    console.log(`      Invoices: ${topClients[0].invoiceCount}`);
-  }
-
-  console.log(`\n   📅 Timeline Coverage: ${consumptionTimeline.length} days`);
-  if (consumptionTimeline.length > 0) {
-    console.log(`      From: ${consumptionTimeline[0].date}`);
-    console.log(`      To: ${consumptionTimeline[consumptionTimeline.length - 1].date}`);
-  }
+  console.log("\n📊 Update completed!");
 }
 
 updateDashboard().catch(console.error);
