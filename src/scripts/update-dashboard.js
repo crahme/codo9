@@ -43,26 +43,42 @@ async function updateDashboard() {
     if (date) deviceMap[deviceId].readings.push({ date, consumption });
   });
 
+  // --- Compute totals ---
   const totalDevices = Object.keys(deviceMap).length;
   const totalConsumption = Object.values(deviceMap).reduce(
     (sum, d) => sum + d.total,
     0
   );
 
-  // --- Compute trends for each device ---
+  // --- Compute trends ---
   const deviceTrends = Object.entries(deviceMap).map(([deviceId, data]) => ({
     deviceId,
     totalConsumption: data.total,
-    readings: data.readings.sort(
-      (a, b) => new Date(a.date) - new Date(b.date)
-    ),
+    readings: data.readings.sort((a, b) => new Date(a.date) - new Date(b.date)),
   }));
+
+  // --- Recent invoices (sorted by date, latest 10) ---
+  const recentInvoices = invoices
+    .filter((inv) => inv.fields?.invoiceDate?.["en-US"])
+    .sort(
+      (a, b) =>
+        new Date(b.fields.invoiceDate["en-US"]) -
+        new Date(a.fields.invoiceDate["en-US"])
+    )
+    .slice(0, 10)
+    .map((inv) => ({
+      id: inv.sys.id,
+      slug: inv.fields.slug?.["en-US"] ?? "",
+      invoiceDate: inv.fields.invoiceDate?.["en-US"],
+      consumptionKwh: inv.fields.consumptionKwh?.["en-US"] ?? 0,
+      customer: inv.fields.customerName?.["en-US"] ?? "Unknown",
+    }));
 
   console.log("📈 Stats computed successfully.");
   console.log(`   Total Devices: ${totalDevices}`);
   console.log(`   Total Consumption: ${totalConsumption.toFixed(2)} kWh`);
 
-  // --- Prepare dashboard widgets ---
+  // --- Dashboard data structure ---
   const widgets = {
     summary: {
       totalDevices,
@@ -70,7 +86,8 @@ async function updateDashboard() {
       averageConsumption:
         totalDevices > 0 ? totalConsumption / totalDevices : 0,
     },
-    deviceTrends,
+    trends: deviceTrends,
+    recentInvoices,
   };
 
   // --- Fetch or create dashboard entry ---
@@ -94,17 +111,14 @@ async function updateDashboard() {
       "mainDashboard",
       { fields }
     );
-    console.log("✅ Created new dashboard entry");
+    await dashboardEntry.publish();
+    console.log("✅ Dashboard created and published successfully!");
   } else {
     dashboardEntry.fields = fields;
     const updated = await dashboardEntry.update();
     await updated.publish();
     console.log("✅ Dashboard updated successfully with live data!");
-    return;
   }
-
-  await dashboardEntry.publish();
-  console.log("✅ Dashboard created and published successfully!");
 }
 
 updateDashboard().catch(console.error);
