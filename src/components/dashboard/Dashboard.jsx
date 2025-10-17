@@ -1,6 +1,6 @@
 // src/components/dashboard/Dashboard.jsx
 import React from 'react';
-import StatsCard from './StatsCard';
+import StatsCard from './StatsCards';
 import DeviceOverview from './DeviceOverview';
 import RecentInvoicesTable from './RecentInvoicesTable';
 import ConsumptionTrendChart from './ConsumptionTrendChart';
