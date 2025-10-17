@@ -36,16 +36,22 @@ const Dashboard = ({ entry }) => {
   const consumptionTimeline = widgets?.consumptionTimeline || [];
   const summary = widgets?.summary || {};
 
-  // Process device trends to extract consumption data
+  // Process device trends to extract consumption data with safe defaults
   const deviceConsumptionData = deviceTrends.map(device => ({
-    deviceId: device.deviceId,
-    chargerSerial: device.chargerSerial,
-    clientName: device.clientName,
-    totalConsumption: device.totalConsumption,
-    totalRevenue: device.totalRevenue,
-    invoiceCount: device.invoiceCount,
-    dailyAverage: device.averageConsumptionPerDay
+    deviceId: device.deviceId || 'Unknown Device',
+    chargerSerial: device.chargerSerial || 'N/A',
+    clientName: device.clientName || 'N/A',
+    totalConsumption: device.totalConsumption || 0,
+    totalRevenue: device.totalRevenue || 0,
+    invoiceCount: device.invoiceCount || 0,
+    dailyAverage: device.averageConsumptionPerDay || 0
   }));
+
+  // Safe number formatting function
+  const formatNumber = (value, decimals = 2) => {
+    if (value === undefined || value === null) return '0.00';
+    return Number(value).toFixed(decimals);
+  };
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
@@ -88,7 +94,7 @@ const Dashboard = ({ entry }) => {
         }}>
           <h3 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '14px' }}>Total Revenue</h3>
           <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#4caf50', margin: 0 }}>
-            ${(totalRevenue || 0).toFixed(2)}
+            ${formatNumber(totalRevenue)}
           </p>
         </div>
         
@@ -101,7 +107,7 @@ const Dashboard = ({ entry }) => {
         }}>
           <h3 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '14px' }}>Energy Consumed</h3>
           <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#ff9800', margin: 0 }}>
-            {(summary.totalEnergyConsumed || 0).toFixed(2)} kWh
+            {formatNumber(summary.totalEnergyConsumed)} kWh
           </p>
         </div>
         
@@ -134,7 +140,7 @@ const Dashboard = ({ entry }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               {deviceConsumptionData.map((device, index) => (
                 <div 
-                  key={device.deviceId} 
+                  key={device.deviceId + index} 
                   style={{ 
                     background: 'white',
                     padding: '20px',
@@ -149,18 +155,18 @@ const Dashboard = ({ entry }) => {
                         Device: {device.deviceId}
                       </h3>
                       <p style={{ margin: '2px 0', color: '#666', fontSize: '14px' }}>
-                        Charger: {device.chargerSerial || 'N/A'}
+                        Charger: {device.chargerSerial}
                       </p>
                       <p style={{ margin: '2px 0', color: '#666', fontSize: '14px' }}>
-                        Client: {device.clientName || 'N/A'}
+                        Client: {device.clientName}
                       </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ margin: '2px 0', color: '#007acc', fontSize: '18px', fontWeight: 'bold' }}>
-                        {device.totalConsumption.toFixed(2)} kWh
+                        {formatNumber(device.totalConsumption)} kWh
                       </p>
                       <p style={{ margin: '2px 0', color: '#4caf50', fontSize: '14px' }}>
-                        ${device.totalRevenue.toFixed(2)}
+                        ${formatNumber(device.totalRevenue)}
                       </p>
                     </div>
                   </div>
@@ -178,7 +184,7 @@ const Dashboard = ({ entry }) => {
                       <strong>Invoices:</strong> {device.invoiceCount}
                     </div>
                     <div>
-                      <strong>Daily Avg:</strong> {device.dailyAverage.toFixed(2)} kWh
+                      <strong>Daily Avg:</strong> {formatNumber(device.dailyAverage)} kWh
                     </div>
                   </div>
                 </div>
@@ -263,7 +269,7 @@ const Dashboard = ({ entry }) => {
                             fontSize: '18px', 
                             fontWeight: 'bold' 
                           }}>
-                            ${invoice.fields?.totalAmount?.toFixed(2) || '0.00'}
+                            ${formatNumber(invoice.fields?.totalAmount)}
                           </p>
                           <p style={{ 
                             margin: 0, 
@@ -274,7 +280,7 @@ const Dashboard = ({ entry }) => {
                             borderRadius: '12px',
                             display: 'inline-block'
                           }}>
-                            {invoice.fields?.consumptionKwh?.toFixed(2) || '0.00'} kWh
+                            {formatNumber(invoice.fields?.consumptionKwh)} kWh
                           </p>
                         </div>
                       </div>
@@ -337,22 +343,29 @@ const Dashboard = ({ entry }) => {
               gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
               gap: '10px'
             }}>
-              {consumptionTimeline.slice(-14).map((day, index) => (
-                <div key={index} style={{ textAlign: 'center' }}>
-                  <div style={{ 
-                    background: 'linear-gradient(to top, #4caf50, #8bc34a)',
-                    height: `${Math.max(20, (day.consumption / Math.max(...consumptionTimeline.map(d => d.consumption))) * 100)}px`,
-                    borderRadius: '4px 4px 0 0',
-                    marginBottom: '5px'
-                  }}></div>
-                  <div style={{ fontSize: '11px', color: '#666' }}>
-                    {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {consumptionTimeline.slice(-14).map((day, index) => {
+                const maxConsumption = Math.max(...consumptionTimeline.map(d => d.consumption || 0));
+                const height = maxConsumption > 0 
+                  ? Math.max(20, ((day.consumption || 0) / maxConsumption) * 100)
+                  : 20;
+                
+                return (
+                  <div key={index} style={{ textAlign: 'center' }}>
+                    <div style={{ 
+                      background: 'linear-gradient(to top, #4caf50, #8bc34a)',
+                      height: `${height}px`,
+                      borderRadius: '4px 4px 0 0',
+                      marginBottom: '5px'
+                    }}></div>
+                    <div style={{ fontSize: '11px', color: '#666' }}>
+                      {day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                    </div>
+                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>
+                      {formatNumber(day.consumption, 1)} kWh
+                    </div>
                   </div>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>
-                    {day.consumption.toFixed(1)} kWh
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
