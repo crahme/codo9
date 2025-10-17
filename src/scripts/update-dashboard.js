@@ -24,39 +24,54 @@ async function updateDashboard() {
 
   console.log(`📄 Found ${invoices.length} invoices.`);
 
-  // --- Compute stats ---
-  const totalInvoices = invoices.length;
-  const totalRevenue = invoices.reduce((sum, inv) => {
-    const amount = inv.fields?.totalAmount?.["en-US"] ?? 0;
-    return sum + Number(amount);
-  }, 0);
+  // --- Extract device-level data ---
+  const deviceMap = {}; // { deviceId: { total: X, readings: [{date, consumption}] } }
 
-  const paidInvoices = invoices.filter(
-    inv => inv.fields?.status?.["en-US"]?.toLowerCase() === "paid"
-  ).length;
+  invoices.forEach((inv) => {
+    const slug = inv.fields?.slug?.["en-US"];
+    if (!slug || !slug.startsWith("fac-")) return;
 
-  const pendingInvoices = invoices.filter(
-    inv => inv.fields?.status?.["en-US"]?.toLowerCase() === "pending"
-  ).length;
+    const deviceId = slug.replace(/^fac-/, ""); // remove "fac-" prefix
+    const date = inv.fields?.invoiceDate?.["en-US"];
+    const consumption = Number(inv.fields?.consumptionKwh?.["en-US"] ?? 0);
 
-  // Sort by date descending and get 5 most recent
-  const recentInvoices = invoices
-    .filter(inv => inv.fields?.invoiceDate?.["en-US"])
-    .sort(
-      (a, b) =>
-        new Date(b.fields.invoiceDate["en-US"]) -
-        new Date(a.fields.invoiceDate["en-US"])
-    )
-    .slice(0, 5)
-    .map(inv => ({
-      sys: {
-        type: "Link",
-        linkType: "Entry",
-        id: inv.sys.id,
-      },
-    }));
+    if (!deviceMap[deviceId]) {
+      deviceMap[deviceId] = { total: 0, readings: [] };
+    }
+
+    deviceMap[deviceId].total += consumption;
+    if (date) deviceMap[deviceId].readings.push({ date, consumption });
+  });
+
+  const totalDevices = Object.keys(deviceMap).length;
+  const totalConsumption = Object.values(deviceMap).reduce(
+    (sum, d) => sum + d.total,
+    0
+  );
+
+  // --- Compute trends for each device ---
+  const deviceTrends = Object.entries(deviceMap).map(([deviceId, data]) => ({
+    deviceId,
+    totalConsumption: data.total,
+    readings: data.readings.sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    ),
+  }));
 
   console.log("📈 Stats computed successfully.");
+  console.log(`   Total Devices: ${totalDevices}`);
+  console.log(`   Total Consumption: ${totalConsumption.toFixed(2)} kWh`);
+
+  // --- Prepare dashboard widgets ---
+  const widgets = {
+    summary: {
+      totalDevices,
+      totalConsumption,
+      averageConsumption:
+        totalDevices > 0 ? totalConsumption / totalDevices : 0,
+    },
+    deviceTrends,
+  };
 
   // --- Fetch or create dashboard entry ---
   let dashboardEntry;
@@ -68,12 +83,8 @@ async function updateDashboard() {
 
   const fields = {
     title: { "en-US": "Main Dashboard" },
-    slug: { "en-US": "main-dashboard" },  // Added required slug field
-    totalInvoices: { "en-US": totalInvoices },
-    totalRevenue: { "en-US": totalRevenue },
-    paidInvoices: { "en-US": paidInvoices },
-    pendingInvoices: { "en-US": pendingInvoices },
-    recentInvoices: { "en-US": recentInvoices },
+    slug: { "en-US": "main-dashboard" },
+    widgets: { "en-US": widgets },
     lastUpdated: { "en-US": new Date().toISOString() },
   };
 
@@ -89,19 +100,11 @@ async function updateDashboard() {
     const updated = await dashboardEntry.update();
     await updated.publish();
     console.log("✅ Dashboard updated successfully with live data!");
-    console.log(`   Total Invoices: ${totalInvoices}`);
-    console.log(`   Total Revenue: $${totalRevenue.toFixed(2)}`);
-    console.log(`   Paid: ${paidInvoices}`);
-    console.log(`   Pending: ${pendingInvoices}`);
     return;
   }
 
   await dashboardEntry.publish();
   console.log("✅ Dashboard created and published successfully!");
-  console.log(`   Total Invoices: ${totalInvoices}`);
-  console.log(`   Total Revenue: $${totalRevenue.toFixed(2)}`);
-  console.log(`   Paid: ${paidInvoices}`);
-  console.log(`   Pending: ${pendingInvoices}`);
 }
 
 updateDashboard().catch(console.error);
