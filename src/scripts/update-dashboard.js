@@ -102,7 +102,7 @@ async function updateDashboard() {
     0
   );
 
-  // --- Build per-device consumption trends (simplified) ---
+  // --- Build per-device consumption trends ---
   const deviceTrends = Object.entries(deviceMap).map(([deviceId, data]) => {
     const dailyMap = {};
     for (const reading of data.dailyReadings) {
@@ -126,15 +126,15 @@ async function updateDashboard() {
       deviceId,
       chargerSerial: data.invoiceDetails.chargerSerial,
       clientName: data.invoiceDetails.clientName,
-      totalConsumption: data.total,
-      totalRevenue: data.totalRevenue,
+      totalConsumption: Math.round(data.total * 100) / 100,
+      totalRevenue: Math.round(data.totalRevenue * 100) / 100,
       invoiceCount: data.invoiceCount,
     };
   });
 
   deviceTrends.sort((a, b) => b.totalConsumption - a.totalConsumption);
 
-  // --- Build overall consumption timeline (simplified) ---
+  // --- Build overall consumption timeline ---
   const dateMap = {};
   for (const deviceData of Object.values(deviceMap)) {
     for (const reading of deviceData.dailyReadings) {
@@ -150,12 +150,12 @@ async function updateDashboard() {
   const consumptionTimeline = Object.entries(dateMap)
     .map(([date, data]) => ({
       date,
-      consumption: data.consumption,
-      revenue: data.revenue,
+      consumption: Math.round(data.consumption * 100) / 100,
+      revenue: Math.round(data.revenue * 100) / 100,
     }))
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // --- SIMPLIFIED Recent invoices ---
+  // --- Recent invoices as separate field ---
   console.log("🔄 Processing recent invoices...");
   
   const recentInvoices = invoices
@@ -181,15 +181,19 @@ async function updateDashboard() {
         }
       }
 
-      // SIMPLIFIED structure to reduce size
       return {
         id: inv.sys.id,
         deviceId: deviceId,
         invoiceNumber: inv.fields.invoiceNumber?.["en-US"] || 'N/A',
         invoiceDate: inv.fields.invoiceDate?.["en-US"] || 'N/A',
         clientName: inv.fields.clientName?.["en-US"] || 'N/A',
-        consumptionKwh: Math.round(totalKwh * 100) / 100, // Round to 2 decimals
-        totalAmount: Math.round(totalAmount * 100) / 100, // Round to 2 decimals
+        chargerSerial: inv.fields.chargerSerialNumber?.["en-US"] || 'N/A',
+        consumptionKwh: Math.round(totalKwh * 100) / 100,
+        totalAmount: Math.round(totalAmount * 100) / 100,
+        billingPeriod: {
+          start: inv.fields.billingPeriodStart?.["en-US"] || 'N/A',
+          end: inv.fields.billingPeriodEnd?.["en-US"] || 'N/A',
+        },
       };
     });
 
@@ -229,11 +233,11 @@ async function updateDashboard() {
       invoiceCount: data.invoiceCount,
     }))
     .sort((a, b) => b.totalConsumption - a.totalConsumption)
-    .slice(0, 5); // Limit to top 5
+    .slice(0, 10);
 
   console.log("📈 Stats computed successfully.");
 
-  // --- SIMPLIFIED Dashboard widgets structure ---
+  // --- Dashboard widgets structure (without recentInvoices) ---
   const widgets = {
     summary: {
       totalDevices,
@@ -243,27 +247,17 @@ async function updateDashboard() {
       averageConsumptionPerDevice: totalDevices > 0 ? Math.round((totalConsumption / totalDevices) * 100) / 100 : 0,
       averageRevenuePerInvoice: invoices.length > 0 ? Math.round((totalRevenue / invoices.length) * 100) / 100 : 0,
     },
-    deviceTrends: deviceTrends.slice(0, 10), // Limit to top 10 devices
-    consumptionTimeline: consumptionTimeline.slice(-30), // Last 30 days only
-    recentInvoices: recentInvoices.slice(0, 20), // Limit to 20 most recent
-    topClients, // Already limited to top 5
+    deviceTrends: deviceTrends.slice(0, 10),
+    consumptionTimeline: consumptionTimeline.slice(-30),
+    topClients,
   };
 
-  // Debug the final structure size
-  const widgetsString = JSON.stringify(widgets);
-  console.log(`📦 Widgets data size: ${Math.round(widgetsString.length / 1024)} KB`);
-  console.log("🔍 Widgets structure:");
-  console.log(`   - summary: ${Object.keys(widgets.summary).length} properties`);
-  console.log(`   - deviceTrends: ${widgets.deviceTrends.length} devices`);
-  console.log(`   - consumptionTimeline: ${widgets.consumptionTimeline.length} days`);
-  console.log(`   - recentInvoices: ${widgets.recentInvoices.length} invoices`);
-  console.log(`   - topClients: ${widgets.topClients.length} clients`);
-
-  // Check if recentInvoices is properly included
-  if (widgets.recentInvoices.length > 0) {
-    console.log("✅ recentInvoices included in widgets");
-    console.log("   Sample:", widgets.recentInvoices[0]);
-  }
+  console.log("🔍 Final data structure:");
+  console.log(`   - widgets summary: ${Object.keys(widgets.summary).length} properties`);
+  console.log(`   - widgets deviceTrends: ${widgets.deviceTrends.length} devices`);
+  console.log(`   - widgets consumptionTimeline: ${widgets.consumptionTimeline.length} days`);
+  console.log(`   - widgets topClients: ${widgets.topClients.length} clients`);
+  console.log(`   - recentInvoices (separate): ${recentInvoices.length} invoices`);
 
   // --- Fetch or create dashboard entry ---
   let dashboardEntry;
@@ -274,10 +268,12 @@ async function updateDashboard() {
     console.log("⚠️ Dashboard entry not found, creating one...");
   }
 
+  // Create fields with recentInvoices as a separate top-level field
   const fields = {
     title: { "en-US": "EV Charging Dashboard" },
     slug: { "en-US": "main-dashboard" },
     widgets: { "en-US": widgets },
+    recentInvoices: { "en-US": recentInvoices }, // ← This is now a separate field
     lastUpdated: { "en-US": new Date().toISOString() },
   };
 
@@ -299,18 +295,26 @@ async function updateDashboard() {
 
     // Verify the update worked
     const verifiedEntry = await environment.getEntry("mainDashboard");
-    const savedWidgets = verifiedEntry.fields.widgets?.["en-US"];
-    console.log("🔍 Verification - Saved recentInvoices count:", savedWidgets?.recentInvoices?.length || 0);
+    const savedRecentInvoices = verifiedEntry.fields.recentInvoices?.["en-US"];
+    console.log("🔍 Verification - Saved recentInvoices count:", savedRecentInvoices?.length || 0);
+    
+    if (savedRecentInvoices && savedRecentInvoices.length > 0) {
+      console.log("✅ Recent invoices saved successfully as separate field!");
+      console.log("   Sample:", {
+        id: savedRecentInvoices[0].id,
+        invoiceNumber: savedRecentInvoices[0].invoiceNumber,
+        date: savedRecentInvoices[0].invoiceDate
+      });
+    }
     
   } catch (error) {
     console.error("❌ Error updating dashboard:", error);
-    if (error.message.includes("size") || error.message.includes("too large")) {
-      console.error("💡 Contentful size limit exceeded. Try reducing data further.");
-    }
     throw error;
   }
 
   console.log("\n📊 Update completed!");
+  console.log(`   📋 Recent Invoices: ${recentInvoices.length} invoices (separate field)`);
+  console.log(`   📊 Widgets: ${Object.keys(widgets).length} sections`);
 }
 
 updateDashboard().catch(console.error);
