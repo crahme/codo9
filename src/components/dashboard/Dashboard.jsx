@@ -9,48 +9,71 @@ const formatNumber = (value, decimals = 2) => {
   return Number(value).toFixed(decimals);
 };
 
-// Function to handle PDF download - REAL IMPLEMENTATION
+// Improved PDF download function
 const handleDownloadPDF = async (invoice, event) => {
   event.preventDefault();
   event.stopPropagation();
   
   try {
     const invoiceId = invoice.sys?.id;
-    const invoiceNumber = invoice.fields?.invoiceNumber || `Invoice-${invoiceId || 'unknown'}`;
     
     if (!invoiceId) {
       alert('Invoice ID not found');
       return;
     }
 
-    console.log('Downloading PDF for invoice:', invoiceId);
-    
-    // Call your backend API to generate/download PDF
-    const response = await fetch(`/api/invoices/${invoiceId}/download`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Show loading state
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '⏳ Generating...';
 
+    console.log('🚀 Downloading PDF for invoice:', invoiceId);
+    
+    // Call the API endpoint
+    const response = await fetch(`/api/invoices/${invoiceId}/download`);
+    
     if (!response.ok) {
-      throw new Error('Failed to download PDF');
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Failed to download PDF: ${response.status}`);
     }
 
-    // Create blob from response and download
+    // Create blob and download
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${invoiceNumber}.pdf`;
+    
+    // Get filename from Content-Disposition header or use default
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = `invoice-${invoiceId}.pdf`;
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    link.download = filename;
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
     
+    console.log('✅ PDF downloaded successfully:', filename);
+    
   } catch (error) {
-    console.error('Error downloading PDF:', error);
-    alert('Failed to download PDF. Please try again.');
+    console.error('❌ Error downloading PDF:', error);
+    alert(`Failed to download PDF: ${error.message}`);
+  } finally {
+    // Reset button state
+    const button = event.target;
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = '📄 Download PDF';
+    }
   }
 };
 
