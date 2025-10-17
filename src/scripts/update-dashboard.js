@@ -24,14 +24,14 @@ async function updateDashboard() {
 
   console.log(`📄 Found ${invoices.length} invoices.`);
 
-  // --- Extract device-level data ---
-  const deviceMap = {}; // { deviceId: { total: X, readings: [{date, consumption}] } }
+  // --- Build device consumption data ---
+  const deviceMap = {}; // { deviceId: { total: number, readings: [{ date, consumption }] } }
 
-  invoices.forEach((inv) => {
+  for (const inv of invoices) {
     const slug = inv.fields?.slug?.["en-US"];
-    if (!slug || !slug.startsWith("fac-")) return;
+    if (!slug || !slug.startsWith("fac-")) continue; // Skip non-device invoices
 
-    const deviceId = slug.replace(/^fac-/, ""); // remove "fac-" prefix
+    const deviceId = slug.replace(/^fac-/, ""); // Extract device ID (e.g., "fac-generator1" → "generator1")
     const date = inv.fields?.invoiceDate?.["en-US"];
     const consumption = Number(inv.fields?.consumptionKwh?.["en-US"] ?? 0);
 
@@ -39,25 +39,35 @@ async function updateDashboard() {
       deviceMap[deviceId] = { total: 0, readings: [] };
     }
 
+    // ✅ Add consumption to this device’s total
     deviceMap[deviceId].total += consumption;
-    if (date) deviceMap[deviceId].readings.push({ date, consumption });
-  });
 
-  // --- Compute totals ---
+    // ✅ Store this invoice’s daily reading for trend charting
+    if (date) {
+      deviceMap[deviceId].readings.push({
+        date,
+        consumption,
+      });
+    }
+  }
+
+  // --- Compute overall totals ---
   const totalDevices = Object.keys(deviceMap).length;
   const totalConsumption = Object.values(deviceMap).reduce(
     (sum, d) => sum + d.total,
     0
   );
 
-  // --- Compute trends ---
+  // --- Build per-device trend data ---
   const deviceTrends = Object.entries(deviceMap).map(([deviceId, data]) => ({
     deviceId,
     totalConsumption: data.total,
-    readings: data.readings.sort((a, b) => new Date(a.date) - new Date(b.date)),
+    readings: data.readings.sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    ),
   }));
 
-  // --- Recent invoices (sorted by date, latest 10) ---
+  // --- Recent invoices (latest 10 by date) ---
   const recentInvoices = invoices
     .filter((inv) => inv.fields?.invoiceDate?.["en-US"])
     .sort(
@@ -78,7 +88,7 @@ async function updateDashboard() {
   console.log(`   Total Devices: ${totalDevices}`);
   console.log(`   Total Consumption: ${totalConsumption.toFixed(2)} kWh`);
 
-  // --- Dashboard data structure ---
+  // --- Dashboard widgets structure ---
   const widgets = {
     summary: {
       totalDevices,
@@ -86,7 +96,7 @@ async function updateDashboard() {
       averageConsumption:
         totalDevices > 0 ? totalConsumption / totalDevices : 0,
     },
-    trends: deviceTrends,
+    deviceTrends,
     recentInvoices,
   };
 
