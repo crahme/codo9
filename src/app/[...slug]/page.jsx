@@ -331,6 +331,29 @@ export default async function ComposablePage({ params }) {
       );
     }
 
+    if (type === "dashboard") {
+  if (!page.fields) {
+    console.warn(
+      `Dashboard entry found for slug '${fullPath}', but missing fields.`,
+      page
+    );
+    return notFound();
+  }
+
+  console.log('Page.jsx - Passing to Dashboard:', {
+    pageId: page.sys.id,
+    fields: Object.keys(page.fields),
+    hasRecentInvoices: !!page.fields.recentInvoices,
+    recentInvoicesCount: page.fields.recentInvoices?.length,
+    hasWidgets: !!page.fields.widgets
+  });
+
+  return (
+    <div data-sb-object-id={page.sys.id}>
+      <Dashboard entry={page} />
+    </div>
+  );
+}
     // ❌ fallback
     console.warn(`Unsupported content type for slug '${fullPath}':`, type);
     return notFound();
