@@ -273,7 +273,7 @@ async function updateDashboard() {
 
   const fields = {
     title: { "en-US": "EV Charging Dashboard" },
-    slug: { "en-US": "main-dashboard" },
+    slug: { "en-US": "/dashboard" },
     widgets: { "en-US": widgets },
     lastUpdated: { "en-US": new Date().toISOString() },
   };
@@ -281,7 +281,7 @@ async function updateDashboard() {
   if (!dashboardEntry) {
     dashboardEntry = await environment.createEntryWithId(
       "dashboard",
-      "mainDashboard",
+      "EV Charging Dashboard",
       { fields }
     );
     await dashboardEntry.publish();
