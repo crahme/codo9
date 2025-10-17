@@ -155,49 +155,26 @@ async function updateDashboard() {
     }))
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // --- Recent invoices as separate field ---
-  console.log("🔄 Processing recent invoices...");
+  // --- Get recent invoices as entry references ---
+  console.log("🔄 Getting recent invoice references...");
   
-  const recentInvoices = invoices
+  const recentInvoiceReferences = invoices
     .filter((inv) => inv.fields?.invoiceDate?.["en-US"])
     .sort(
       (a, b) =>
         new Date(b.fields.invoiceDate["en-US"]) -
         new Date(a.fields.invoiceDate["en-US"])
     )
-    .map((inv) => {
-      const slug = inv.fields?.slug?.["en-US"] || '';
-      const deviceId = slug?.startsWith("fac-") ? slug.replace(/^fac-/, "") : slug;
-      const lineItemRefs = inv.fields?.lineItems?.["en-US"] || [];
-      
-      let totalAmount = 0;
-      let totalKwh = 0;
-
-      for (const lineItemRef of lineItemRefs) {
-        const lineItem = lineItemsMap.get(lineItemRef.sys.id);
-        if (lineItem) {
-          totalKwh += Number(lineItem.fields?.energyConsumed?.["en-US"] ?? 0);
-          totalAmount += Number(lineItem.fields?.amount?.["en-US"] ?? 0);
-        }
+    .slice(0, 10) // Get the 10 most recent invoices
+    .map((inv) => ({
+      sys: {
+        type: "Link",
+        linkType: "Entry",
+        id: inv.sys.id
       }
+    }));
 
-      return {
-        id: inv.sys.id,
-        deviceId: deviceId,
-        invoiceNumber: inv.fields.invoiceNumber?.["en-US"] || 'N/A',
-        invoiceDate: inv.fields.invoiceDate?.["en-US"] || 'N/A',
-        clientName: inv.fields.clientName?.["en-US"] || 'N/A',
-        chargerSerial: inv.fields.chargerSerialNumber?.["en-US"] || 'N/A',
-        consumptionKwh: Math.round(totalKwh * 100) / 100,
-        totalAmount: Math.round(totalAmount * 100) / 100,
-        billingPeriod: {
-          start: inv.fields.billingPeriodStart?.["en-US"] || 'N/A',
-          end: inv.fields.billingPeriodEnd?.["en-US"] || 'N/A',
-        },
-      };
-    });
-
-  console.log(`   ✅ Processed ${recentInvoices.length} invoices`);
+  console.log(`   ✅ Found ${recentInvoiceReferences.length} recent invoices for references`);
 
   // --- Top clients by consumption ---
   const clientMap = {};
@@ -237,7 +214,7 @@ async function updateDashboard() {
 
   console.log("📈 Stats computed successfully.");
 
-  // --- Dashboard widgets structure (without recentInvoices) ---
+  // --- Dashboard widgets structure ---
   const widgets = {
     summary: {
       totalDevices,
@@ -253,11 +230,8 @@ async function updateDashboard() {
   };
 
   console.log("🔍 Final data structure:");
-  console.log(`   - widgets summary: ${Object.keys(widgets.summary).length} properties`);
-  console.log(`   - widgets deviceTrends: ${widgets.deviceTrends.length} devices`);
-  console.log(`   - widgets consumptionTimeline: ${widgets.consumptionTimeline.length} days`);
-  console.log(`   - widgets topClients: ${widgets.topClients.length} clients`);
-  console.log(`   - recentInvoices (separate): ${recentInvoices.length} invoices`);
+  console.log(`   - widgets: ${Object.keys(widgets).length} sections`);
+  console.log(`   - recentInvoices: ${recentInvoiceReferences.length} entry references`);
 
   // --- Fetch or create dashboard entry ---
   let dashboardEntry;
@@ -268,12 +242,14 @@ async function updateDashboard() {
     console.log("⚠️ Dashboard entry not found, creating one...");
   }
 
-  // Create fields with recentInvoices as a separate top-level field
+  // Create fields with recentInvoices as entry references
   const fields = {
     title: { "en-US": "EV Charging Dashboard" },
     slug: { "en-US": "main-dashboard" },
+    totalInvoices: { "en-US": invoices.length },
+    totalRevenue: { "en-US": Math.round(totalRevenue * 100) / 100 },
     widgets: { "en-US": widgets },
-    recentInvoices: { "en-US": recentInvoices }, // ← This is now a separate field
+    recentInvoices: { "en-US": recentInvoiceReferences }, // ← This is now entry references
     lastUpdated: { "en-US": new Date().toISOString() },
   };
 
@@ -299,12 +275,7 @@ async function updateDashboard() {
     console.log("🔍 Verification - Saved recentInvoices count:", savedRecentInvoices?.length || 0);
     
     if (savedRecentInvoices && savedRecentInvoices.length > 0) {
-      console.log("✅ Recent invoices saved successfully as separate field!");
-      console.log("   Sample:", {
-        id: savedRecentInvoices[0].id,
-        invoiceNumber: savedRecentInvoices[0].invoiceNumber,
-        date: savedRecentInvoices[0].invoiceDate
-      });
+      console.log("✅ Recent invoices saved successfully as entry references!");
     }
     
   } catch (error) {
@@ -313,8 +284,10 @@ async function updateDashboard() {
   }
 
   console.log("\n📊 Update completed!");
-  console.log(`   📋 Recent Invoices: ${recentInvoices.length} invoices (separate field)`);
+  console.log(`   📋 Recent Invoices: ${recentInvoiceReferences.length} entry references`);
   console.log(`   📊 Widgets: ${Object.keys(widgets).length} sections`);
+  console.log(`   💰 Total Revenue: $${Math.round(totalRevenue * 100) / 100}`);
+  console.log(`   📄 Total Invoices: ${invoices.length}`);
 }
 
 updateDashboard().catch(console.error);
