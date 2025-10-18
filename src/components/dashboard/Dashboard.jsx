@@ -90,7 +90,7 @@ const calculateDeviceAverages = (device) => {
     // Estimate daily average: assume invoices span multiple days
     // For EV charging, typical daily usage might be 10-40 kWh
     if (invoiceCount === 1) {
-      dailyAvg = totalConsumption / 7; // Assume one week of usage
+      dailyAvg = totalConsumption / 40; // on a given 40-day range
     } else {
       dailyAvg = totalConsumption / (invoiceCount * 7); // Estimate based on invoice count
     }
@@ -102,6 +102,204 @@ const calculateDeviceAverages = (device) => {
     dailyAvg: Math.max(dailyAvg, 0),
     avgPerInvoice
   };
+};
+
+// Component for Bar Chart
+const ConsumptionBarChart = ({ data, title }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ 
+        background: '#fff3cd', 
+        padding: '20px', 
+        borderRadius: '8px',
+        border: '1px solid #ffeaa7',
+        textAlign: 'center'
+      }}>
+        <p style={{ margin: 0, color: '#856404' }}>No data available for {title}</p>
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map(item => item.consumption || 0));
+  const chartHeight = 200;
+  const barWidth = Math.max(20, (600 / data.length) - 10);
+
+  return (
+    <div style={{ 
+      background: 'white',
+      padding: '20px',
+      borderRadius: '8px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      marginBottom: '20px'
+    }}>
+      <h3 style={{ margin: '0 0 20px 0', color: '#333', fontSize: '18px' }}>{title}</h3>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'flex-end', 
+        gap: '8px', 
+        height: `${chartHeight}px`,
+        padding: '20px 0',
+        borderBottom: '1px solid #e0e0e0',
+        position: 'relative'
+      }}>
+        {data.map((item, index) => {
+          const height = maxValue > 0 ? (item.consumption / maxValue) * (chartHeight - 40) : 0;
+          return (
+            <div key={index} style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              flex: 1
+            }}>
+              <div
+                style={{
+                  width: `${barWidth}px`,
+                  height: `${height}px`,
+                  background: 'linear-gradient(to top, #4caf50, #8bc34a)',
+                  borderRadius: '4px 4px 0 0',
+                  minHeight: '4px'
+                }}
+                title={`${item.date}: ${formatNumber(item.consumption)} kWh`}
+              />
+              <div style={{ 
+                fontSize: '10px', 
+                color: '#666', 
+                marginTop: '5px',
+                textAlign: 'center',
+                writingMode: data.length > 10 ? 'vertical-rl' : 'horizontal',
+                transform: data.length > 10 ? 'rotate(180deg)' : 'none'
+              }}>
+                {item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        marginTop: '10px',
+        fontSize: '12px',
+        color: '#666'
+      }}>
+        <span>Min: {formatNumber(Math.min(...data.map(item => item.consumption || 0)))} kWh</span>
+        <span>Max: {formatNumber(maxValue)} kWh</span>
+        <span>Avg: {formatNumber(data.reduce((sum, item) => sum + (item.consumption || 0), 0) / data.length)} kWh</span>
+      </div>
+    </div>
+  );
+};
+
+// Component for Line Chart
+const ConsumptionLineChart = ({ data, title }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ 
+        background: '#fff3cd', 
+        padding: '20px', 
+        borderRadius: '8px',
+        border: '1px solid #ffeaa7',
+        textAlign: 'center'
+      }}>
+        <p style={{ margin: 0, color: '#856404' }}>No data available for {title}</p>
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map(item => item.consumption || 0));
+  const chartHeight = 200;
+  const chartWidth = 600;
+  const pointWidth = chartWidth / (data.length - 1);
+
+  // Generate SVG path for the line
+  const points = data.map((item, index) => {
+    const x = index * pointWidth;
+    const y = chartHeight - ((item.consumption / maxValue) * (chartHeight - 40));
+    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+  }).join(' ');
+
+  return (
+    <div style={{ 
+      background: 'white',
+      padding: '20px',
+      borderRadius: '8px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      marginBottom: '20px'
+    }}>
+      <h3 style={{ margin: '0 0 20px 0', color: '#333', fontSize: '18px' }}>{title}</h3>
+      <div style={{ position: 'relative', height: `${chartHeight}px` }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
+          {/* Grid lines */}
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
+            <line
+              key={`grid-${index}`}
+              x1="0"
+              y1={chartHeight * ratio}
+              x2={chartWidth}
+              y2={chartHeight * ratio}
+              stroke="#f0f0f0"
+              strokeWidth="1"
+            />
+          ))}
+          
+          {/* Main line */}
+          <path
+            d={points}
+            fill="none"
+            stroke="#4caf50"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          
+          {/* Data points */}
+          {data.map((item, index) => {
+            const x = index * pointWidth;
+            const y = chartHeight - ((item.consumption / maxValue) * (chartHeight - 40));
+            return (
+              <circle
+                key={index}
+                cx={x}
+                cy={y}
+                r="4"
+                fill="#4caf50"
+                stroke="white"
+                strokeWidth="2"
+              />
+            );
+          })}
+        </svg>
+        
+        {/* X-axis labels */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          marginTop: '10px',
+          fontSize: '10px',
+          color: '#666'
+        }}>
+          {data.map((item, index) => (
+            <div key={index} style={{ 
+              transform: data.length > 10 ? 'rotate(45deg)' : 'none',
+              transformOrigin: 'left center'
+            }}>
+              {item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        marginTop: '10px',
+        fontSize: '12px',
+        color: '#666'
+      }}>
+        <span>Trend: {data.length > 1 ? (data[data.length - 1].consumption > data[0].consumption ? '↗️ Increasing' : '↘️ Decreasing') : '➡️ Stable'}</span>
+        <span>Peak: {formatNumber(maxValue)} kWh</span>
+      </div>
+    </div>
+  );
 };
 
 const Dashboard = ({ entry }) => {
@@ -148,6 +346,9 @@ const Dashboard = ({ entry }) => {
       calculatedAvgPerInvoice: averages.avgPerInvoice
     };
   });
+
+  // Prepare data for charts (last 14 days)
+  const chartData = consumptionTimeline.slice(-14);
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
@@ -220,6 +421,33 @@ const Dashboard = ({ entry }) => {
           </p>
         </div>
       </div>
+
+      {/* Consumption Trends Section */}
+      {chartData.length > 0 && (
+        <div style={{ marginBottom: '40px' }}>
+          <h2 style={{ color: '#333', marginBottom: '20px' }}>Consumption Trends</h2>
+          
+          {/* Two-column layout for charts */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '20px',
+            marginBottom: '30px'
+          }}>
+            {/* Bar Chart */}
+            <ConsumptionBarChart 
+              data={chartData} 
+              title="Daily Consumption (Bar Chart)" 
+            />
+            
+            {/* Line Chart */}
+            <ConsumptionLineChart 
+              data={chartData} 
+              title="Consumption Trend (Line Chart)" 
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div style={{ 
@@ -532,69 +760,6 @@ const Dashboard = ({ entry }) => {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Overall Consumption Timeline */}
-      {consumptionTimeline.length > 0 && (
-        <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ color: '#333', marginBottom: '20px' }}>Overall Consumption Timeline</h2>
-          <div style={{ 
-            background: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <div style={{ 
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-              gap: '10px'
-            }}>
-              {consumptionTimeline.slice(-14).map((day, index) => {
-                const maxConsumption = Math.max(...consumptionTimeline.map(d => d.consumption || 0));
-                const height = maxConsumption > 0 
-                  ? Math.max(20, ((day.consumption || 0) / maxConsumption) * 100)
-                  : 20;
-                
-                return (
-                  <div key={index} style={{ textAlign: 'center' }}>
-                    <div style={{ 
-                      background: 'linear-gradient(to top, #4caf50, #8bc34a)',
-                      height: `${height}px`,
-                      borderRadius: '4px 4px 0 0',
-                      marginBottom: '5px'
-                    }}></div>
-                    <div style={{ fontSize: '11px', color: '#666' }}>
-                      {day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
-                    </div>
-                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>
-                      {formatNumber(day.consumption, 1)} kWh
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Widgets Data Preview (for debugging) */}
-      {process.env.NODE_ENV === 'development' && widgets && (
-        <div style={{ marginTop: '40px', background: '#f5f5f5', padding: '20px', borderRadius: '8px' }}>
-          <h3 style={{ color: '#666', marginBottom: '15px' }}>📊 Widgets Data Structure</h3>
-          <details>
-            <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>View Raw Widgets Data</summary>
-            <pre style={{ 
-              background: 'white', 
-              padding: '15px', 
-              borderRadius: '4px', 
-              overflow: 'auto',
-              fontSize: '12px',
-              marginTop: '10px'
-            }}>
-              {JSON.stringify(widgets, null, 2)}
-            </pre>
-          </details>
         </div>
       )}
     </div>
