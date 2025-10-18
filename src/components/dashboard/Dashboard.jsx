@@ -357,9 +357,7 @@ const Dashboard = ({ entry }) => {
         <h1 style={{ color: '#333', borderBottom: '2px solid #007acc', paddingBottom: '10px' }}>
           🏠 {title || 'EV Charging Dashboard'}
         </h1>
-        <p style={{ color: '#666', margin: '5px 0' }}>
-          Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Unknown'}
-        </p>
+      
       </div>
 
       {/* Summary Stats */}
