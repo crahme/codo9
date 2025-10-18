@@ -1,5 +1,6 @@
 // src/app/api/invoices/[id]/download/route.js
-import { NextResponse } from 'next';
+import pkg from 'next';
+const { NextResponse } = pkg;
 import 'pdfkit';
 // Function to fetch invoice data from Contentful
 async function getInvoiceById(id) {
