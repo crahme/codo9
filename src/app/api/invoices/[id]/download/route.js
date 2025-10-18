@@ -1,5 +1,6 @@
 // src/app/api/invoices/[id]/download/route.js (Simplified version)
-import { NextResponse } from 'next';
+import pkg from 'next';
+const { NextResponse } = pkg;
 
 async function getInvoiceById(id) {
   return {
