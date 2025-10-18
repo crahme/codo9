@@ -42,7 +42,7 @@ export default function HomePage() {
   }, []);
 
   function handleNavigation() {
-    window.location.href = '/invoice/fac-2024-001/';
+    window.location.href = '/main-dashboard';
   }
 
   if (loading) return <div>Loading...</div>;
@@ -63,7 +63,7 @@ export default function HomePage() {
         }
         return <Component key={section.sys.id} {...section.fields} id={section.sys.id} />;
       })}
-      <button onClick={handleNavigation}>Invoice</button>
+      <button onClick={handleNavigation}>Go to Dashboard</button>
     </div>
   );
 }
