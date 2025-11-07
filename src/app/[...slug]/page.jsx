@@ -457,7 +457,7 @@ export async function generateStaticParams() {
 
     // Add other common routes if needed
     params.push({
-      slug: ['dashboard'],
+      slug: ['/main-dashboard'],
     });
 
     console.log(`✅ Generated ${params.length} static params`);
